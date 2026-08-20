@@ -53,56 +53,66 @@ export async function fetchMyCourierOrders(courierId: string) {
 
 type NewOrderInput = {
   userId: string;
+  lines: { serviceId: string; itemId: string; name: string; price: number; quantity: number }[];
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
+  total: number;
+  tier: string;
+  collectionTime: string;
+  deliveryTime: string;
   address: string;
   addressLat: number | null;
   addressLng: number | null;
-  collectionTime: string;
-  deliveryTime: string;
   notes: string | null;
-  items: { itemId: string; serviceId: string; itemName: string; price: number; quantity: number }[];
+  isOutsideCity: boolean;
+  photos: string[];
 };
 
+/**
+ * Writes the order plus its line items. Column names match the confirmed
+ * schema; `collection_time` / `delivery_time` are free-text slot labels in
+ * the database (e.g. "Sabah, 18:00 - 20:00"), which is how the shipped app
+ * stores them.
+ *
+ * The server (Laravel) recomputes pricing on its own before accepting an
+ * order — the figures sent here are what the customer was shown, not the
+ * authority.
+ */
 export async function createOrder(input: NewOrderInput) {
-  const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const deliveryFee = 0;
-  const discount = 0;
-  const total = subtotal + deliveryFee - discount;
-
-  // "Users can insert their own orders" requires auth.uid() = user_id.
-  // collection_time/delivery_time/subtotal/total are NOT NULL in the schema.
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
       user_id: input.userId,
       status: "pending" satisfies OrderStatus,
-      delivery_tier: "standard",
-      service_type: "standard",
-      subtotal,
-      discount,
-      delivery_fee: deliveryFee,
-      total,
+      delivery_tier: input.tier,
+      service_type: input.lines[0]?.serviceId ?? "dry_cleaning",
+      subtotal: input.subtotal,
+      discount: input.discount,
+      delivery_fee: input.deliveryFee,
+      total: input.total,
       collection_time: input.collectionTime,
       delivery_time: input.deliveryTime,
       address: input.address,
       address_lat: input.addressLat,
       address_lng: input.addressLng,
       notes: input.notes,
+      is_outside_city: input.isOutsideCity,
+      item_photos: input.photos,
     })
     .select()
     .single();
   if (orderError) throw orderError;
 
-  if (input.items.length > 0) {
-    // "Users can insert their own order items" requires the parent order to
-    // belong to auth.uid() — satisfied since we just created it as this user.
+  if (input.lines.length > 0) {
     const { error: itemsError } = await supabase.from("order_items").insert(
-      input.items.map((item) => ({
+      input.lines.map((line) => ({
         order_id: order.id,
-        service_id: item.serviceId,
-        item_id: item.itemId,
-        item_name: item.itemName,
-        price: item.price,
-        quantity: item.quantity,
+        service_id: line.serviceId,
+        item_id: line.itemId,
+        item_name: line.name,
+        price: line.price,
+        quantity: line.quantity,
       }))
     );
     if (itemsError) throw itemsError;

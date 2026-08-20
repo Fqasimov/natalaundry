@@ -1,0 +1,362 @@
+import { useMemo, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, font, money, radius, serviceTheme, type ServiceKey } from "@/theme/tokens";
+import { CATALOG, findService } from "@/lib/catalog";
+import { useI18n } from "@/lib/language-context";
+import { useCart } from "@/lib/state/cart";
+import { FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
+import { AddButton, BigButton, IconBubble, Pill, ScreenHeader, Stepper } from "@/components/ui";
+
+// "Xidmət icmalı" — the catalogue. Service circles across the top, a tinted
+// hero banner for the active service, then one accordion per category with
+// per-item pricing, and a floating estimate bar pinned to the bottom.
+export default function ServiceCatalogueScreen() {
+  const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
+  const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const { add, setQty, quantityOf, subtotal, count } = useCart();
+
+  const activeId = (serviceId as ServiceKey) ?? "dry_cleaning";
+  const service = findService(activeId);
+  const theme = serviceTheme[activeId] ?? serviceTheme.dry_cleaning;
+
+  const [expanded, setExpanded] = useState<string[]>([service.categories[0]?.categoryId]);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+
+  const allExpanded = expanded.length === service.categories.length;
+
+  const toggle = (categoryId: string) =>
+    setExpanded((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+
+  const selectedPerCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const category of service.categories) {
+      map[category.categoryId] = category.items.reduce(
+        (sum, item) => sum + quantityOf(service.serviceId, item.itemId),
+        0
+      );
+    }
+    return map;
+  }, [service, quantityOf]);
+
+  const goToCheckout = () => {
+    if (subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD) {
+      setUpsellOpen(true);
+      return;
+    }
+    router.push("/checkout/schedule");
+  };
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <ScreenHeader title={t("serviceOverview")} />
+
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 150 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.serviceRow}>
+          {CATALOG.map((entry) => {
+            const entryTheme = serviceTheme[entry.serviceId];
+            const isActive = entry.serviceId === activeId;
+            return (
+              <Pressable
+                key={entry.serviceId}
+                onPress={() => router.replace(`/service/${entry.serviceId}`)}
+              >
+                <IconBubble
+                  name={entry.icon as never}
+                  tint={entryTheme.tint}
+                  fg={entryTheme.fg}
+                  size={58}
+                  selected={isActive}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={[styles.heroBanner, { backgroundColor: theme.tint }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroName}>{theme.label}</Text>
+            <Text style={styles.heroTagline}>{service.tagline}</Text>
+            <Pressable style={[styles.heroButton, { backgroundColor: theme.fg }]}>
+              <Text style={styles.heroButtonLabel}>{t("more")}</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.heroIcon, { backgroundColor: "rgba(255,255,255,0.45)" }]}>
+            <Ionicons name={service.icon as never} size={34} color={theme.fg} />
+          </View>
+        </View>
+
+        <View style={styles.priceHeader}>
+          <View>
+            <Text style={styles.priceTitle}>{t("priceList")}</Text>
+            <Text style={styles.priceSubtitle}>{t("pricePerItem")}</Text>
+          </View>
+          <Pressable
+            style={styles.expandToggle}
+            onPress={() =>
+              setExpanded(allExpanded ? [] : service.categories.map((c) => c.categoryId))
+            }
+          >
+            <Text style={styles.expandToggleLabel}>
+              {allExpanded ? t("collapseAll") : t("expandAll")}
+            </Text>
+          </Pressable>
+        </View>
+
+        {service.categories.map((category) => {
+          const isOpen = expanded.includes(category.categoryId);
+          const selected = selectedPerCategory[category.categoryId] ?? 0;
+          return (
+            <View
+              key={category.categoryId}
+              style={[styles.accordion, isOpen && styles.accordionOpen]}
+            >
+              <Pressable style={styles.accordionHeader} onPress={() => toggle(category.categoryId)}>
+                <IconBubble
+                  name={category.icon as never}
+                  tint={theme.tint}
+                  fg={theme.fg}
+                  size={36}
+                />
+                <Text style={styles.accordionTitle}>{category.name}</Text>
+                {selected > 0 ? <Pill label={String(selected)} tone="primary" /> : null}
+                <Pill label={`${category.items.length} ${t("products")}`} tone="info" />
+                <Ionicons
+                  name={isOpen ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+
+              {isOpen
+                ? category.items.map((item, index) => {
+                    const qty = quantityOf(service.serviceId, item.itemId);
+                    return (
+                      <View
+                        key={item.itemId}
+                        style={[styles.itemRow, index > 0 && styles.itemRowDivided]}
+                      >
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={styles.itemPrice}>{money(item.price)}</Text>
+                        {qty > 0 ? (
+                          <Stepper
+                            value={qty}
+                            onChange={(next) => setQty(service.serviceId, item.itemId, next)}
+                          />
+                        ) : (
+                          <AddButton
+                            onPress={() =>
+                              add({
+                                serviceId: service.serviceId,
+                                itemId: item.itemId,
+                                name: item.name,
+                                price: item.price,
+                              })
+                            }
+                          />
+                        )}
+                      </View>
+                    );
+                  })
+                : null}
+            </View>
+          );
+        })}
+
+        <View style={styles.helpCard}>
+          <Text style={styles.helpTitle}>{t("cantFindItem")}</Text>
+          <Text style={styles.helpLink}>{t("writeToTeam")}</Text>
+        </View>
+      </ScrollView>
+
+      {count > 0 ? (
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={styles.bottomCard}>
+            <View>
+              <View style={styles.bottomTotalRow}>
+                <Text style={styles.bottomTotal}>{money(subtotal)}</Text>
+                <Pill label={String(count)} tone="primary" />
+              </View>
+              <Text style={styles.bottomHint}>{t("estimatedPrice")}</Text>
+            </View>
+            <BigButton
+              label={t("schedulePickup")}
+              iconRight="arrow-forward"
+              onPress={goToCheckout}
+              style={styles.bottomButton}
+            />
+          </View>
+        </View>
+      ) : null}
+
+      <Modal transparent visible={upsellOpen} animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t("freeDeliveryTitle")}</Text>
+            <Text style={styles.modalBody}>
+              {t("freeDeliveryBody", {
+                total: money(subtotal),
+                threshold: money(FREE_DELIVERY_THRESHOLD),
+              })}
+            </Text>
+            <Pressable
+              style={styles.modalPrimary}
+              onPress={() => {
+                setUpsellOpen(false);
+                router.push("/checkout/schedule");
+              }}
+            >
+              <Text style={styles.modalPrimaryLabel}>{t("continueOrder")}</Text>
+            </Pressable>
+            <Pressable style={styles.modalSecondary} onPress={() => setUpsellOpen(false)}>
+              <Text style={styles.modalSecondaryLabel}>{t("decline")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  serviceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  heroBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: radius.lg,
+    padding: 18,
+  },
+  heroName: { fontFamily: font.bold, fontSize: 21, color: colors.textPrimary },
+  heroTagline: {
+    fontFamily: font.regular,
+    fontSize: 13.5,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  heroButton: {
+    alignSelf: "flex-start",
+    borderRadius: radius.sm,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    marginTop: 14,
+  },
+  heroButtonLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
+  heroIcon: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  priceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  priceTitle: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary },
+  expandToggle: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  expandToggleLabel: { fontFamily: font.medium, fontSize: 12, color: colors.primary },
+  accordion: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  accordionOpen: { borderColor: colors.primary },
+  accordionHeader: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12 },
+  accordionTitle: { flex: 1, fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  itemRowDivided: { borderTopWidth: 1, borderTopColor: colors.divider },
+  itemName: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
+  itemPrice: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
+  helpCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: 16,
+  },
+  helpTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
+  helpLink: { fontFamily: font.medium, fontSize: 14, color: colors.primary, marginTop: 3 },
+  bottomBar: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14 },
+  bottomCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  bottomTotalRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bottomTotal: { fontFamily: font.bold, fontSize: 21, color: colors.textPrimary },
+  bottomHint: { fontFamily: font.regular, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  bottomButton: { paddingHorizontal: 20, paddingVertical: 14 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15,20,28,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: 22,
+  },
+  modalTitle: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  modalBody: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
+  modalPrimary: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  modalPrimaryLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
+  modalSecondary: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  modalSecondaryLabel: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
+});
