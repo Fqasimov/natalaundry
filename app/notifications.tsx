@@ -42,12 +42,20 @@ export default function NotificationsScreen() {
         data={items}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={<Text style={styles.empty}>Nothing yet</Text>}
-        renderItem={({ item }) => (
-          <Pressable style={[styles.row, !item.read && styles.rowUnread]} onPress={() => markRead(item.id)}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.body}>{item.body}</Text>
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          // No title/body columns — notifications carry a `kind` + a jsonb
+          // `payload` whose shape isn't confirmed yet. Fall back to whatever
+          // title/body/message keys show up, else dump the kind + raw payload.
+          const payload = item.payload ?? {};
+          const title = (payload.title as string) ?? item.kind;
+          const body = (payload.body as string) ?? (payload.message as string) ?? JSON.stringify(payload);
+          return (
+            <Pressable style={[styles.row, !item.read && styles.rowUnread]} onPress={() => markRead(item.id)}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.body}>{body}</Text>
+            </Pressable>
+          );
+        }}
       />
     </>
   );

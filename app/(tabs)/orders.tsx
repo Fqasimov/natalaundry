@@ -95,7 +95,7 @@ export default function OrdersScreen() {
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => router.push(`/order/${item.id}`)}>
             <View>
-              <Text style={styles.rowTitle}>Order {item.id.slice(0, 8)}</Text>
+              <Text style={styles.rowTitle}>Order #{item.order_no}</Text>
               <Text style={styles.rowSubtitle}>{item.address ?? "No address"}</Text>
             </View>
             <StatusBadge status={item.status} />

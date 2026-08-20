@@ -1,116 +1,162 @@
-// Schema inferred from Supabase RLS policies (pg_policies) recovered from the
-// live project on 2026-08-20. Fields marked PROVISIONAL are guesses needed to
-// build real screens — they are NOT confirmed by a schema dump yet. Swap them
-// for the real column names/types the moment the full `information_schema`
-// dump comes back (see SCHEMA_NOTES.md).
+// Schema confirmed via information_schema.columns dump from the live
+// Supabase project (dzplzvogobqmwaaimkef), pulled 2026-08-20. This replaces
+// all earlier guesses. `service_prices` is still incomplete — only
+// item_id/service_id came back, no price/name/active columns, which can't
+// be right given "Anyone can read active prices" RLS policy exists on it.
+// Re-pull that one table's columns and fill in ServicePrice below.
 
-export type UserRole = "customer" | "courier" | "admin";
+export type UserRole = "user" | "courier" | "admin";
 
-// orders.status values referenced across the RLS policies:
-// 'pending' -> 'collecting' -> 'cleaning' -> 'delivering' -> (done) | 'cancelled'
-// 'completed' is PROVISIONAL — never appeared in a policy, but the flow
-// needs a terminal success state distinct from 'cancelled'.
+// orders.status (customer/courier-facing macro state):
 export type OrderStatus = "pending" | "collecting" | "cleaning" | "delivering" | "completed" | "cancelled";
 
+// orders.dispatch_state (internal admin workflow — an order is approved by
+// an admin before it's offered to couriers). Values beyond the default and
+// what 'assigned_at'/'offered_at'/'approved_at' imply are still a guess.
+export type DispatchState = "awaiting_admin" | "approved" | "offered" | "assigned" | (string & {});
+
 export type Profile = {
-  id: string; // = auth.uid()
-  role: UserRole;
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  language: string; // default 'az' — app is Azerbaijani-first
+  points: number;
+  is_subscribed: boolean;
+  push_token: string | null;
+  last_active_at: string | null;
+  birthday: string | null; // date
+  created_at: string;
+  role: UserRole | null;
+  wallet_balance: number;
+  subscription_expires_at: string | null;
 };
 
 export type Order = {
   id: string;
   user_id: string;
-  courier_id: string | null;
   status: OrderStatus;
-  created_at: string; // PROVISIONAL
-  // PROVISIONAL — booking details not yet confirmed by schema dump
+  delivery_tier: string; // default 'standard'
+  subtotal: number;
+  discount: number;
+  delivery_fee: number;
+  total: number;
+  collection_time: string; // free-text slot label, e.g. "Today, 2-4 PM"
+  delivery_time: string; // free-text slot label
+  created_at: string;
+  courier_id: string | null;
+  reward_id: string | null;
+  service_type: string; // default 'standard'
   address: string | null;
   address_lat: number | null;
   address_lng: number | null;
-  scheduled_for: string | null; // timestamptz
-  total_amount: number | null;
   notes: string | null;
+  deposit_amount: number | null;
+  counted_total: number | null; // set once courier/staff weigh-counts items
+  counted_at: string | null;
+  counted_by: string | null;
+  payment_method: string | null;
+  payment_status: string | null; // default 'pending'
+  is_outside_city: boolean;
+  item_photos: string[]; // jsonb array of photo URLs
+  dispatch_state: DispatchState;
+  approved_at: string | null;
+  offered_at: string | null;
+  assigned_at: string | null;
+  order_no: number; // human-facing sequential order number
+  collected_at: string | null;
+  cleaning_started_at: string | null;
+  delivering_at: string | null;
+  delivered_at: string | null;
 };
 
 export type OrderItem = {
   id: string;
   order_id: string;
-  // PROVISIONAL
-  service_price_id: string;
+  service_id: string;
+  item_id: string;
+  item_name: string;
+  price: number;
   quantity: number;
-  unit_price: number;
 };
 
 export type OrderOffer = {
   id: string;
   order_id: string;
   courier_id: string;
-  // PROVISIONAL
-  created_at: string;
-  status: "pending" | "accepted" | "rejected";
+  offered_at: string;
+  responded_at: string | null;
+  response: string | null; // e.g. 'accepted' / 'rejected', still a guess
 };
 
+// INCOMPLETE — only item_id/service_id confirmed so far. Needs a price and
+// almost certainly a name/active flag to match "Anyone can read active
+// prices" RLS policy. Do not trust this shape yet.
 export type ServicePrice = {
-  id: string;
-  active: boolean;
-  // PROVISIONAL
-  name: string;
-  unit: string; // e.g. "per item", "per kg"
-  price: number;
+  item_id: string;
+  service_id: string;
+  price?: number;
+  active?: boolean;
+  name?: string;
 };
 
 export type Payment = {
   id: string;
   order_id: string;
-  // PROVISIONAL
   amount: number;
-  status: string;
+  status: string; // default 'Pending'
+  payment_method: string; // default 'Card'
+  transaction_ref: string | null;
   created_at: string;
 };
 
 export type PaymentIntent = {
   id: string;
   user_id: string;
-  // PROVISIONAL
-  order_id: string | null;
+  purpose: string;
   amount: number;
-  status: string;
+  status: string; // default 'pending'
+  transaction_ref: string | null;
+  created_at: string;
+  settled_at: string | null;
 };
 
-// Confirmed via information_schema dump:
 export type WalletTransaction = {
-  id: string; // uuid, default gen_random_uuid()
-  user_id: string; // uuid
-  amount: number; // numeric
-  kind: string; // text
-  order_id: string | null; // uuid, nullable
-  note: string | null; // text, nullable
-  created_at: string; // timestamptz, default now()
+  id: string;
+  user_id: string;
+  amount: number;
+  kind: string;
+  order_id: string | null;
+  note: string | null;
+  created_at: string;
 };
 
 export type Notification = {
   id: string;
   user_id: string;
-  // PROVISIONAL
-  title: string;
-  body: string;
+  order_id: string | null;
+  kind: string;
+  payload: Record<string, unknown>; // jsonb — shape varies by `kind`
   read: boolean;
   created_at: string;
 };
 
 export type CustomerDetails = {
-  id: string; // = auth.uid()
-  // PROVISIONAL
-  full_name: string | null;
-  phone: string | null;
-  default_address: string | null;
+  id: string;
+  stripe_customer_id: string | null;
+  loyalty_points: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type CourierDetails = {
-  id: string; // = auth.uid()
-  // PROVISIONAL
-  full_name: string | null;
-  phone: string | null;
-  vehicle: string | null;
-  rating: number | null;
+  id: string;
+  vehicle_type: string | null;
+  license_plate: string | null;
+  is_active: boolean;
+  current_lat: number | null;
+  current_lng: number | null;
+  last_location_update: string | null;
+  created_at: string;
+  updated_at: string;
 };

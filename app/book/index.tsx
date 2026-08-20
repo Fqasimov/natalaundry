@@ -1,46 +1,35 @@
-import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { useState } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Stack, router } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
-import { createOrder, fetchActiveServicePrices } from "@/lib/orders";
-import type { ServicePrice } from "@/types/database";
+import { createOrder } from "@/lib/orders";
+import { CATALOG } from "@/lib/catalog";
+
+const TIME_SLOTS = ["Today, 10:00–12:00", "Today, 14:00–16:00", "Tomorrow, 10:00–12:00", "Tomorrow, 14:00–16:00"];
 
 export default function BookScreen() {
   const { session } = useAuth();
-  const [services, setServices] = useState<ServicePrice[] | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [address, setAddress] = useState("");
+  const [collectionTime, setCollectionTime] = useState(TIME_SLOTS[0]);
+  const [deliveryTime, setDeliveryTime] = useState(TIME_SLOTS[2]);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchActiveServicePrices()
-      .then(setServices)
-      .catch((e) => setError(e.message));
-  }, []);
-
-  const setQty = (id: string, delta: number) => {
-    setQuantities((prev) => {
-      const next = Math.max(0, (prev[id] ?? 0) + delta);
-      return { ...prev, [id]: next };
-    });
+  const setQty = (itemId: string, delta: number) => {
+    setQuantities((prev) => ({ ...prev, [itemId]: Math.max(0, (prev[itemId] ?? 0) + delta) }));
   };
 
-  const selectedItems = (services ?? [])
-    .filter((s) => (quantities[s.id] ?? 0) > 0)
-    .map((s) => ({ servicePriceId: s.id, quantity: quantities[s.id], unitPrice: s.price }));
+  const selectedItems = CATALOG.filter((c) => (quantities[c.itemId] ?? 0) > 0).map((c) => ({
+    itemId: c.itemId,
+    serviceId: c.serviceId,
+    itemName: c.name,
+    price: c.price,
+    quantity: quantities[c.itemId],
+  }));
 
-  const total = selectedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const total = selectedItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   const onSubmit = async () => {
     if (!session?.user.id) return;
@@ -60,7 +49,8 @@ export default function BookScreen() {
         address: address.trim(),
         addressLat: null,
         addressLng: null,
-        scheduledFor: null,
+        collectionTime,
+        deliveryTime,
         notes: notes.trim() || null,
         items: selectedItems,
       });
@@ -72,45 +62,34 @@ export default function BookScreen() {
     }
   };
 
-  if (!services) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
   return (
     <>
       <Stack.Screen options={{ headerShown: true, title: "Book a pickup" }} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.section}>What do you need cleaned?</Text>
-        {services.length === 0 ? (
-          <Text style={styles.empty}>
-            No active services found. (service_prices table may use different column names than guessed —
-            see SCHEMA_NOTES.md)
-          </Text>
-        ) : (
-          services.map((service) => (
-            <View key={service.id} style={styles.serviceRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.servicePrice}>
-                  {service.price} / {service.unit}
-                </Text>
-              </View>
-              <View style={styles.qtyControl}>
-                <Pressable style={styles.qtyButton} onPress={() => setQty(service.id, -1)}>
-                  <Text style={styles.qtyButtonText}>−</Text>
-                </Pressable>
-                <Text style={styles.qtyValue}>{quantities[service.id] ?? 0}</Text>
-                <Pressable style={styles.qtyButton} onPress={() => setQty(service.id, 1)}>
-                  <Text style={styles.qtyButtonText}>+</Text>
-                </Pressable>
-              </View>
+        <Text style={styles.caveat}>
+          Item list is a placeholder catalog — the real service_prices table's price/name columns weren&apos;t
+          in the schema dump yet, swap CATALOG in lib/catalog.ts once they are.
+        </Text>
+        {CATALOG.map((item) => (
+          <View key={item.itemId} style={styles.serviceRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.serviceName}>{item.name}</Text>
+              <Text style={styles.servicePrice}>
+                {item.price} / {item.unit}
+              </Text>
             </View>
-          ))
-        )}
+            <View style={styles.qtyControl}>
+              <Pressable style={styles.qtyButton} onPress={() => setQty(item.itemId, -1)}>
+                <Text style={styles.qtyButtonText}>−</Text>
+              </Pressable>
+              <Text style={styles.qtyValue}>{quantities[item.itemId] ?? 0}</Text>
+              <Pressable style={styles.qtyButton} onPress={() => setQty(item.itemId, 1)}>
+                <Text style={styles.qtyButtonText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+        ))}
 
         <Text style={styles.section}>Pickup address</Text>
         <TextInput
@@ -121,6 +100,32 @@ export default function BookScreen() {
         />
         {/* TODO: swap for react-native-google-places-autocomplete once we
             confirm how the original screen combined address text + map pin */}
+
+        <Text style={styles.section}>Pickup time</Text>
+        <View style={styles.slotRow}>
+          {TIME_SLOTS.map((slot) => (
+            <Pressable
+              key={slot}
+              style={[styles.slot, collectionTime === slot && styles.slotActive]}
+              onPress={() => setCollectionTime(slot)}
+            >
+              <Text style={[styles.slotText, collectionTime === slot && styles.slotTextActive]}>{slot}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.section}>Delivery time</Text>
+        <View style={styles.slotRow}>
+          {TIME_SLOTS.map((slot) => (
+            <Pressable
+              key={slot}
+              style={[styles.slot, deliveryTime === slot && styles.slotActive]}
+              onPress={() => setDeliveryTime(slot)}
+            >
+              <Text style={[styles.slotText, deliveryTime === slot && styles.slotTextActive]}>{slot}</Text>
+            </Pressable>
+          ))}
+        </View>
 
         <Text style={styles.section}>Notes (optional)</Text>
         <TextInput
@@ -147,10 +152,9 @@ export default function BookScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   container: { padding: 20, paddingBottom: 60 },
   section: { fontFamily: "Outfit_600SemiBold", fontSize: 16, marginTop: 20, marginBottom: 10 },
-  empty: { fontFamily: "Outfit_400Regular", color: "#666" },
+  caveat: { fontFamily: "Outfit_400Regular", color: "#999", fontSize: 11, marginTop: -6, marginBottom: 10 },
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -179,6 +183,11 @@ const styles = StyleSheet.create({
     padding: 14,
     fontFamily: "Outfit_400Regular",
   },
+  slotRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  slot: { borderWidth: 1, borderColor: "#ddd", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  slotActive: { backgroundColor: "#111", borderColor: "#111" },
+  slotText: { fontFamily: "Outfit_400Regular", fontSize: 12 },
+  slotTextActive: { color: "#fff" },
   error: { color: "#c0392b", marginTop: 12, fontFamily: "Outfit_400Regular" },
   totalRow: {
     flexDirection: "row",

@@ -4,11 +4,13 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import type { WalletTransaction } from "@/types/database";
 
-// wallet_transactions columns are confirmed via the schema dump — this
-// screen is on solid ground, unlike the booking/order screens.
+// wallet_transactions columns are confirmed via the schema dump, and the
+// running balance itself lives on profiles.wallet_balance (also confirmed)
+// rather than being derived client-side — that's the authoritative number.
 export default function WalletScreen() {
   const { session } = useAuth();
   const [transactions, setTransactions] = useState<WalletTransaction[] | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,9 +27,13 @@ export default function WalletScreen() {
         }
         setTransactions((data as WalletTransaction[]) ?? []);
       });
+    supabase
+      .from("profiles")
+      .select("wallet_balance")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data }) => setBalance(data?.wallet_balance ?? 0));
   }, [session?.user.id]);
-
-  const balance = (transactions ?? []).reduce((sum, t) => sum + Number(t.amount), 0);
 
   if (error) {
     return (
@@ -53,7 +59,7 @@ export default function WalletScreen() {
       ListHeaderComponent={
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Wallet balance</Text>
-          <Text style={styles.balanceValue}>{balance.toFixed(2)}</Text>
+          <Text style={styles.balanceValue}>{(balance ?? 0).toFixed(2)}</Text>
         </View>
       }
       ListEmptyComponent={<Text style={styles.empty}>No transactions yet</Text>}

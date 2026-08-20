@@ -20,7 +20,7 @@ export function useProfile() {
     setIsLoading(true);
     supabase
       .from("profiles")
-      .select("id, role")
+      .select("*")
       .eq("id", session.user.id)
       .single()
       .then(({ data, error }) => {

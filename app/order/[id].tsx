@@ -66,9 +66,13 @@ export default function OrderDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: `Order ${order.id.slice(0, 8)}` }} />
+      <Stack.Screen options={{ headerShown: true, title: `Order #${order.order_no}` }} />
       <ScrollView contentContainerStyle={styles.container}>
         <StatusBadge status={order.status} />
+
+        <Text style={styles.section}>Pickup / delivery</Text>
+        <Text style={styles.value}>{order.collection_time}</Text>
+        <Text style={styles.value}>{order.delivery_time}</Text>
 
         <Text style={styles.section}>Address</Text>
         <Text style={styles.value}>{order.address ?? "—"}</Text>
@@ -86,16 +90,37 @@ export default function OrderDetailScreen() {
         ) : (
           items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
-              <Text style={styles.value}>Qty {item.quantity}</Text>
-              <Text style={styles.value}>{(item.quantity * item.unit_price).toFixed(2)}</Text>
+              <Text style={styles.value}>
+                {item.item_name} × {item.quantity}
+              </Text>
+              <Text style={styles.value}>{(item.quantity * item.price).toFixed(2)}</Text>
             </View>
           ))
         )}
 
+        <View style={styles.itemRow}>
+          <Text style={styles.value}>Subtotal</Text>
+          <Text style={styles.value}>{order.subtotal.toFixed(2)}</Text>
+        </View>
+        {order.discount > 0 && (
+          <View style={styles.itemRow}>
+            <Text style={styles.value}>Discount</Text>
+            <Text style={styles.value}>-{order.discount.toFixed(2)}</Text>
+          </View>
+        )}
+        {order.delivery_fee > 0 && (
+          <View style={styles.itemRow}>
+            <Text style={styles.value}>Delivery fee</Text>
+            <Text style={styles.value}>{order.delivery_fee.toFixed(2)}</Text>
+          </View>
+        )}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalLabel}>{order.total_amount?.toFixed(2) ?? "—"}</Text>
+          <Text style={styles.totalLabel}>{order.total.toFixed(2)}</Text>
         </View>
+        <Text style={styles.paymentNote}>
+          {order.payment_method ?? "Payment method not set"} · {order.payment_status ?? "pending"}
+        </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -159,6 +184,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
   },
   totalLabel: { fontFamily: "Outfit_700Bold" },
+  paymentNote: { fontFamily: "Outfit_400Regular", color: "#999", fontSize: 12, marginTop: 6 },
   error: { color: "#c0392b", marginTop: 12, fontFamily: "Outfit_400Regular" },
   primaryButton: { backgroundColor: "#111", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 24 },
   primaryButtonText: { color: "#fff", fontFamily: "Outfit_600SemiBold" },
