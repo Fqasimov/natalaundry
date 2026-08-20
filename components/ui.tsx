@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { AppIcon, type IconName } from "@/components/AppIcon";
 import { colors, font, radius } from "@/theme/tokens";
 
 /** Back chevron + centred bold title + optional right-hand text action. */
@@ -156,7 +157,7 @@ export function IconBubble({
   size = 44,
   selected,
 }: {
-  name: keyof typeof Ionicons.glyphMap;
+  name: IconName;
   tint: string;
   fg: string;
   size?: number;
@@ -176,7 +177,7 @@ export function IconBubble({
         },
       ]}
     >
-      <Ionicons name={name} size={size * 0.46} color={fg} />
+      <AppIcon name={name} size={size * 0.5} color={fg} />
     </View>
   );
 }

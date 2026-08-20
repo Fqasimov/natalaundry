@@ -121,6 +121,76 @@ export async function createOrder(input: NewOrderInput) {
   return order as Order;
 }
 
+
+type NewTopluOrderInput = {
+  userId: string;
+  deposit: number;
+  collectionTime: string;
+  deliveryTime: string;
+  address: string;
+  addressLat: number | null;
+  addressLng: number | null;
+  notes: string | null;
+  isOutsideCity: boolean;
+};
+
+/**
+ * Creates a "toplu" (bulk) order — no line items, because nothing has been
+ * counted yet. `deposit_amount` holds what was paid up front and `total`
+ * mirrors it, since that is genuinely all the customer owes at this point.
+ * `counted_total` stays null until a courier records the count.
+ */
+export async function createTopluOrder(input: NewTopluOrderInput) {
+  const { data: order, error } = await supabase
+    .from("orders")
+    .insert({
+      user_id: input.userId,
+      status: "pending" satisfies OrderStatus,
+      service_type: "toplu",
+      delivery_tier: "standard",
+      subtotal: 0,
+      discount: 0,
+      delivery_fee: 0,
+      total: input.deposit,
+      deposit_amount: input.deposit,
+      collection_time: input.collectionTime,
+      delivery_time: input.deliveryTime,
+      address: input.address,
+      address_lat: input.addressLat,
+      address_lng: input.addressLng,
+      notes: input.notes,
+      is_outside_city: input.isOutsideCity,
+      item_photos: [],
+      payment_method: "deposit",
+      payment_status: "deposit_paid",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return order as Order;
+}
+
+/**
+ * Courier records the counted value of a bulk load. Scoped to the assigned
+ * courier by the same RLS policy that guards every other courier update.
+ */
+export async function recordTopluCount(
+  orderId: string,
+  courierId: string,
+  countedTotal: number
+) {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      counted_total: countedTotal,
+      counted_at: new Date().toISOString(),
+      counted_by: courierId,
+    })
+    .eq("id", orderId)
+    .eq("courier_id", courierId);
+  if (error) throw error;
+}
+
 // "Users can cancel their own pending orders." — only while still pending.
 export async function cancelOrder(orderId: string) {
   const { error } = await supabase

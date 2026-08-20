@@ -8,7 +8,7 @@ import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { useCart } from "@/lib/state/cart";
 import { useAuth } from "@/lib/auth-context";
-import { REQUIRED_PHOTOS } from "@/lib/pricing";
+import { OUTSIDE_CITY_FEE, REQUIRED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
 
@@ -131,7 +131,9 @@ export default function SummaryScreen() {
         <View style={styles.outsideRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.outsideTitle}>{t("outsideCity")}</Text>
-            <Text style={styles.outsideNote}>{t("outsideCityNote")}</Text>
+            <Text style={styles.outsideNote}>
+              {t("outsideCityNote", { fee: money(OUTSIDE_CITY_FEE) })}
+            </Text>
           </View>
           <Switch
             value={draft.isOutsideCity}

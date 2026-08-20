@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, money, radius, serviceTheme, type ServiceKey } from "@/theme/tokens";
+import {
+  colors,
+  font,
+  money,
+  radius,
+  serviceTheme,
+  ITEMISED_SERVICES,
+  type ServiceKey,
+} from "@/theme/tokens";
 import { CATALOG, findService } from "@/lib/catalog";
 import { useI18n } from "@/lib/language-context";
 import { useCart } from "@/lib/state/cart";
@@ -63,24 +71,30 @@ export default function ServiceCatalogueScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.serviceRow}>
-          {CATALOG.map((entry) => {
-            const entryTheme = serviceTheme[entry.serviceId];
-            const isActive = entry.serviceId === activeId;
+          {ITEMISED_SERVICES.map((key) => {
+            const entryTheme = serviceTheme[key];
             return (
-              <Pressable
-                key={entry.serviceId}
-                onPress={() => router.replace(`/service/${entry.serviceId}`)}
-              >
+              <Pressable key={key} onPress={() => router.replace(`/service/${key}`)}>
                 <IconBubble
-                  name={entry.icon as never}
+                  name={entryTheme.icon}
                   tint={entryTheme.tint}
                   fg={entryTheme.fg}
                   size={58}
-                  selected={isActive}
+                  selected={key === activeId}
                 />
               </Pressable>
             );
           })}
+          {/* Bulk sits alongside the price lists but leads somewhere else —
+              it has no items to browse, only a deposit and a pickup slot. */}
+          <Pressable onPress={() => router.push("/toplu")}>
+            <IconBubble
+              name={serviceTheme.toplu.icon}
+              tint={serviceTheme.toplu.tint}
+              fg={serviceTheme.toplu.fg}
+              size={58}
+            />
+          </Pressable>
         </View>
 
         <View style={[styles.heroBanner, { backgroundColor: theme.tint }]}>

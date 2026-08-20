@@ -29,7 +29,24 @@ return [
     ],
 
     // The order summary refuses to submit without this many garment photos.
+    // Bulk orders are exempt: there is nothing to photograph until the
+    // courier has collected and counted the load.
     'required_photos' => 3,
+
+    /*
+     * "Toplu" — the bulk / count-after-pickup order type.
+     *
+     * The customer never itemises anything. They pay a fixed deposit, a
+     * courier collects within the pickup window, counts the load, and the
+     * real order value is written to orders.counted_total. Those columns
+     * (deposit_amount, counted_total, counted_at, counted_by) already exist
+     * in the live schema.
+     */
+    'toplu' => [
+        'service_type' => 'toplu',
+        'deposit' => env('NATA_TOPLU_DEPOSIT', 20),
+        'pickup_window_hours' => env('NATA_TOPLU_PICKUP_WINDOW_HOURS', 24),
+    ],
 
     'rewards' => [
         'ttl_days' => 7,

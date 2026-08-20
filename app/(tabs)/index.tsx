@@ -3,7 +3,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, radius, serviceTheme } from "@/theme/tokens";
+import { colors, font, money, radius, serviceTheme } from "@/theme/tokens";
+import { TOPLU_DEPOSIT } from "@/lib/toplu";
 import { CATALOG } from "@/lib/catalog";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
@@ -87,7 +88,7 @@ export default function HomeScreen() {
           >
             <View style={styles.featureTop}>
               <IconBubble
-                name="shirt-outline"
+                name={serviceTheme.dry_cleaning.icon}
                 tint="#FFFFFF"
                 fg={serviceTheme.dry_cleaning.fg}
                 size={54}
@@ -100,6 +101,25 @@ export default function HomeScreen() {
             <Text style={styles.featureTagline}>{CATALOG[0].tagline}</Text>
           </Pressable>
 
+          {/* Bulk gets its own full-width card: it's a different kind of
+              order (deposit now, real total after the courier counts), so
+              it shouldn't sit in the grid as if it were one more price list. */}
+          <Pressable style={styles.topluCard} onPress={() => router.push("/toplu")}>
+            <IconBubble
+              name={serviceTheme.toplu.icon}
+              tint="rgba(255,255,255,0.65)"
+              fg={serviceTheme.toplu.fg}
+              size={46}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.topluTitle}>{serviceTheme.toplu.label}</Text>
+              <Text style={styles.topluTagline}>{t("topluTagline")}</Text>
+            </View>
+            <View style={styles.topluDepositPill}>
+              <Text style={styles.topluDepositLabel}>{money(TOPLU_DEPOSIT)}</Text>
+            </View>
+          </Pressable>
+
           <View style={styles.serviceGrid}>
             {CATALOG.slice(1).map((service) => {
               const theme = serviceTheme[service.serviceId];
@@ -109,12 +129,7 @@ export default function HomeScreen() {
                   style={styles.serviceCard}
                   onPress={() => router.push(`/service/${service.serviceId}`)}
                 >
-                  <IconBubble
-                    name={service.icon as never}
-                    tint={theme.tint}
-                    fg={theme.fg}
-                    size={42}
-                  />
+                  <IconBubble name={service.icon} tint={theme.tint} fg={theme.fg} size={42} />
                   <Text style={styles.serviceName}>{theme.label}</Text>
                   <View style={styles.viewRow}>
                     <Text style={styles.viewLabel}>{t("view")}</Text>
@@ -248,6 +263,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
   },
+  topluCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: serviceTheme.toplu.tint,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginTop: 12,
+  },
+  topluTitle: { fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
+  topluTagline: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+  topluDepositPill: {
+    backgroundColor: "rgba(255,255,255,0.75)",
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  topluDepositLabel: { fontFamily: font.bold, fontSize: 14, color: serviceTheme.toplu.fg },
   serviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 12 },
   serviceCard: {
     width: "47.5%",

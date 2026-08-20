@@ -27,6 +27,11 @@ class OrderResource extends JsonResource
             'is_outside_city' => (bool) $this->is_outside_city,
             'item_photos' => $this->item_photos ?? [],
             'payment_status' => $this->payment_status,
+            // Bulk ("toplu") settlement. counted_total is null until a
+            // courier has collected and counted the load.
+            'deposit_amount' => $this->deposit_amount === null ? null : (float) $this->deposit_amount,
+            'counted_total' => $this->counted_total === null ? null : (float) $this->counted_total,
+            'counted_at' => $this->counted_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'timeline' => [
                 'approved_at' => $this->approved_at?->toIso8601String(),

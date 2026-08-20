@@ -49,17 +49,37 @@ export const colors = {
   dangerSoft: "#FDECEA",
 } as const;
 
-// Each service category carries its own tint through the whole catalogue —
-// the circle selector, the hero banner and the accordion icons all key off it.
+// Each service carries its own tint through the whole catalogue — the circle
+// selector, the hero banner and the accordion icons all key off it. Icons use
+// MaterialCommunityIcons for the laundry-domain glyphs (washing machine,
+// iron, shoe, purse, basket), matching the service circles in the designs.
 export const serviceTheme = {
-  dry_cleaning: { tint: "#E7E6FB", fg: "#5B57D6", label: "Quru Təmizləmə" },
-  ironing: { tint: "#FCE6CE", fg: "#E8912A", label: "Ütüləmə" },
-  shoes: { tint: "#DFDCD9", fg: "#7A6A5C", label: "Ayaqqabı" },
-  bedding: { tint: "#CFF0F6", fg: "#2AA5BD", label: "Yataq Dəsti" },
-  bags: { tint: "#FBD2E3", fg: "#DC3D80", label: "Çanta" },
+  dry_cleaning: {
+    tint: "#E7E6FB",
+    fg: "#5B57D6",
+    label: "Quru Təmizləmə",
+    icon: "mci:washing-machine",
+  },
+  ironing: { tint: "#FCE6CE", fg: "#E8912A", label: "Ütüləmə", icon: "mci:iron" },
+  shoes: { tint: "#DFDCD9", fg: "#7A6A5C", label: "Ayaqqabı", icon: "mci:shoe-formal" },
+  bedding: { tint: "#CFF0F6", fg: "#2AA5BD", label: "Yataq Dəsti", icon: "mci:bed-king-outline" },
+  bags: { tint: "#FBD2E3", fg: "#DC3D80", label: "Çanta", icon: "mci:purse" },
+  // "Toplu" is a different shape of order: no item picking up front — a
+  // deposit is paid, the courier collects and counts, and the real total is
+  // set afterwards. Green sets it apart from the per-item services.
+  toplu: { tint: "#D8F0DE", fg: "#1E8E4E", label: "Toplu", icon: "mci:basket" },
 } as const;
 
 export type ServiceKey = keyof typeof serviceTheme;
+
+/** Services priced per item, i.e. everything except the count-after-pickup flow. */
+export const ITEMISED_SERVICES = [
+  "dry_cleaning",
+  "ironing",
+  "shoes",
+  "bedding",
+  "bags",
+] as const satisfies readonly ServiceKey[];
 
 // Plus Jakarta Sans replaces Outfit: Outfit has no schwa glyph at all
 // (ə/Ə — the most common letter in Azerbaijani) and its @expo-google-fonts

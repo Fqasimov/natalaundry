@@ -61,6 +61,50 @@ scale (`display`/`h1`/`h2`/`h3`/`body`/`caption`/`eyebrow`) so headings pick
 up an extrabold weight and tightened tracking instead of each screen
 reinventing its own heading style.
 
+## Icons
+
+Service and category icons come from **MaterialCommunityIcons**, not Ionicons —
+Ionicons has no washing machine, iron, hanger or laundry basket, which is what
+the service circles in the designs actually show. `components/AppIcon.tsx`
+carries both families behind one prefixed-string type
+(`"mci:washing-machine"` / `"ion:chevron-back"`), so data files stay plain
+strings while every glyph name is still checked at compile time.
+
+| Service | Glyph |
+| --- | --- |
+| Quru Təmizləmə | `mci:washing-machine` |
+| Ütüləmə | `mci:iron` |
+| Ayaqqabı | `mci:shoe-formal` |
+| Yataq Dəsti | `mci:bed-king-outline` |
+| Çanta | `mci:purse` |
+| Toplu | `mci:basket` |
+
+## Toplu — the bulk / count-after-pickup service
+
+A different shape of order from the itemised services: the customer picks
+nothing up front.
+
+1. Pay a fixed **₼20 deposit**
+2. Choose an address and a pickup slot **within 24 hours**
+3. The courier collects, counts the load, and the real total is set
+
+This maps onto columns that were **already in the live schema** —
+`deposit_amount`, `counted_total`, `counted_at`, `counted_by` — which is
+strong evidence the original app was built around the same flow, even though
+none of it appears in the screen recording.
+
+Settlement, in `OrderService::countBulk()`:
+
+- counted **above** the deposit → `payment_status = balance_due`, courier
+  collects the difference
+- counted **below** the deposit → the difference is credited straight back to
+  the customer's wallet, `payment_status = paid`
+- counting is guarded against running twice, so a double submission can't
+  double-refund
+
+The three-photo gate that guards itemised orders deliberately does **not**
+apply here — there is nothing to photograph before the load is collected.
+
 ## Still unverified
 
 - **`service_prices` columns.** Only `service_id` and `item_id` came back from

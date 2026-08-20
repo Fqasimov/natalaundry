@@ -75,7 +75,7 @@ const az = {
   deliveryAddress: "Çatdırılma Ünvanı",
   addNewAddress: "Yeni ünvan əlavə et",
   outsideCity: "Şəhərdən kənar çatdırılma?",
-  outsideCityNote: "Şəhərdən kənar üçün 5 ₼ çatdırılma haqqı alınır.",
+  outsideCityNote: "Şəhərdən kənar üçün {fee} çatdırılma haqqı alınır.",
   photosTitle: "Əşyaların və Qüsurların Şəkilləri",
   photosHint:
     "İki tərəfli şəffaflıq üçün paltarlarınızın ən azı 3 şəklini (və ya qüsurlarını) əlavə edin",
@@ -113,6 +113,33 @@ const az = {
   phone: "Telefon",
   save: "Yadda saxla",
   noOrders: "Hələ sifariş yoxdur",
+
+  // Toplu — the count-after-pickup flow. No item picking up front: a deposit
+  // is paid, the courier collects and counts, and the real total follows.
+  toplu: "Toplu",
+  topluTagline: "Sayı bilmirsiniz? Kuryer sayır.",
+  topluTitle: "Toplu sifariş",
+  topluIntro:
+    "Paltarlarınızı bir-bir seçmək lazım deyil. Depozit ödəyin, kuryer gəlib yığsın və saysın — yekun məbləği elə yerindəcə bildirsin.",
+  topluStep1Title: "Depozit ödəyin",
+  topluStep1Body: "{deposit} depozit yekun məbləğdən çıxılır.",
+  topluStep2Title: "Ünvan və vaxt seçin",
+  topluStep2Body: "Kuryer 24 saat ərzində göstərdiyiniz ünvana gəlir.",
+  topluStep3Title: "Kuryer sayır",
+  topluStep3Body: "Əşyalar sayılır və yekun məbləğ sizə bildirilir.",
+  topluHowItWorks: "Necə işləyir",
+  topluDeposit: "Depozit",
+  topluDepositNote: "Yekun məbləğdən çıxılacaq",
+  topluPickupWindow: "Götürülmə vaxtı (24 saat ərzində)",
+  topluConfirm: "{deposit} depozit ödə",
+  topluAwaitingCount: "Sayılmasını gözləyir",
+  topluCountedTotal: "Yekun məbləğ",
+  topluDepositPaid: "Ödənilmiş depozit",
+  topluBalanceDue: "Əlavə ödəniş",
+  topluRefund: "Geri qaytarılır",
+  topluNotCountedYet: "Kuryer əşyaları sayandan sonra yekun məbləğ burada görünəcək.",
+  topluCountAction: "Əşyaları say",
+  topluCountPrompt: "Yekun məbləği daxil edin",
 } as const;
 
 export type StringKey = keyof typeof az;
@@ -180,7 +207,7 @@ const ru: Record<StringKey, string> = {
   deliveryAddress: "Адрес доставки",
   addNewAddress: "Добавить новый адрес",
   outsideCity: "Доставка за город?",
-  outsideCityNote: "За пределами города взимается 5 ₼ за доставку.",
+  outsideCityNote: "За пределами города взимается {fee} за доставку.",
   photosTitle: "Фото вещей и дефектов",
   photosHint:
     "Для прозрачности добавьте не менее 3 фотографий вещей (или дефектов)",
@@ -215,6 +242,30 @@ const ru: Record<StringKey, string> = {
   phone: "Телефон",
   save: "Сохранить",
   noOrders: "Заказов пока нет",
+  toplu: "Оптом",
+  topluTagline: "Не знаете количество? Курьер посчитает.",
+  topluTitle: "Заказ оптом",
+  topluIntro:
+    "Не нужно выбирать вещи по одной. Внесите депозит, курьер приедет, заберёт и посчитает — и сразу назовёт итоговую сумму.",
+  topluStep1Title: "Внесите депозит",
+  topluStep1Body: "Депозит {deposit} вычитается из итоговой суммы.",
+  topluStep2Title: "Выберите адрес и время",
+  topluStep2Body: "Курьер приедет по указанному адресу в течение 24 часов.",
+  topluStep3Title: "Курьер считает",
+  topluStep3Body: "Вещи пересчитываются, и вам сообщают итоговую сумму.",
+  topluHowItWorks: "Как это работает",
+  topluDeposit: "Депозит",
+  topluDepositNote: "Будет вычтен из итоговой суммы",
+  topluPickupWindow: "Время забора (в течение 24 часов)",
+  topluConfirm: "Внести депозит {deposit}",
+  topluAwaitingCount: "Ожидает подсчёта",
+  topluCountedTotal: "Итоговая сумма",
+  topluDepositPaid: "Внесённый депозит",
+  topluBalanceDue: "К доплате",
+  topluRefund: "К возврату",
+  topluNotCountedYet: "Итоговая сумма появится здесь после того, как курьер пересчитает вещи.",
+  topluCountAction: "Посчитать вещи",
+  topluCountPrompt: "Введите итоговую сумму",
 };
 
 const en: Record<StringKey, string> = {
@@ -280,7 +331,7 @@ const en: Record<StringKey, string> = {
   deliveryAddress: "Delivery address",
   addNewAddress: "Add a new address",
   outsideCity: "Delivery outside the city?",
-  outsideCityNote: "A 5 ₼ delivery fee applies outside the city.",
+  outsideCityNote: "A {fee} delivery fee applies outside the city.",
   photosTitle: "Photos of items and defects",
   photosHint:
     "For two-way transparency, add at least 3 photos of your clothes (or their defects)",
@@ -315,6 +366,30 @@ const en: Record<StringKey, string> = {
   phone: "Phone",
   save: "Save",
   noOrders: "No orders yet",
+  toplu: "Bulk",
+  topluTagline: "Not sure how many? The courier counts.",
+  topluTitle: "Bulk order",
+  topluIntro:
+    "No need to pick items one by one. Pay a deposit, the courier collects and counts everything, and tells you the final total on the spot.",
+  topluStep1Title: "Pay the deposit",
+  topluStep1Body: "The {deposit} deposit comes off your final total.",
+  topluStep2Title: "Pick address and time",
+  topluStep2Body: "A courier arrives at your address within 24 hours.",
+  topluStep3Title: "The courier counts",
+  topluStep3Body: "Your items are counted and the final total is confirmed with you.",
+  topluHowItWorks: "How it works",
+  topluDeposit: "Deposit",
+  topluDepositNote: "Deducted from your final total",
+  topluPickupWindow: "Pickup time (within 24 hours)",
+  topluConfirm: "Pay {deposit} deposit",
+  topluAwaitingCount: "Awaiting count",
+  topluCountedTotal: "Final total",
+  topluDepositPaid: "Deposit paid",
+  topluBalanceDue: "Balance due",
+  topluRefund: "To be refunded",
+  topluNotCountedYet: "The final total appears here once the courier has counted your items.",
+  topluCountAction: "Count items",
+  topluCountPrompt: "Enter the final total",
 };
 
 export const dictionaries: Record<Language, Record<StringKey, string>> = {

@@ -1,3 +1,4 @@
+import type { IconName } from "@/components/AppIcon";
 import type { ServiceKey } from "@/theme/tokens";
 
 // Catalogue transcribed from the 1.0.2 screen recording. Item names and
@@ -20,7 +21,7 @@ export type CatalogItem = {
 export type CatalogCategory = {
   categoryId: string;
   name: string;
-  icon: string; // Ionicons glyph
+  icon: IconName;
   items: CatalogItem[];
 };
 
@@ -28,7 +29,7 @@ export type CatalogService = {
   serviceId: ServiceKey;
   name: string;
   tagline: string;
-  icon: string;
+  icon: IconName;
   categories: CatalogCategory[];
 };
 
@@ -37,12 +38,12 @@ export const CATALOG: CatalogService[] = [
     serviceId: "dry_cleaning",
     name: "Quru Təmizləmə",
     tagline: "Zərif parçalar və paltarlar üçün.",
-    icon: "shirt-outline",
+    icon: "mci:washing-machine",
     categories: [
       {
         categoryId: "shirts",
         name: "Köynəklər",
-        icon: "shirt-outline",
+        icon: "mci:tshirt-crew",
         items: [
           { itemId: "tshirt", name: "T-Shirt", price: 7 },
           { itemId: "shirt_short", name: "Köynək – Qısaqol", price: 7 },
@@ -53,7 +54,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "suits",
         name: "Kostyumlar",
-        icon: "briefcase-outline",
+        icon: "mci:tie",
         items: [
           { itemId: "jacket", name: "Pencək", price: 12, unverified: true },
           { itemId: "suit_2pc", name: "Kostyum (2 hissəli)", price: 20, unverified: true },
@@ -64,7 +65,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "bottoms",
         name: "Alt geyimlər",
-        icon: "cut-outline",
+        icon: "mci:hanger",
         items: [
           { itemId: "trousers", name: "Şalvar", price: 10 },
           { itemId: "shorts", name: "Şort", price: 6 },
@@ -74,7 +75,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "dresses",
         name: "Donlar",
-        icon: "woman-outline",
+        icon: "mci:human-female",
         items: [
           { itemId: "dress_simple", name: "Sadə don", price: 14, unverified: true },
           { itemId: "dress_evening", name: "Gecə donu", price: 25, unverified: true },
@@ -83,7 +84,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "outerwear",
         name: "Xarici geyimlər",
-        icon: "snow-outline",
+        icon: "mci:snowflake",
         items: [
           { itemId: "coat", name: "Palto", price: 22, unverified: true },
           { itemId: "jacket_winter", name: "Qış gödəkçəsi", price: 25, unverified: true },
@@ -94,7 +95,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "daily_other",
         name: "Gündəlik və Digər",
-        icon: "ellipsis-horizontal-circle-outline",
+        icon: "mci:dots-horizontal-circle-outline",
         items: [
           { itemId: "tie", name: "Qalstuk", price: 5, unverified: true },
           { itemId: "scarf", name: "Şərf", price: 6, unverified: true },
@@ -108,12 +109,12 @@ export const CATALOG: CatalogService[] = [
     serviceId: "ironing",
     name: "Ütüləmə",
     tagline: "Artıq təmiz olan əşyalar üçün.",
-    icon: "flame-outline",
+    icon: "mci:iron",
     categories: [
       {
         categoryId: "shirts",
         name: "Köynəklər",
-        icon: "shirt-outline",
+        icon: "mci:tshirt-crew",
         items: [
           { itemId: "tshirt", name: "T-Shirt", price: 3, unverified: true },
           { itemId: "shirt_short", name: "Köynək – Qısaqol", price: 3, unverified: true },
@@ -124,7 +125,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "bottoms",
         name: "Alt geyimlər",
-        icon: "cut-outline",
+        icon: "mci:hanger",
         items: [
           { itemId: "trousers", name: "Şalvar", price: 4, unverified: true },
           { itemId: "skirt", name: "Ətək", price: 4, unverified: true },
@@ -134,7 +135,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "dresses",
         name: "Donlar",
-        icon: "woman-outline",
+        icon: "mci:human-female",
         items: [
           { itemId: "dress_simple", name: "Sadə don", price: 6, unverified: true },
           { itemId: "dress_evening", name: "Gecə donu", price: 10, unverified: true },
@@ -146,12 +147,12 @@ export const CATALOG: CatalogService[] = [
     serviceId: "shoes",
     name: "Ayaqqabı Təmizləmə",
     tagline: "Ayaqqabılarınıza peşəkar qulluq.",
-    icon: "footsteps-outline",
+    icon: "mci:shoe-formal",
     categories: [
       {
         categoryId: "shoes",
         name: "Ayaqqabılar",
-        icon: "footsteps-outline",
+        icon: "mci:shoe-formal",
         items: [
           { itemId: "shoe_fabric", name: "Sadə parça ayaqqabı", price: 25 },
           { itemId: "shoe_part_leather", name: "Qismən dəri ayaqqabı", price: 30 },
@@ -167,12 +168,12 @@ export const CATALOG: CatalogService[] = [
     serviceId: "bedding",
     name: "Yataq Dəstləri",
     tagline: "Yataq və ev tekstili üçün.",
-    icon: "bed-outline",
+    icon: "mci:bed-king-outline",
     categories: [
       {
         categoryId: "bedding",
         name: "Yataq dəstləri",
-        icon: "bed-outline",
+        icon: "mci:bed-king-outline",
         items: [
           { itemId: "bedding_single", name: "Bir nəfərlik dəst", price: 15, unverified: true },
           { itemId: "bedding_double", name: "İki nəfərlik dəst", price: 20, unverified: true },
@@ -184,7 +185,7 @@ export const CATALOG: CatalogService[] = [
       {
         categoryId: "home_textile",
         name: "Ev tekstili",
-        icon: "home-outline",
+        icon: "mci:sofa-outline",
         items: [
           { itemId: "curtain", name: "Pərdə", price: 18, unverified: true },
           { itemId: "tablecloth", name: "Süfrə", price: 12, unverified: true },
@@ -197,12 +198,12 @@ export const CATALOG: CatalogService[] = [
     serviceId: "bags",
     name: "Çanta Təmizləmə",
     tagline: "Çanta və dəri aksesuarlar üçün.",
-    icon: "bag-handle-outline",
+    icon: "mci:purse",
     categories: [
       {
         categoryId: "bags",
         name: "Çantalar",
-        icon: "bag-handle-outline",
+        icon: "mci:purse",
         items: [
           { itemId: "bag_small", name: "Kiçik çanta", price: 20, unverified: true },
           { itemId: "bag_medium", name: "Orta çanta", price: 28, unverified: true },

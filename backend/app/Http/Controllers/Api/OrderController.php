@@ -131,4 +131,46 @@ class OrderController extends Controller
 
         return (new OrderResource($model->load('items')))->response();
     }
+
+    // ---- bulk ("toplu") -----------------------------------------------------
+
+    /** Creates a bulk order: deposit now, real total after the courier counts. */
+    public function storeBulk(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'collection_time' => ['required', 'string', 'max:120'],
+            'delivery_time' => ['nullable', 'string', 'max:120'],
+            'address' => ['required', 'string', 'max:500'],
+            'address_lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'address_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'is_outside_city' => ['boolean'],
+        ]);
+
+        $order = $this->orders->createBulk($this->profile($request), $data);
+
+        return (new OrderResource($order))->response()->setStatusCode(201);
+    }
+
+    /** Courier records the counted value of a collected bulk load. */
+    public function count(Request $request, string $order): JsonResponse
+    {
+        $data = $request->validate([
+            'counted_total' => ['required', 'numeric', 'min:0', 'max:100000'],
+        ]);
+
+        $model = Order::query()->findOrFail($order);
+
+        try {
+            $this->orders->countBulk(
+                $model,
+                $this->profile($request),
+                (float) $data['counted_total'],
+            );
+        } catch (RuntimeException|\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return (new OrderResource($model->fresh()))->response();
+    }
 }

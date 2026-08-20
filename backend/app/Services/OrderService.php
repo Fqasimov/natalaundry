@@ -8,6 +8,7 @@ use App\Models\PromoCode;
 use App\Models\UserReward;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -179,6 +180,102 @@ class OrderService
         }
 
         return [round(min($discount, $subtotal), 2), $promo, $userReward];
+    }
+
+
+    /**
+     * Creates a "toplu" (bulk) order.
+     *
+     * Nothing is itemised and nothing is priced yet: the customer pays a
+     * fixed deposit, and the real value of the load is only known once a
+     * courier has collected and counted it. So `subtotal` is 0, `total`
+     * mirrors the deposit (genuinely all that is owed right now), and
+     * `counted_total` stays null until countBulk() runs.
+     *
+     * The photo gate that guards itemised orders deliberately does not apply
+     * — there is nothing to photograph before pickup.
+     *
+     * @param  array{collection_time: string, delivery_time?: ?string,
+     *   address?: ?string, address_lat?: ?float, address_lng?: ?float,
+     *   notes?: ?string, is_outside_city?: bool}  $payload
+     */
+    public function createBulk(Profile $profile, array $payload): Order
+    {
+        $deposit = (float) config('nata.toplu.deposit');
+
+        return Order::create([
+            'user_id' => $profile->id,
+            'status' => 'pending',
+            'dispatch_state' => 'awaiting_admin',
+            'service_type' => config('nata.toplu.service_type'),
+            'delivery_tier' => 'standard',
+            'subtotal' => 0,
+            'discount' => 0,
+            'delivery_fee' => 0,
+            'total' => $deposit,
+            'deposit_amount' => $deposit,
+            'collection_time' => $payload['collection_time'],
+            'delivery_time' => $payload['delivery_time'] ?? $payload['collection_time'],
+            'address' => $payload['address'] ?? null,
+            'address_lat' => $payload['address_lat'] ?? null,
+            'address_lng' => $payload['address_lng'] ?? null,
+            'notes' => $payload['notes'] ?? null,
+            'is_outside_city' => (bool) ($payload['is_outside_city'] ?? false),
+            'item_photos' => [],
+            'payment_method' => 'deposit',
+            'payment_status' => 'deposit_paid',
+        ]);
+    }
+
+    /**
+     * Records what the courier counted for a bulk load, and settles it
+     * against the deposit already taken.
+     *
+     * A count below the deposit refunds the difference to the customer's
+     * wallet immediately; a count above it leaves a balance for the courier
+     * to collect. Counting is idempotent-guarded: a load can only be counted
+     * once, so a double submission can't double-refund.
+     */
+    public function countBulk(Order $order, Profile $courier, float $countedTotal): Order
+    {
+        if ($order->service_type !== config('nata.toplu.service_type')) {
+            throw new RuntimeException('Only bulk orders are counted.');
+        }
+        if ($order->courier_id !== $courier->id) {
+            throw new RuntimeException('Only the assigned courier can count this order.');
+        }
+        if ($order->counted_at !== null) {
+            throw new RuntimeException('This order has already been counted.');
+        }
+        if ($countedTotal < 0) {
+            throw new InvalidArgumentException('A counted total cannot be negative.');
+        }
+
+        return DB::transaction(function () use ($order, $courier, $countedTotal) {
+            $deposit = (float) $order->deposit_amount;
+            $countedTotal = round($countedTotal, 2);
+
+            $order->forceFill([
+                'counted_total' => $countedTotal,
+                'counted_at' => now(),
+                'counted_by' => $courier->id,
+                'total' => $countedTotal,
+                'payment_status' => $countedTotal <= $deposit ? 'paid' : 'balance_due',
+            ])->save();
+
+            // Counted under the deposit — hand the difference straight back.
+            if ($countedTotal < $deposit) {
+                app(WalletService::class)->credit(
+                    $order->user_id,
+                    $deposit - $countedTotal,
+                    'refund',
+                    'Toplu sifariş: depozit qalığı',
+                    $order->id,
+                );
+            }
+
+            return $order;
+        });
     }
 
     /** "Users can cancel their own pending orders." */
