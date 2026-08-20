@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: 18,
   },
-  heroName: { fontFamily: font.bold, fontSize: 21, color: colors.textPrimary },
+  heroName: { fontFamily: font.extrabold, fontSize: 21, letterSpacing: -0.3, color: colors.textPrimary },
   heroTagline: {
     fontFamily: font.regular,
     fontSize: 13.5,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 10,
   },
-  priceTitle: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  priceTitle: { fontFamily: font.extrabold, fontSize: 18, letterSpacing: -0.3, color: colors.textPrimary },
   priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary },
   expandToggle: {
     backgroundColor: colors.primarySoft,

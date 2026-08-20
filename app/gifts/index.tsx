@@ -214,7 +214,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroTitle: { fontFamily: font.bold, fontSize: 22, color: colors.textInverse, marginTop: 14 },
+  heroTitle: {
+    fontFamily: font.extrabold,
+    fontSize: 22,
+    letterSpacing: -0.3,
+    color: colors.textInverse,
+    marginTop: 14,
+  },
   heroBody: {
     fontFamily: font.regular,
     fontSize: 13.5,

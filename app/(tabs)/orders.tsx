@@ -108,7 +108,7 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { fontFamily: "Outfit_700Bold", fontSize: 22, paddingHorizontal: 16, marginBottom: 12 },
+  header: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 22, paddingHorizontal: 16, marginBottom: 12 },
   segmented: {
     flexDirection: "row",
     marginHorizontal: 16,
@@ -119,11 +119,11 @@ const styles = StyleSheet.create({
   },
   segment: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   segmentActive: { backgroundColor: "#fff" },
-  segmentText: { fontFamily: "Outfit_500Medium", color: "#666" },
+  segmentText: { fontFamily: "PlusJakartaSans_500Medium", color: "#666" },
   segmentTextActive: { color: "#111" },
   list: { paddingHorizontal: 16, paddingBottom: 40 },
-  empty: { fontFamily: "Outfit_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
-  error: { fontFamily: "Outfit_400Regular", color: "#c0392b" },
+  empty: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
+  error: { fontFamily: "PlusJakartaSans_400Regular", color: "#c0392b" },
   row: {
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -132,6 +132,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  rowTitle: { fontFamily: "Outfit_500Medium" },
-  rowSubtitle: { fontFamily: "Outfit_400Regular", color: "#666", fontSize: 12, marginTop: 2 },
+  rowTitle: { fontFamily: "PlusJakartaSans_500Medium" },
+  rowSubtitle: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", fontSize: 12, marginTop: 2 },
 });

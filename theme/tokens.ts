@@ -61,11 +61,37 @@ export const serviceTheme = {
 
 export type ServiceKey = keyof typeof serviceTheme;
 
+// Plus Jakarta Sans replaces Outfit: Outfit has no schwa glyph at all
+// (ə/Ə — the most common letter in Azerbaijani) and its @expo-google-fonts
+// package only carries a latin-only subset besides, so ş/ğ were missing too.
+// Verified against every weight used here: Plus Jakarta Sans covers the full
+// Azerbaijani alphabet (ə, ş, ğ, ı, ç, ö, ü and their capitals).
 export const font = {
-  regular: "Outfit_400Regular",
-  medium: "Outfit_500Medium",
-  semibold: "Outfit_600SemiBold",
-  bold: "Outfit_700Bold",
+  regular: "PlusJakartaSans_400Regular",
+  medium: "PlusJakartaSans_500Medium",
+  semibold: "PlusJakartaSans_600SemiBold",
+  bold: "PlusJakartaSans_700Bold",
+  extrabold: "PlusJakartaSans_800ExtraBold",
+} as const;
+
+// A small type scale so headings/body/labels stay consistent instead of
+// each screen picking its own size+spacing ad hoc. Spread these into a
+// Text style, e.g. style={[type.h1, { color: colors.textPrimary }]}.
+export const type = {
+  display: { fontFamily: font.extrabold, fontSize: 34, lineHeight: 40, letterSpacing: -0.6 },
+  h1: { fontFamily: font.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.3 },
+  h2: { fontFamily: font.bold, fontSize: 19, lineHeight: 25, letterSpacing: -0.2 },
+  h3: { fontFamily: font.semibold, fontSize: 16, lineHeight: 22 },
+  body: { fontFamily: font.regular, fontSize: 15, lineHeight: 22 },
+  bodyMedium: { fontFamily: font.medium, fontSize: 15, lineHeight: 22 },
+  caption: { fontFamily: font.regular, fontSize: 12.5, lineHeight: 17 },
+  eyebrow: {
+    fontFamily: font.semibold,
+    fontSize: 11.5,
+    lineHeight: 15,
+    letterSpacing: 0.9,
+    textTransform: "uppercase" as const,
+  },
 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 18, xl: 24, pill: 999 } as const;

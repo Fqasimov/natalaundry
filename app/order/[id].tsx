@@ -172,8 +172,8 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   container: { padding: 20, paddingBottom: 60, gap: 4 },
-  section: { fontFamily: "Outfit_600SemiBold", fontSize: 14, marginTop: 18, color: "#666" },
-  value: { fontFamily: "Outfit_400Regular", fontSize: 15 },
+  section: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, marginTop: 18, color: "#666" },
+  value: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   totalRow: {
     flexDirection: "row",
@@ -183,11 +183,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
   },
-  totalLabel: { fontFamily: "Outfit_700Bold" },
-  paymentNote: { fontFamily: "Outfit_400Regular", color: "#999", fontSize: 12, marginTop: 6 },
-  error: { color: "#c0392b", marginTop: 12, fontFamily: "Outfit_400Regular" },
+  totalLabel: { fontFamily: "PlusJakartaSans_700Bold" },
+  paymentNote: { fontFamily: "PlusJakartaSans_400Regular", color: "#999", fontSize: 12, marginTop: 6 },
+  error: { color: "#c0392b", marginTop: 12, fontFamily: "PlusJakartaSans_400Regular" },
   primaryButton: { backgroundColor: "#111", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 24 },
-  primaryButtonText: { color: "#fff", fontFamily: "Outfit_600SemiBold" },
+  primaryButtonText: { color: "#fff", fontFamily: "PlusJakartaSans_600SemiBold" },
   dangerButton: {
     borderWidth: 1,
     borderColor: "#c0392b",
@@ -196,5 +196,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
   },
-  dangerButtonText: { color: "#c0392b", fontFamily: "Outfit_600SemiBold" },
+  dangerButtonText: { color: "#c0392b", fontFamily: "PlusJakartaSans_600SemiBold" },
 });

@@ -181,9 +181,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   heroTitle: {
-    fontFamily: font.bold,
+    fontFamily: font.extrabold,
     fontSize: 33,
-    lineHeight: 41,
+    lineHeight: 39,
+    letterSpacing: -0.6,
     color: colors.textInverse,
     marginTop: 8,
   },
@@ -220,7 +221,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   servicesSection: { paddingHorizontal: 20, paddingTop: 24 },
-  sectionTitle: { fontFamily: font.bold, fontSize: 22, color: colors.textPrimary },
+  sectionTitle: {
+    fontFamily: font.extrabold,
+    fontSize: 22,
+    letterSpacing: -0.4,
+    color: colors.textPrimary,
+  },
   featureCard: {
     backgroundColor: "#E9E7FB",
     borderRadius: radius.xl,

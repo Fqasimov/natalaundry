@@ -64,9 +64,9 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { padding: 16 },
-  empty: { fontFamily: "Outfit_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
+  empty: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
   row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
   rowUnread: { backgroundColor: "#fafafa" },
-  title: { fontFamily: "Outfit_600SemiBold" },
-  body: { fontFamily: "Outfit_400Regular", color: "#666", marginTop: 2 },
+  title: { fontFamily: "PlusJakartaSans_600SemiBold" },
+  body: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", marginTop: 2 },
 });

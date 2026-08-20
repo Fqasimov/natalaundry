@@ -40,25 +40,26 @@ with a red note explaining the ₼5 applies because the basket is under ₼40.
 `lib/pricing.ts` reproduces exactly those figures, and the Laravel test suite
 asserts them.
 
-## Known issue: the font cannot render Azerbaijani
+## Typeface: switched from Outfit to Plus Jakarta Sans
 
-**Outfit has no schwa glyph (`ə`/`Ə`) at all.** Google Fonts returns a subset
-without it even when the character is requested explicitly. `ə` appears in
-almost every Azerbaijani word — Hədiyyə, təmizləmə, əşya, çatdırılma — so every
-one of those words is being rendered with a fallback font today.
+The original build's font, Outfit, **has no schwa glyph (`ə`/`Ə`) at all** —
+Google Fonts returns a subset without it even when the character is requested
+explicitly. `ə` appears in almost every Azerbaijani word (Hədiyyə, təmizləmə,
+əşya, çatdırılma), so every one of those words was rendering with a
+mid-word fallback-font substitution. The `@expo-google-fonts/outfit` package
+also ships a latin-only subset besides, so `ş`/`Ş`/`ğ`/`Ğ` were missing too.
+The original App Store build shipped the identical 36 KB font files, so this
+was pre-existing, not something the rebuild introduced.
 
-On top of that, the `@expo-google-fonts/outfit` package ships a **latin-only**
-subset, so `ş`, `Ş`, `ğ`, `Ğ` are missing too. The original App Store build
-shipped the identical 36 KB font files, so this is pre-existing, not a
-regression introduced by the rebuild. iOS substitutes per-glyph from the system
-font, which is why the recording still looks acceptable.
-
-The font stack has been left exactly as it shipped, since the brief was to
-match the existing design. If you want genuinely consistent typography, the fix
-is to switch to a typeface with full Azerbaijani coverage — **Inter**,
-**Manrope**, **Plus Jakarta Sans** and **Nunito Sans** all include `ə` and are
-close in character to Outfit. That is a one-line change in `theme/tokens.ts`
-plus the `useFonts` call in `app/_layout.tsx`.
+Replaced it with **Plus Jakarta Sans**, verified glyph-by-glyph (via fontTools)
+against every weight used here (400/500/600/700/800) to cover the full
+Azerbaijani alphabet — `ə Ə ş Ş ğ Ğ ı İ ç Ç ö Ö ü Ü` all present. Similar
+geometric character to Outfit, so the visual identity carries over; the
+difference is every word now renders in one consistent face instead of
+silently switching mid-word. `theme/tokens.ts` also gained a small `type`
+scale (`display`/`h1`/`h2`/`h3`/`body`/`caption`/`eyebrow`) so headings pick
+up an extrabold weight and tightened tracking instead of each screen
+reinventing its own heading style.
 
 ## Still unverified
 

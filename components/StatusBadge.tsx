@@ -36,5 +36,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     alignSelf: "flex-start",
   },
-  text: { fontFamily: "Outfit_600SemiBold", fontSize: 12 },
+  text: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12 },
 });
