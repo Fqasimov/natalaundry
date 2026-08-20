@@ -35,17 +35,34 @@ pulled 2026-08-20. Column-level detail is filled in as we get more of the
 - `service_prices` has a public-read policy for `active = true` rows — likely
   the pricing shown on the booking screen.
 
+## Postgres functions (confirmed source)
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_assigned_courier_for(customer_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.orders o
+    WHERE o.user_id = customer_id
+      AND o.courier_id = auth.uid()
+      AND o.status IN ('pending', 'collecting', 'cleaning', 'delivering')
+  );
+$function$
+```
+
+`is_my_assigned_courier(id)` is presumably the customer-side mirror (same
+shape, checks `o.courier_id = courier_id AND o.user_id = auth.uid()`) but
+still needs to be pulled to confirm — the earlier `pg_proc` query only
+returned this one function so far, run it again if the second row didn't
+come back.
+
 ## Still needed
 
 - Full column list for every table above (run the `information_schema.columns`
   query and paste back **all** rows, not just one table).
+- `is_my_assigned_courier(id)` source (see above).
 - Any Edge Functions source (Dashboard → Edge Functions).
 - Storage bucket names + public/private status.
-- Any Postgres functions referenced by policies: `is_assigned_courier_for(id)`,
-  `is_my_assigned_courier(id)` — worth pulling their definitions too:
-
-```sql
-select proname, pg_get_functiondef(oid)
-from pg_proc
-where proname in ('is_assigned_courier_for', 'is_my_assigned_courier');
-```
