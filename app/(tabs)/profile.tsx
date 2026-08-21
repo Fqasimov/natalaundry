@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -22,23 +22,39 @@ import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 
 // Profile rebuilt to the structure of the Laravel/React reference build:
 // a header block, then Orders / Membership & balance / Account / Support
-// sections of tappable rows. Rendered in this app's own design language —
-// blue gradient hero, ivory surface, tinted icon bubbles, `font.*` tokens.
+// sections of tappable rows.
+//
+// Deliberately monochrome, unlike the rest of the app: the palette below is
+// local to this screen so the ivory/blue/service tints stay untouched
+// everywhere else. Hierarchy here comes from weight and grey level rather
+// than hue, so the rows still read as distinct without any colour.
 //
 // Rows whose destination screen doesn't exist yet are marked "Tezliklə"
 // rather than wired to a dead route, so nothing silently does nothing.
 
+const mono = {
+  heroFrom: "#3A3A3C",
+  heroTo: "#111112",
+  bg: "#FFFFFF",
+  surface: "#FFFFFF",
+  bubble: "#F2F2F3",
+  border: "#E4E4E6",
+  divider: "#EFEFF1",
+  ink: "#111112",
+  inkSoft: "#6E6E73",
+  inkFaint: "#A1A1A6",
+  inverse: "#FFFFFF",
+} as const;
+
 type RowProps = {
   icon: IconName;
-  tint: string;
-  fg: string;
   label: string;
   value?: string;
   soon?: boolean;
   onPress?: () => void;
 };
 
-function Row({ icon, tint, fg, label, value, soon, onPress }: RowProps) {
+function Row({ icon, label, value, soon, onPress }: RowProps) {
   const { t } = useI18n();
   return (
     <Pressable
@@ -46,8 +62,8 @@ function Row({ icon, tint, fg, label, value, soon, onPress }: RowProps) {
       onPress={soon ? undefined : onPress}
       disabled={soon}
     >
-      <View style={[s.rowIcon, { backgroundColor: tint }]}>
-        <AppIcon name={icon} size={19} color={fg} />
+      <View style={s.rowIcon}>
+        <AppIcon name={icon} size={19} color={soon ? mono.inkFaint : mono.ink} />
       </View>
       <Text style={[s.rowLabel, soon && s.rowLabelMuted]} numberOfLines={1}>
         {label}
@@ -64,7 +80,7 @@ function Row({ icon, tint, fg, label, value, soon, onPress }: RowProps) {
       <Ionicons
         name="chevron-forward"
         size={17}
-        color={soon ? colors.border : colors.textSecondary}
+        color={soon ? mono.border : mono.inkFaint}
       />
     </Pressable>
   );
@@ -124,7 +140,7 @@ export default function ProfileScreen() {
   if (isLoading || !profile) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={mono.ink} />
       </View>
     );
   }
@@ -143,14 +159,14 @@ export default function ProfileScreen() {
       >
         {/* ── Hero ── */}
         <LinearGradient
-          colors={[colors.heroFrom, colors.heroTo]}
+          colors={[mono.heroFrom, mono.heroTo]}
           style={[s.hero, { paddingTop: insets.top + 14 }]}
         >
           <Text style={s.heroTitle}>{t("profile")}</Text>
 
           <View style={s.identity}>
             <View style={s.avatar}>
-              <Ionicons name="person" size={34} color={colors.textInverse} />
+              <Ionicons name="person" size={34} color={mono.inverse} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.name} numberOfLines={1}>
@@ -170,9 +186,9 @@ export default function ProfileScreen() {
           </View>
 
           <View style={s.tierRow}>
-            <View style={[s.tierBadge, { backgroundColor: tier.tint }]}>
-              <AppIcon name="mci:medal-outline" size={14} color={tier.fg} />
-              <Text style={[s.tierName, { color: tier.fg }]}>{tier.name}</Text>
+            <View style={s.tierBadge}>
+              <AppIcon name="mci:medal-outline" size={14} color={mono.ink} />
+              <Text style={s.tierName}>{tier.name}</Text>
             </View>
             <Text style={s.tierProgress}>
               {remaining !== null && nextTier
@@ -188,8 +204,6 @@ export default function ProfileScreen() {
           <Section title={t("profileSectionOrders")}>
             <Row
               icon="mci:refresh"
-              tint="#E8F1FD"
-              fg={colors.primary}
               label={t("repeatLastOrder")}
               value={repeating ? "…" : undefined}
               onPress={repeatLastOrder}
@@ -197,8 +211,6 @@ export default function ProfileScreen() {
             <View style={s.divider} />
             <Row
               icon="mci:clipboard-text-outline"
-              tint="#FDE9E3"
-              fg={colors.accent}
               label={t("pastOrders")}
               onPress={() => router.push("/orders")}
             />
@@ -207,8 +219,6 @@ export default function ProfileScreen() {
           <Section title={t("profileSectionMembership")}>
             <Row
               icon="mci:wallet-outline"
-              tint="#E4F6EC"
-              fg={colors.success}
               label={t("myBalance")}
               value={money(profile.wallet_balance ?? 0)}
               onPress={() => router.push("/wallet")}
@@ -216,8 +226,6 @@ export default function ProfileScreen() {
             <View style={s.divider} />
             <Row
               icon="mci:crown-outline"
-              tint="#FCF0D2"
-              fg="#B98407"
               label={t("mySubscription")}
               value={
                 profile.is_subscribed ? t("subscriptionName") : t("subscriptionInactive")
@@ -227,8 +235,6 @@ export default function ProfileScreen() {
             <View style={s.divider} />
             <Row
               icon="mci:medal-outline"
-              tint={tier.tint}
-              fg={tier.fg}
               label={t("myLevel")}
               value={tier.name}
               soon
@@ -236,8 +242,6 @@ export default function ProfileScreen() {
             <View style={s.divider} />
             <Row
               icon="mci:account-multiple-plus-outline"
-              tint="#E7E6FB"
-              fg="#5B57D6"
               label={t("inviteFriend")}
               value={t("inviteFriendValue")}
               soon
@@ -247,32 +251,24 @@ export default function ProfileScreen() {
           <Section title={t("profileSectionAccount")}>
             <Row
               icon="ion:person-outline"
-              tint="#E8F1FD"
-              fg={colors.primary}
               label={t("personalInfo")}
               onPress={() => router.push("/profile/personal")}
             />
             <View style={s.divider} />
             <Row
               icon="ion:location-outline"
-              tint="#CFF0F6"
-              fg="#2AA5BD"
               label={t("myAddresses")}
               soon
             />
             <View style={s.divider} />
             <Row
               icon="mci:credit-card-outline"
-              tint="#FBD2E3"
-              fg="#DC3D80"
               label={t("paymentMethods")}
               soon
             />
             <View style={s.divider} />
             <Row
               icon="ion:notifications-outline"
-              tint="#FCE6CE"
-              fg="#E8912A"
               label={t("notificationsRow")}
               onPress={() => router.push("/notifications")}
             />
@@ -281,15 +277,13 @@ export default function ProfileScreen() {
           <Section title={t("profileSectionSupport")}>
             <Row
               icon="ion:help-circle-outline"
-              tint={colors.surfaceAlt}
-              fg={colors.textSecondary}
               label={t("helpSupport")}
               soon
             />
           </Section>
 
           <Pressable style={s.signOut} onPress={signOut}>
-            <Ionicons name="log-out-outline" size={19} color={colors.danger} />
+            <Ionicons name="log-out-outline" size={19} color={mono.ink} />
             <Text style={s.signOutLabel}>{t("signOut")}</Text>
           </Pressable>
         </View>
@@ -299,12 +293,12 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: mono.bg },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor: mono.bg,
   },
 
   // ── Hero ──
@@ -313,23 +307,23 @@ const s = StyleSheet.create({
     fontFamily: font.extrabold,
     fontSize: 26,
     letterSpacing: -0.4,
-    color: colors.textInverse,
+    color: mono.inverse,
   },
   identity: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 20 },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
   },
-  name: { fontFamily: font.bold, fontSize: 19, color: colors.textInverse },
+  name: { fontFamily: font.bold, fontSize: 19, color: mono.inverse },
   contact: {
     fontFamily: font.regular,
     fontSize: 13,
     lineHeight: 19,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.72)",
     marginTop: 1,
   },
   tierRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18 },
@@ -337,25 +331,26 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    backgroundColor: mono.inverse,
     borderRadius: radius.pill,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
-  tierName: { fontFamily: font.bold, fontSize: 12.5 },
+  tierName: { fontFamily: font.bold, fontSize: 12.5, color: mono.ink },
   tierProgress: {
     flex: 1,
     fontFamily: font.regular,
     fontSize: 12,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.72)",
   },
 
   // ── Body ──
   body: { paddingHorizontal: 20, paddingTop: 22, gap: 22 },
   notice: {
     ...type.caption,
-    color: colors.primary,
-    backgroundColor: colors.primarySoft,
+    color: mono.ink,
+    backgroundColor: mono.bubble,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -366,16 +361,16 @@ const s = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: 15,
     letterSpacing: -0.2,
-    color: colors.textPrimary,
+    color: mono.ink,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: mono.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: mono.border,
     overflow: "hidden",
   },
-  divider: { height: 1, backgroundColor: colors.divider, marginLeft: 60 },
+  divider: { height: 1, backgroundColor: mono.divider, marginLeft: 60 },
 
   row: {
     flexDirection: "row",
@@ -384,11 +379,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  rowPressed: { backgroundColor: colors.surfaceAlt },
+  rowPressed: { backgroundColor: mono.bubble },
   rowIcon: {
     width: 34,
     height: 34,
     borderRadius: 11,
+    backgroundColor: mono.bubble,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -396,27 +392,29 @@ const s = StyleSheet.create({
     flex: 1,
     fontFamily: font.medium,
     fontSize: 14.5,
-    color: colors.textPrimary,
+    color: mono.ink,
   },
-  rowLabelMuted: { color: colors.textSecondary },
-  rowValue: { fontFamily: font.bold, fontSize: 13.5, color: colors.textSecondary },
+  rowLabelMuted: { color: mono.inkFaint },
+  rowValue: { fontFamily: font.bold, fontSize: 13.5, color: mono.inkSoft },
   soonPill: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: mono.bubble,
     borderRadius: radius.pill,
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  soonLabel: { fontFamily: font.semibold, fontSize: 10.5, color: colors.textSecondary },
+  soonLabel: { fontFamily: font.semibold, fontSize: 10.5, color: mono.inkFaint },
 
   signOut: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: mono.bg,
+    borderWidth: 1,
+    borderColor: mono.ink,
     borderRadius: radius.pill,
     paddingVertical: 15,
     marginTop: 2,
   },
-  signOutLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.danger },
+  signOutLabel: { fontFamily: font.semibold, fontSize: 15, color: mono.ink },
 });

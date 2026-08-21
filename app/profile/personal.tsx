@@ -5,15 +5,28 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
+  Pressable,
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, radius, type } from "@/theme/tokens";
+import { font, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import { supabase } from "@/lib/supabase";
-import { BigButton, ScreenHeader } from "@/components/ui";
+import { ScreenHeader } from "@/components/ui";
+
+// Monochrome to match the profile screen it opens from — same local palette,
+// kept out of theme/tokens so the rest of the app stays in colour.
+const mono = {
+  bg: "#FFFFFF",
+  surface: "#FFFFFF",
+  bubble: "#F2F2F3",
+  border: "#E4E4E6",
+  ink: "#111112",
+  inkSoft: "#6E6E73",
+  inverse: "#FFFFFF",
+} as const;
 
 // profiles.name/phone are the confirmed editable fields — customer_details/
 // courier_details turned out to hold system-managed stuff instead
@@ -57,7 +70,7 @@ export default function PersonalDetailsScreen() {
   if (isLoading || !profile) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={mono.ink} />
       </View>
     );
   }
@@ -106,43 +119,57 @@ export default function PersonalDetailsScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {saved ? <Text style={styles.saved}>{t("saved")}</Text> : null}
 
-        <BigButton
-          label={t("save")}
-          tone="primary"
+        {/* BigButton is tied to the app's colour tones, so this screen uses a
+            plain black pill to stay monochrome. */}
+        <Pressable
+          style={({ pressed }) => [styles.saveButton, pressed && { opacity: 0.85 }]}
           onPress={save}
-          loading={saving}
-          style={styles.saveButton}
-        />
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color={mono.inverse} />
+          ) : (
+            <Text style={styles.saveLabel}>{t("save")}</Text>
+          )}
+        </Pressable>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: mono.bg },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor: mono.bg,
   },
   body: { paddingHorizontal: 20, paddingTop: 8, gap: 18 },
   field: { gap: 7 },
-  label: { ...type.bodyMedium, fontSize: 13.5, color: colors.textSecondary },
+  label: { ...type.bodyMedium, fontSize: 13.5, color: mono.inkSoft },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: mono.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: mono.border,
     borderRadius: radius.md,
     paddingHorizontal: 15,
     paddingVertical: 15,
     fontFamily: font.medium,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: mono.ink,
   },
-  inputReadOnly: { backgroundColor: colors.surfaceAlt, justifyContent: "center" },
-  readOnlyValue: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
-  error: { ...type.caption, color: colors.danger },
-  saved: { ...type.caption, color: colors.success },
-  saveButton: { marginTop: 6 },
+  inputReadOnly: { backgroundColor: mono.bubble, justifyContent: "center" },
+  readOnlyValue: { fontFamily: font.medium, fontSize: 15, color: mono.inkSoft },
+  error: { ...type.caption, color: mono.ink, fontFamily: font.semibold },
+  saved: { ...type.caption, color: mono.inkSoft },
+  saveButton: {
+    backgroundColor: mono.ink,
+    borderRadius: radius.pill,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  saveLabel: { fontFamily: font.semibold, fontSize: 16, color: mono.inverse },
 });
