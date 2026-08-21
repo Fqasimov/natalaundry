@@ -29,6 +29,23 @@ export async function fetchOrderItems(orderId: string) {
   return data as OrderItem[];
 }
 
+/**
+ * The most recent completed order, used by "repeat last order" on the profile
+ * screen. Toplu orders are excluded: they carry no line items to rebuild a
+ * basket from — the courier sets the total after counting.
+ */
+export async function fetchLastCompletedOrder() {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("status", "completed" satisfies OrderStatus)
+    .neq("service_type", "toplu")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (data as Order[])[0] ?? null;
+}
+
 // "Couriers can view pending orders" — jobs nobody has claimed yet.
 export async function fetchAvailableOrdersForCourier() {
   const { data, error } = await supabase
