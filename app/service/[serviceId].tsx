@@ -118,13 +118,10 @@ export default function ServiceCatalogueScreen() {
         </View>
 
         <View style={styles.list}>
-          {items.map((item, index) => {
+          {items.map((item) => {
             const qty = quantityOf(service.serviceId, item.itemId);
             return (
-              <View
-                key={item.itemId}
-                style={[styles.itemRow, index > 0 && styles.itemRowDivided]}
-              >
+              <View key={item.itemId} style={styles.itemRow}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemPrice}>{money(item.price)}</Text>
                 {qty > 0 ? (
@@ -249,22 +246,18 @@ const styles = StyleSheet.create({
   priceTitle: { fontFamily: font.extrabold, fontSize: 18, letterSpacing: -0.3, color: colors.textPrimary },
   priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary },
   priceCount: { fontFamily: font.medium, fontSize: 12.5, color: colors.textSecondary },
-  list: {
-    marginHorizontal: 16,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
+  list: { marginHorizontal: 16, gap: 10 },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  itemRowDivided: { borderTopWidth: 1, borderTopColor: colors.divider },
   itemName: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
   itemPrice: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
   helpCard: {
