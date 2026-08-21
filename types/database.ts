@@ -10,6 +10,11 @@ export type UserRole = "user" | "courier" | "admin";
 // orders.status (customer/courier-facing macro state):
 export type OrderStatus = "pending" | "collecting" | "cleaning" | "delivering" | "completed" | "cancelled";
 
+// orders.lifecycle_state — the nine-step collection → laundry → delivery flow
+// (App\Support\OrderLifecycle server-side, lib/lifecycle.ts here). `status`
+// above is derived from it on every transition, so the two never disagree.
+export type { LifecycleState } from "@/lib/lifecycle";
+
 // orders.dispatch_state (internal admin workflow — an order is approved by
 // an admin before it's offered to couriers). Values beyond the default and
 // what 'assigned_at'/'offered_at'/'approved_at' imply are still a guess.
@@ -68,6 +73,35 @@ export type Order = {
   cleaning_started_at: string | null;
   delivering_at: string | null;
   delivered_at: string | null;
+  lifecycle_state: import("@/lib/lifecycle").LifecycleState;
+  processing_finished_at: string | null;
+  promo_code: string | null;
+};
+
+/** One append-only row per lifecycle transition; drives the timeline. */
+export type OrderStatusLog = {
+  id: string;
+  order_id: string;
+  from_state: string | null;
+  to_state: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+/** A GPS fix streamed by a courier while en route. */
+export type CourierLocation = {
+  id: string;
+  order_id: string;
+  courier_id: string;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  speed: number | null;
+  accuracy: number | null;
+  recorded_at: string | null;
+  created_at: string;
 };
 
 export type OrderItem = {

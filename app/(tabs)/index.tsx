@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,12 @@ import { TOPLU_DEPOSIT } from "@/lib/toplu";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
+import { useAuth } from "@/lib/auth-context";
+import { useProfile } from "@/lib/profile";
+import { fetchActiveOrder, hasAnyOrder } from "@/lib/tracking";
+import { LIFECYCLE_LABEL, stepIndex, LIFECYCLE_STATES } from "@/lib/lifecycle";
+import { FIRST_ORDER_CODE } from "@/lib/promo";
+import type { Order } from "@/types/database";
 
 // ─── Service design tokens (from screenshot) ────────────────────────────────
 const SERVICE_THEME: Record<
@@ -111,6 +117,40 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t, lang, setLang } = useI18n();
   const { count } = useCart();
+  const { session } = useAuth();
+  const { profile } = useProfile();
+
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [ordered, setOrdered] = useState<boolean | null>(null);
+
+  // Refreshed whenever the screen regains focus rather than on an interval:
+  // the hero only has to be right when someone is looking at it, and polling
+  // here would keep a request in flight for the whole session.
+  const refresh = useCallback(async () => {
+    const userId = session?.user.id;
+    if (!userId) return;
+    try {
+      const [order, has] = await Promise.all([
+        fetchActiveOrder(userId),
+        hasAnyOrder(userId),
+      ]);
+      setActiveOrder(order);
+      setOrdered(has);
+    } catch {
+      // A failed refresh leaves the last known state on screen; the hero is
+      // informational, so a transient error shouldn't blank it or interrupt.
+    }
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Only the given name — "Salam, Məhəmməd" reads better than the full name.
+  const firstName = profile?.name?.trim().split(/\s+/)[0] ?? "";
+  // Held back until the check resolves, so it can't flash for a returning
+  // customer on a slow connection.
+  const showPromo = ordered === false;
 
   const [feat, ironing, shoes, bedding, bags] = CATALOG;
   const featTheme  = SERVICE_THEME.dry_cleaning;
@@ -125,7 +165,7 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero gradient header ── */}
+        {/* ── Hero: greeting, the welcome offer, and the live order ── */}
         <LinearGradient
           colors={[colors.heroFrom, colors.heroTo]}
           style={[styles.hero, { paddingTop: insets.top + 12 }]}
@@ -162,15 +202,74 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <Text style={styles.brand}>{t("brand")}</Text>
-          <Text style={styles.heroTitle}>{t("heroTitle")}</Text>
-          <Text style={styles.heroSubtitle}>{t("heroSubtitle")}</Text>
+          <Text style={styles.greeting}>
+            {firstName ? t("greeting", { name: firstName }) : t("greetingNoName")}
+          </Text>
 
-          <View style={styles.chipRow}>
-            <HeroChip icon="cube-outline" label={t("chipPickup")} />
-            <HeroChip icon="headset-outline" label={t("chipSupport")} />
-            <HeroChip icon="navigate-outline" label={t("chipTracking")} />
-          </View>
+          {/* The welcome offer, shown only until the first order exists. It
+              isn't typed in anywhere — the server applies it automatically —
+              so this is an announcement, not an input. */}
+          {showPromo ? (
+            <View style={styles.promoCard}>
+              <View style={styles.promoIcon}>
+                <AppIcon name="mci:sale" size={22} color="#B25C00" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.promoTitleRow}>
+                  <Text style={styles.promoTitle}>{t("firstOrderPromoTitle")}</Text>
+                  <View style={styles.promoBadge}>
+                    <Text style={styles.promoBadgeLabel}>{t("firstOrderPromoBadge")}</Text>
+                  </View>
+                </View>
+                <Text style={styles.promoBody}>
+                  {t("firstOrderPromoBody", { code: FIRST_ORDER_CODE })}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Live order: status, progress and a way into tracking. */}
+          {activeOrder ? (
+            <Pressable
+              style={styles.orderCard}
+              onPress={() => router.push(`/order/${activeOrder.id}`)}
+            >
+              <View style={styles.orderTopRow}>
+                <Text style={styles.heroOrderLabel}>{t("activeOrder")}</Text>
+                <Text style={styles.orderNo}>
+                  {t("orderNo", { no: activeOrder.order_no ?? "—" })}
+                </Text>
+              </View>
+              <Text style={styles.orderState}>
+                {t(LIFECYCLE_LABEL[activeOrder.lifecycle_state] ?? "stateOrderPlaced")}
+              </Text>
+
+              <View style={styles.progressTrack}>
+                {LIFECYCLE_STATES.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.progressSegment,
+                      i <= (stepIndex(activeOrder.lifecycle_state) ?? 0) && styles.progressSegmentDone,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <View style={styles.orderActionRow}>
+                <Text style={styles.orderAction}>{t("trackOrder")}</Text>
+                <Ionicons name="arrow-forward" size={15} color={colors.textInverse} />
+              </View>
+            </Pressable>
+          ) : (
+            <View style={styles.emptyOrderCard}>
+              <Ionicons name="cube-outline" size={20} color="rgba(255,255,255,0.9)" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.emptyOrderTitle}>{t("noActiveOrder")}</Text>
+                <Text style={styles.emptyOrderBody}>{t("noActiveOrderBody")}</Text>
+              </View>
+            </View>
+          )}
 
           <Pressable
             style={styles.giftBanner}
@@ -385,21 +484,6 @@ export default function HomeScreen() {
   );
 }
 
-function HeroChip({
-  icon,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}) {
-  return (
-    <View style={styles.chip}>
-      <Ionicons name={icon} size={13} color="#FFD98A" />
-      <Text style={styles.chipLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
 
@@ -423,38 +507,106 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  brand: {
-    fontFamily: font.semibold,
-    fontSize: 17,
-    color: "rgba(255,255,255,0.82)",
-    marginTop: 22,
-  },
-  heroTitle: {
+  greeting: {
     fontFamily: font.extrabold,
-    fontSize: 33,
-    lineHeight: 39,
-    letterSpacing: -0.6,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
     color: colors.textInverse,
-    marginTop: 8,
+    marginTop: 20,
   },
-  heroSubtitle: {
-    fontFamily: font.regular,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: "rgba(255,255,255,0.88)",
-    marginTop: 14,
-  },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 20 },
-  chip: {
+
+  // First-order offer
+  promoCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 12,
+    backgroundColor: "#FFF4DE",
+    borderRadius: radius.lg,
+    padding: 14,
+    marginTop: 18,
   },
-  chipLabel: { fontFamily: font.medium, fontSize: 12, color: colors.textInverse },
+  promoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFE1AE",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  promoTitle: {
+    flex: 1,
+    fontFamily: font.bold,
+    fontSize: 14.5,
+    color: "#5A3A00",
+  },
+  promoBadge: {
+    backgroundColor: "#FFD48A",
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  promoBadgeLabel: { fontFamily: font.bold, fontSize: 10, color: "#5A3A00" },
+  promoBody: {
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: "#7A5510",
+    marginTop: 3,
+  },
+
+  // Active order
+  orderCard: {
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderRadius: radius.lg,
+    padding: 16,
+    marginTop: 16,
+  },
+  orderTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  heroOrderLabel: {
+    fontFamily: font.semibold,
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.75)",
+  },
+  orderNo: { fontFamily: font.medium, fontSize: 12, color: "rgba(255,255,255,0.75)" },
+  orderState: {
+    fontFamily: font.bold,
+    fontSize: 18,
+    letterSpacing: -0.2,
+    color: colors.textInverse,
+    marginTop: 6,
+  },
+  progressTrack: { flexDirection: "row", gap: 4, marginTop: 14 },
+  progressSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  progressSegmentDone: { backgroundColor: "#FFD98A" },
+  orderActionRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14 },
+  orderAction: { fontFamily: font.bold, fontSize: 14, color: colors.textInverse },
+
+  emptyOrderCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.13)",
+    borderRadius: radius.lg,
+    padding: 16,
+    marginTop: 16,
+  },
+  emptyOrderTitle: { fontFamily: font.bold, fontSize: 15, color: colors.textInverse },
+  emptyOrderBody: {
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 3,
+  },
   giftBanner: { marginTop: 22, borderRadius: radius.lg, overflow: "hidden" },
   giftBannerInner: {
     flexDirection: "row",
