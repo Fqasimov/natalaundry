@@ -11,6 +11,10 @@ return [
         'url' => env('SUPABASE_URL'),
         'jwt_secret' => env('SUPABASE_JWT_SECRET'),
         'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
+        // Safe to hand to a browser — it is the publishable key, and RLS is
+        // what protects the data. The admin console signs in with it so staff
+        // use their normal Supabase credentials rather than a second store.
+        'anon_key' => env('SUPABASE_ANON_KEY'),
     ],
 
 

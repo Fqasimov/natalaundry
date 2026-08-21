@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\GiftBoxController;
 use App\Http\Controllers\Api\OrderController;
@@ -40,6 +41,11 @@ Route::middleware('supabase')->group(function () {
     // Live tracking: courier writes, customer reads.
     Route::post('orders/{order}/location', [TrackingController::class, 'store']);
     Route::get('orders/{order}/location', [TrackingController::class, 'show']);
+
+    // Admin website. The dispatch and facility controls live in a browser
+    // app, not in the phone app; these are the endpoints it drives.
+    Route::get('admin/orders', [AdminController::class, 'orders']);
+    Route::get('admin/couriers', [AdminController::class, 'couriers']);
 
     Route::get('gift-boxes', [GiftBoxController::class, 'index']);
     Route::post('gift-boxes/open', [GiftBoxController::class, 'open']);
