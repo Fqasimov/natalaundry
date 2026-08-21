@@ -8,27 +8,39 @@ import {
   type StyleProp,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { AppIcon, type IconName } from "@/components/AppIcon";
 import { colors, font, radius } from "@/theme/tokens";
 
-/** Back chevron + centred bold title + optional right-hand text action. */
+/**
+ * Back chevron + centred bold title + optional right-hand text action.
+ *
+ * router.back() is a silent no-op when the stack is empty — which happens on
+ * a deep link, a reload, or after a router.replace — so the button appears
+ * dead. `backFallback` gives it somewhere to go in that case.
+ */
 export function ScreenHeader({
   title,
   rightLabel,
   onRightPress,
   onBack,
+  backFallback = "/(tabs)",
 }: {
   title: string;
   rightLabel?: string;
   onRightPress?: () => void;
   onBack?: () => void;
+  backFallback?: Href<string>;
 }) {
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(backFallback);
+  };
   return (
     <View style={s.header}>
       <Pressable
         hitSlop={12}
-        onPress={onBack ?? (() => router.back())}
+        onPress={onBack ?? goBack}
         style={s.headerSide}
       >
         <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
@@ -190,8 +202,8 @@ const s = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  headerSide: { width: 56 },
-  headerSideRight: { width: 56, alignItems: "flex-end" },
+  headerSide: { width: 56, height: 44, justifyContent: "center" },
+  headerSideRight: { width: 56, height: 44, alignItems: "flex-end", justifyContent: "center" },
   headerTitle: {
     flex: 1,
     textAlign: "center",

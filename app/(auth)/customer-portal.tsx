@@ -8,6 +8,14 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { AppLogo } from "@/components/AppLogo";
 import { colors, font, radius } from "@/theme/tokens";
 
+// router.back() does nothing when the stack is empty — a deep link or a
+// reload lands here with no history — so fall back to the welcome screen
+// rather than leaving the button dead.
+const goBack = () => {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+};
+
 export default function CustomerPortalScreen() {
   const insets = useSafeAreaInsets();
   const { t, lang, setLang } = useI18n();
@@ -38,7 +46,7 @@ export default function CustomerPortalScreen() {
 
         {/* Back button */}
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
           hitSlop={12}
         >
@@ -114,6 +122,7 @@ const styles = StyleSheet.create({
   backBtn: {
     alignSelf: "flex-start",
     marginBottom: 20,
+    padding: 4,
   },
   backCircle: {
     width: 36,

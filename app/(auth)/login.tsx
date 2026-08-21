@@ -11,6 +11,14 @@ import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { BigButton } from "@/components/ui";
 
+// router.back() does nothing when the stack is empty — a deep link or a
+// reload lands here with no history — so fall back to the welcome screen
+// rather than leaving the button dead.
+const goBack = () => {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+};
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { signInWithPassword } = useAuth();
@@ -57,7 +65,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Back button */}
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+        <Pressable onPress={goBack} style={styles.backBtn} hitSlop={12}>
           <View style={styles.backCircle}>
             <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
           </View>
@@ -163,7 +171,7 @@ const styles = StyleSheet.create({
   },
   langLabelActive: { color: colors.textPrimary },
 
-  backBtn: { marginBottom: 18, alignSelf: "flex-start" },
+  backBtn: { marginBottom: 18, alignSelf: "flex-start", padding: 4 },
   backCircle: {
     width: 36,
     height: 36,
