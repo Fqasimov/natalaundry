@@ -12,8 +12,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
-import { colors, font, radius } from "@/theme/tokens";
+import { colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { CATALOG } from "@/lib/catalog";
+import { TOPLU_DEPOSIT } from "@/lib/toplu";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
@@ -286,6 +287,31 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Toplu — a different kind of order (deposit now, real total after
+              the courier counts), so it gets its own full-width band rather
+              than sitting in the grid as if it were one more price list. */}
+          <PressCard
+            onPress={() => router.push("/toplu")}
+            style={[styles.topluCard, { backgroundColor: serviceTheme.toplu.tint }]}
+            contentStyle={styles.topluContent}
+          >
+            <ServiceIcon
+              icon={serviceTheme.toplu.icon}
+              bg="rgba(255,255,255,0.65)"
+              fg={serviceTheme.toplu.fg}
+              size={46}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.topluTitle}>{serviceTheme.toplu.label}</Text>
+              <Text style={styles.topluTagline}>{t("topluTagline")}</Text>
+            </View>
+            <View style={styles.topluDepositPill}>
+              <Text style={[styles.topluDepositLabel, { color: serviceTheme.toplu.fg }]}>
+                {money(TOPLU_DEPOSIT)}
+              </Text>
+            </View>
+          </PressCard>
+
           {/* Row 2: Two wide horizontal cards */}
           <View style={styles.row2}>
             {/* Ev Tekstili */}
@@ -539,6 +565,29 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: 12,
   },
+
+  // Toplu — full-width band between the two grid rows
+  topluCard: { borderRadius: 20 },
+  topluContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+  },
+  topluTitle: { fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
+  topluTagline: {
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+  topluDepositPill: {
+    backgroundColor: "rgba(255,255,255,0.75)",
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  topluDepositLabel: { fontFamily: font.bold, fontSize: 14 },
 
   // Row 2: two wide horizontal cards
   row2: { flexDirection: "row", gap: 10 },
