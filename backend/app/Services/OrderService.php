@@ -32,6 +32,7 @@ class OrderService
         private readonly PricingService $pricing,
         private readonly CatalogService $catalog,
         private readonly GiftBoxService $giftBoxes,
+        private readonly PromoService $promos = new PromoService,
     ) {}
 
     /**
@@ -83,7 +84,7 @@ class OrderService
         $isOutsideCity = (bool) ($payload['is_outside_city'] ?? false);
         $subtotal = $this->pricing->subtotal($lines);
 
-        [$discount, $promo, $userReward] = $this->resolveDiscounts(
+        [$discount, $promo, $userReward, $autoPromoCode] = $this->resolveDiscounts(
             $profile,
             $subtotal,
             $payload['promo_code'] ?? null,
@@ -102,7 +103,8 @@ class OrderService
         }
 
         return DB::transaction(function () use (
-            $profile, $payload, $tier, $lines, $breakdown, $isOutsideCity, $photos, $promo, $userReward
+            $profile, $payload, $tier, $lines, $breakdown, $isOutsideCity, $photos, $promo,
+            $userReward, $autoPromoCode
         ) {
             $order = Order::create([
                 'user_id' => $profile->id,
@@ -112,6 +114,7 @@ class OrderService
                 'service_type' => $lines[0]['service_id'],
                 'subtotal' => $breakdown['subtotal'],
                 'discount' => $breakdown['discount'],
+                'promo_code' => $promo?->code ?? $autoPromoCode,
                 'delivery_fee' => $breakdown['delivery_fee'],
                 'total' => $breakdown['total'],
                 'collection_time' => $payload['collection_time'],
@@ -142,7 +145,7 @@ class OrderService
     }
 
     /**
-     * @return array{0: float, 1: ?PromoCode, 2: ?UserReward}
+     * @return array{0: float, 1: ?PromoCode, 2: ?UserReward, 3: ?string}
      */
     private function resolveDiscounts(
         Profile $profile,
@@ -153,6 +156,7 @@ class OrderService
         $discount = 0.0;
         $promo = null;
         $userReward = null;
+        $autoCode = null;
 
         if ($promoCode) {
             $promo = PromoCode::query()->where('code', strtoupper(trim($promoCode)))->first();
@@ -162,6 +166,18 @@ class OrderService
                 ]);
             }
             $discount += $promo->discountFor($subtotal);
+        }
+
+        // The ILK20 welcome offer. Applied automatically — nothing in the app
+        // asks the customer to type it — and only when it beats whatever they
+        // did enter, so a better campaign code is never silently downgraded.
+        // It stacks with a gift-box reward but not with another promo code.
+        if ($promo === null) {
+            $auto = $this->promos->firstOrderDiscount($profile, $subtotal);
+            if ($auto > 0) {
+                $discount += $auto;
+                $autoCode = $this->promos->firstOrderCode();
+            }
         }
 
         if ($userRewardId) {
@@ -179,7 +195,7 @@ class OrderService
             $discount += $this->giftBoxes->discountValue($userReward, $subtotal);
         }
 
-        return [round(min($discount, $subtotal), 2), $promo, $userReward];
+        return [round(min($discount, $subtotal), 2), $promo, $userReward, $autoCode];
     }
 
 

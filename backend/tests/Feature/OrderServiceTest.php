@@ -40,6 +40,38 @@ class OrderServiceTest extends TestCase
         ], $attributes));
     }
 
+    /**
+     * A customer who has ordered before.
+     *
+     * The ILK20 welcome discount applies automatically to a first order, so
+     * tests that pin the base pricing arithmetic (the video's ₼37 + ₼5 = ₼42)
+     * need a customer who is past it — otherwise they'd be asserting the
+     * discounted total and the invariant would quietly stop being tested.
+     */
+    private function returningCustomer(array $attributes = []): Profile
+    {
+        $profile = $this->customer($attributes);
+
+        Order::forceCreate([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => $profile->id,
+            'status' => 'completed',
+            'delivery_tier' => 'standard',
+            'service_type' => 'dry_cleaning',
+            'subtotal' => 10,
+            'discount' => 0,
+            'delivery_fee' => 0,
+            'total' => 10,
+            'collection_time' => 'Dünən',
+            'delivery_time' => 'Dünən',
+            'is_outside_city' => false,
+            'item_photos' => [],
+            'created_at' => now()->subDay(),
+        ]);
+
+        return $profile;
+    }
+
     private function payload(array $overrides = []): array
     {
         return array_merge([
@@ -57,7 +89,7 @@ class OrderServiceTest extends TestCase
 
     public function test_it_creates_an_order_priced_from_the_catalogue(): void
     {
-        $order = $this->orders->create($this->customer(), $this->payload());
+        $order = $this->orders->create($this->returningCustomer(), $this->payload());
 
         // Sviter ₼9 × 3 + Şalvar ₼10 = ₼37, under the ₼40 threshold so ₼5
         // delivery applies — the exact figures the video shows.
@@ -127,10 +159,34 @@ class OrderServiceTest extends TestCase
 
     public function test_outside_city_adds_its_surcharge(): void
     {
-        $order = $this->orders->create($this->customer(), $this->payload(['is_outside_city' => true]));
+        $order = $this->orders->create($this->returningCustomer(), $this->payload(['is_outside_city' => true]));
 
         $this->assertSame('10.00', (string) $order->delivery_fee);
         $this->assertSame('47.00', (string) $order->total);
+    }
+
+    /**
+     * The welcome offer is applied by the server, not entered by the customer:
+     * the payload carries no promo_code at all.
+     */
+    public function test_a_first_order_gets_the_welcome_discount(): void
+    {
+        $order = $this->orders->create($this->customer(), $this->payload());
+
+        // ₼37 subtotal − 20% = ₼7.40 off, then the ₼5 under-threshold fee.
+        $this->assertSame('7.40', (string) $order->discount);
+        $this->assertSame('34.60', (string) $order->total);
+        $this->assertSame('ILK20', $order->promo_code);
+    }
+
+    public function test_a_second_order_does_not_get_it_again(): void
+    {
+        $customer = $this->returningCustomer();
+        $order = $this->orders->create($customer, $this->payload());
+
+        $this->assertSame('0.00', (string) $order->discount);
+        $this->assertNull($order->promo_code);
+        $this->assertSame('42.00', (string) $order->total);
     }
 
     public function test_only_pending_orders_can_be_cancelled(): void
