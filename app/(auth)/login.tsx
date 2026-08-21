@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppLogo } from "@/components/AppLogo";
 import { colors, font, radius } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
@@ -61,6 +62,11 @@ export default function LoginScreen() {
             <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
           </View>
         </Pressable>
+
+        {/* App mark */}
+        <View style={styles.logoWrap}>
+          <AppLogo size={64} />
+        </View>
 
         {/* Title */}
         <Text style={styles.heroTitle}>{t("customerLogin")}</Text>
@@ -167,6 +173,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  logoWrap: { marginBottom: 16 },
   heroTitle: {
     fontFamily: font.extrabold,
     fontSize: 30,

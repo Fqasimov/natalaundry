@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
+import { AppLogo } from "@/components/AppLogo";
 import { colors, font, radius } from "@/theme/tokens";
 
 export default function CustomerPortalScreen() {
@@ -46,11 +47,9 @@ export default function CustomerPortalScreen() {
           </View>
         </Pressable>
 
-        {/* Avatar icon */}
+        {/* App mark */}
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            <Ionicons name="person-circle" size={72} color={colors.textInverse} />
-          </View>
+          <AppLogo size={80} />
         </View>
 
         {/* Title */}
@@ -126,7 +125,6 @@ const styles = StyleSheet.create({
   },
 
   avatarWrap: { marginBottom: 16 },
-  avatar: { alignItems: "center", justifyContent: "center" },
 
   title: {
     fontFamily: font.extrabold,

@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
-import { font, money, radius, type } from "@/theme/tokens";
+import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -24,17 +24,15 @@ import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 // a header block, then Orders / Membership & balance / Account / Support
 // sections of tappable rows.
 //
-// Deliberately monochrome, unlike the rest of the app: the palette below is
-// local to this screen so the ivory/blue/service tints stay untouched
-// everywhere else. Hierarchy here comes from weight and grey level rather
-// than hue, so the rows still read as distinct without any colour.
+// The hero keeps the app's blue gradient so the screen still belongs to the
+// product; everything below it is monochrome, using the local palette here so
+// the ivory/blue/service tints stay untouched on every other screen. Hierarchy
+// in the body comes from weight and grey level rather than hue.
 //
 // Rows whose destination screen doesn't exist yet are marked "Tezliklə"
 // rather than wired to a dead route, so nothing silently does nothing.
 
 const mono = {
-  heroFrom: "#3A3A3C",
-  heroTo: "#111112",
   bg: "#FFFFFF",
   surface: "#FFFFFF",
   bubble: "#F2F2F3",
@@ -159,16 +157,19 @@ export default function ProfileScreen() {
       >
         {/* ── Hero ── */}
         <LinearGradient
-          colors={[mono.heroFrom, mono.heroTo]}
+          colors={[colors.heroFrom, colors.heroTo]}
           style={[s.hero, { paddingTop: insets.top + 14 }]}
         >
           <Text style={s.heroTitle}>{t("profile")}</Text>
 
+          {/* Avatar and credentials are centred against each other, and the
+              contact lines share one rhythm, so the block reads as a single
+              unit instead of three loose lines beside a circle. */}
           <View style={s.identity}>
             <View style={s.avatar}>
-              <Ionicons name="person" size={34} color={mono.inverse} />
+              <Ionicons name="person" size={32} color={mono.inverse} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={s.credentials}>
               <Text style={s.name} numberOfLines={1}>
                 {profile.name?.trim() || "—"}
               </Text>
@@ -187,10 +188,10 @@ export default function ProfileScreen() {
 
           <View style={s.tierRow}>
             <View style={s.tierBadge}>
-              <AppIcon name="mci:medal-outline" size={14} color={mono.ink} />
+              <AppIcon name="mci:medal-outline" size={14} color={colors.primary} />
               <Text style={s.tierName}>{tier.name}</Text>
             </View>
-            <Text style={s.tierProgress}>
+            <Text style={s.tierProgress} numberOfLines={2}>
               {remaining !== null && nextTier
                 ? t("levelProgress", { name: nextTier.name, points: remaining })
                 : t("levelMax")}
@@ -302,7 +303,7 @@ const s = StyleSheet.create({
   },
 
   // ── Hero ──
-  hero: { paddingHorizontal: 20, paddingBottom: 22 },
+  hero: { paddingHorizontal: 20, paddingBottom: 24 },
   heroTitle: {
     fontFamily: font.extrabold,
     fontSize: 26,
@@ -311,22 +312,28 @@ const s = StyleSheet.create({
   },
   identity: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 20 },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255,255,255,0.20)",
     alignItems: "center",
     justifyContent: "center",
   },
-  name: { fontFamily: font.bold, fontSize: 19, color: mono.inverse },
+  credentials: { flex: 1, justifyContent: "center" },
+  name: {
+    fontFamily: font.bold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: mono.inverse,
+    marginBottom: 3,
+  },
   contact: {
     fontFamily: font.regular,
     fontSize: 13,
-    lineHeight: 19,
-    color: "rgba(255,255,255,0.72)",
-    marginTop: 1,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.80)",
   },
-  tierRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18 },
+  tierRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 20 },
   tierBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -336,13 +343,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
-  tierName: { fontFamily: font.bold, fontSize: 12.5, color: mono.ink },
+  tierName: { fontFamily: font.bold, fontSize: 12.5, color: colors.primary },
   tierProgress: {
     flex: 1,
     fontFamily: font.regular,
     fontSize: 12,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.72)",
+    color: "rgba(255,255,255,0.80)",
   },
 
   // ── Body ──

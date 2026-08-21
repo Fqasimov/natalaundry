@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
+import { AppLogo } from "@/components/AppLogo";
 import { colors, font, radius } from "@/theme/tokens";
 
 type Role = "customer" | "courier" | "admin";
@@ -99,11 +100,9 @@ export default function WelcomeScreen() {
           ))}
         </View>
 
-        {/* Water-drop logo */}
+        {/* App mark */}
         <View style={styles.logoWrap}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="water" size={42} color={colors.primary} />
-          </View>
+          <AppLogo size={88} />
         </View>
 
         {/* Brand name */}
@@ -185,14 +184,6 @@ const styles = StyleSheet.create({
   langLabelActive: { color: colors.textPrimary },
 
   logoWrap: { marginBottom: 16 },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
   brand: {
     fontFamily: font.extrabold,
