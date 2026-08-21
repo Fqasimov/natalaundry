@@ -1,16 +1,15 @@
 // Membership tiers.
 //
-// The Laravel reference implementation defaults a user with no explicit level
-// to "Nata Silver" and computes progress as `max(0, 1500 - xp)` toward
-// "Nata Gold" — so Silver is the entry tier and Gold sits at 1500 points.
-// Those two thresholds are taken from that code; Platinum is an extension so
-// the ladder doesn't dead-end at Gold.
+// Gold sits at 1500 because the Laravel reference computes progress as
+// `max(0, 1500 - xp)` toward it. The shipped design shows a fresh account as
+// "Nata Bronze", so Bronze is the entry tier and Silver moved up to 500;
+// Platinum extends the ladder so it doesn't dead-end at Gold.
 //
 // `profiles.points` is the confirmed column in the live schema, so that is
 // what drives the tier here (the reference API calls the same quantity "xp").
 
 export type MembershipTier = {
-  key: "silver" | "gold" | "platinum";
+  key: "bronze" | "silver" | "gold" | "platinum";
   name: string;
   /** Inclusive lower bound, in points. */
   threshold: number;
@@ -20,7 +19,8 @@ export type MembershipTier = {
 };
 
 export const MEMBERSHIP_TIERS: readonly MembershipTier[] = [
-  { key: "silver", name: "Nata Silver", threshold: 0, tint: "#ECEEF1", fg: "#6B7280" },
+  { key: "bronze", name: "Nata Bronze", threshold: 0, tint: "#F6E7DA", fg: "#9A5B25" },
+  { key: "silver", name: "Nata Silver", threshold: 500, tint: "#ECEEF1", fg: "#6B7280" },
   { key: "gold", name: "Nata Gold", threshold: 1500, tint: "#FCF0D2", fg: "#B98407" },
   { key: "platinum", name: "Nata Platinum", threshold: 3500, tint: "#E7E6FB", fg: "#5B57D6" },
 ] as const;

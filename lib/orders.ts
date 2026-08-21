@@ -336,6 +336,30 @@ export async function transitionOrder(
   return (data ?? []).length > 0;
 }
 
+/**
+ * Distinct addresses this customer has had orders collected from, newest
+ * first. There is no addresses table in the confirmed schema, so the useful
+ * list is derived from order history rather than invented.
+ */
+export async function fetchRecentAddresses(userId: string, limit = 8): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("address, created_at")
+    .eq("user_id", userId)
+    .not("address", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+
+  const seen = new Set<string>();
+  for (const row of (data ?? []) as { address: string | null }[]) {
+    const address = row.address?.trim();
+    if (address) seen.add(address);
+    if (seen.size >= limit) break;
+  }
+  return [...seen];
+}
+
 // "Users can cancel their own pending orders." — only while still pending.
 export async function cancelOrder(orderId: string) {
   const { error } = await supabase

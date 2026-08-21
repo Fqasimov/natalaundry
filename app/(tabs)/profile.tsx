@@ -17,6 +17,7 @@ import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
+import type { Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
 import { tierFor } from "@/lib/membership";
 import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
@@ -25,62 +26,54 @@ import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 // a header block, then Orders / Membership & balance / Account / Support
 // sections of tappable rows.
 //
-// The hero keeps the app's blue gradient so the screen still belongs to the
-// product; everything below it is monochrome, using the local palette here so
-// the ivory/blue/service tints stay untouched on every other screen. Hierarchy
-// in the body comes from weight and grey level rather than hue.
-//
-// Rows whose destination screen doesn't exist yet are marked "Tezliklə"
-// rather than wired to a dead route, so nothing silently does nothing.
+// Follows the shipped design: a pale blue surface, a plain header with a
+// settings affordance, the identity block laid out horizontally, and rows
+// carrying blue outline icons rather than filled bubbles. The palette is local
+// to this screen so the ivory/blue/service tints stay untouched elsewhere.
 
-const mono = {
-  bg: "#FFFFFF",
+const ui = {
+  bg: "#F4F8FD",
   surface: "#FFFFFF",
-  bubble: "#F2F2F3",
-  border: "#E4E4E6",
-  divider: "#EFEFF1",
-  ink: "#111112",
-  inkSoft: "#6E6E73",
-  inkFaint: "#A1A1A6",
-  inverse: "#FFFFFF",
+  border: "#E6EEF7",
+  divider: "#EDF2F8",
+  ink: "#0F1B2D",
+  inkSoft: "#7F8CA0",
+  accent: "#1E77E5",
+  danger: "#F0492F",
 } as const;
+
+/** Shown as the value on the language row. */
+const LANGUAGE_LABEL: Record<Language, string> = {
+  az: "Azərbaycan",
+  ru: "Русский",
+  en: "English",
+};
 
 type RowProps = {
   icon: IconName;
   label: string;
   value?: string;
-  soon?: boolean;
+  danger?: boolean;
   onPress?: () => void;
 };
 
-function Row({ icon, label, value, soon, onPress }: RowProps) {
-  const { t } = useI18n();
+function Row({ icon, label, value, danger, onPress }: RowProps) {
+  const tone = danger ? ui.danger : ui.accent;
   return (
     <Pressable
-      style={({ pressed }) => [s.row, pressed && !soon && s.rowPressed]}
-      onPress={soon ? undefined : onPress}
-      disabled={soon}
+      style={({ pressed }) => [s.row, pressed && s.rowPressed]}
+      onPress={onPress}
     >
-      <View style={s.rowIcon}>
-        <AppIcon name={icon} size={19} color={soon ? mono.inkFaint : mono.ink} />
-      </View>
-      <Text style={[s.rowLabel, soon && s.rowLabelMuted]} numberOfLines={1}>
+      <AppIcon name={icon} size={22} color={tone} />
+      <Text style={[s.rowLabel, danger && { color: ui.danger }]} numberOfLines={1}>
         {label}
       </Text>
-      {soon ? (
-        <View style={s.soonPill}>
-          <Text style={s.soonLabel}>{t("comingSoon")}</Text>
-        </View>
-      ) : value ? (
+      {value ? (
         <Text style={s.rowValue} numberOfLines={1}>
           {value}
         </Text>
       ) : null}
-      <Ionicons
-        name="chevron-forward"
-        size={17}
-        color={soon ? mono.border : mono.inkFaint}
-      />
+      <Ionicons name="chevron-forward" size={18} color={danger ? ui.danger : ui.accent} />
     </Pressable>
   );
 }
@@ -98,7 +91,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { session, signOut } = useAuth();
   const { profile, isLoading } = useProfile();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { add, setQty, reset } = useCart();
   const [notice, setNotice] = useState<string | null>(null);
   const [repeating, setRepeating] = useState(false);
@@ -139,7 +132,7 @@ export default function ProfileScreen() {
   if (isLoading || !profile) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={mono.ink} />
+        <ActivityIndicator color={ui.ink} />
       </View>
     );
   }
@@ -153,33 +146,34 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero ── */}
-        <LinearGradient
-          colors={[colors.heroFrom, colors.heroTo]}
-          style={[s.hero, { paddingTop: insets.top + 14 }]}
-        >
-          <Text style={s.heroTitle}>{t("profile")}</Text>
+        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <Text style={s.title}>{t("profile")}</Text>
+          <Pressable
+            style={s.gear}
+            hitSlop={10}
+            onPress={() => router.push("/profile/personal")}
+            accessibilityLabel={t("settings")}
+          >
+            <Ionicons name="settings-outline" size={20} color={ui.accent} />
+          </Pressable>
+        </View>
 
-          {/* One centred column: mark, name, then the contact lines. Stacking
-              them on a single axis keeps the block aligned no matter how long
-              a name or address runs. */}
-          <View style={s.identity}>
-            <AppLogo size={84} />
+        {/* Identity reads left-to-right: mark, then name over the contact
+            lines, matching the shipped design. */}
+        <View style={s.identity}>
+          <AppLogo size={92} ring={false} />
+          <View style={s.credentials}>
             <Text style={s.name} numberOfLines={1}>
               {profile.name?.trim() || "—"}
             </Text>
             {profile.phone ? (
-              <Text style={s.contact} numberOfLines={1}>
-                {profile.phone}
-              </Text>
+              <Text style={s.contact} numberOfLines={1}>{profile.phone}</Text>
             ) : null}
             {email ? (
-              <Text style={s.contact} numberOfLines={1}>
-                {email}
-              </Text>
+              <Text style={s.contact} numberOfLines={1}>{email}</Text>
             ) : null}
           </View>
-        </LinearGradient>
+        </View>
 
         <View style={s.body}>
           {notice ? <Text style={s.notice}>{notice}</Text> : null}
@@ -193,7 +187,7 @@ export default function ProfileScreen() {
             />
             <View style={s.divider} />
             <Row
-              icon="mci:clipboard-text-outline"
+              icon="mci:clock-outline"
               label={t("pastOrders")}
               onPress={() => router.push("/orders")}
             />
@@ -203,31 +197,31 @@ export default function ProfileScreen() {
             <Row
               icon="mci:wallet-outline"
               label={t("myBalance")}
-              value={money(profile.wallet_balance ?? 0)}
+              value={`${(profile.wallet_balance ?? 0).toFixed(2)} ${t("currencyCode")}`}
               onPress={() => router.push("/wallet")}
             />
             <View style={s.divider} />
             <Row
-              icon="mci:crown-outline"
+              icon="mci:shield-check-outline"
               label={t("mySubscription")}
               value={
                 profile.is_subscribed ? t("subscriptionName") : t("subscriptionInactive")
               }
-              soon
+              onPress={() => router.push("/profile/subscription")}
             />
             <View style={s.divider} />
             <Row
               icon="mci:medal-outline"
               label={t("myLevel")}
               value={tier.name}
-              soon
+              onPress={() => router.push("/profile/level")}
             />
             <View style={s.divider} />
             <Row
-              icon="mci:account-multiple-plus-outline"
+              icon="mci:gift-outline"
               label={t("inviteFriend")}
               value={t("inviteFriendValue")}
-              soon
+              onPress={() => router.push("/profile/referral")}
             />
           </Section>
 
@@ -241,13 +235,13 @@ export default function ProfileScreen() {
             <Row
               icon="ion:location-outline"
               label={t("myAddresses")}
-              soon
+              onPress={() => router.push("/profile/addresses")}
             />
             <View style={s.divider} />
             <Row
               icon="mci:credit-card-outline"
               label={t("paymentMethods")}
-              soon
+              onPress={() => router.push("/profile/payment")}
             />
             <View style={s.divider} />
             <Row
@@ -261,14 +255,23 @@ export default function ProfileScreen() {
             <Row
               icon="ion:help-circle-outline"
               label={t("helpSupport")}
-              soon
+              onPress={() => router.push("/profile/support")}
             />
           </Section>
 
-          <Pressable style={s.signOut} onPress={signOut}>
-            <Ionicons name="log-out-outline" size={19} color={mono.ink} />
-            <Text style={s.signOutLabel}>{t("signOut")}</Text>
-          </Pressable>
+          {/* Language and sign-out share a trailing card, as in the design —
+              sign-out is a row here rather than a button so it doesn't read as
+              the screen's primary action. */}
+          <View style={s.card}>
+            <Row
+              icon="mci:web"
+              label={t("appLanguage")}
+              value={LANGUAGE_LABEL[lang]}
+              onPress={() => router.push("/profile/language")}
+            />
+            <View style={s.divider} />
+            <Row icon="mci:logout" label={t("signOut")} danger onPress={signOut} />
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -276,111 +279,100 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: mono.bg },
+  root: { flex: 1, backgroundColor: ui.bg },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: mono.bg,
+    backgroundColor: ui.bg,
   },
 
-  // ── Hero ──
-  hero: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
-  heroTitle: {
-    alignSelf: "flex-start",
-    fontFamily: font.extrabold,
-    fontSize: 26,
-    letterSpacing: -0.4,
-    color: mono.inverse,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
-  identity: { alignItems: "center", marginTop: 18, alignSelf: "stretch" },
+  title: {
+    fontFamily: font.extrabold,
+    fontSize: 30,
+    letterSpacing: -0.6,
+    color: ui.ink,
+  },
+  gear: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E7F0FB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  identity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 22,
+  },
+  credentials: { flex: 1 },
   name: {
-    fontFamily: font.bold,
-    fontSize: 20,
-    lineHeight: 26,
-    letterSpacing: -0.2,
-    color: mono.inverse,
-    marginTop: 14,
-    textAlign: "center",
+    fontFamily: font.extrabold,
+    fontSize: 24,
+    letterSpacing: -0.4,
+    color: ui.ink,
+    marginBottom: 4,
   },
   contact: {
     fontFamily: font.regular,
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: "rgba(255,255,255,0.82)",
-    textAlign: "center",
+    fontSize: 14.5,
+    lineHeight: 21,
+    color: ui.inkSoft,
   },
 
-  // ── Body ──
-  body: { paddingHorizontal: 20, paddingTop: 22, gap: 22 },
+  body: { paddingHorizontal: 16, gap: 22 },
   notice: {
     ...type.caption,
-    color: mono.ink,
-    backgroundColor: mono.bubble,
+    color: ui.accent,
+    backgroundColor: "#E7F0FB",
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
 
-  section: { gap: 9 },
+  section: { gap: 10 },
   sectionTitle: {
     fontFamily: font.bold,
-    fontSize: 15,
-    letterSpacing: -0.2,
-    color: mono.ink,
+    fontSize: 12.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: ui.inkSoft,
+    paddingHorizontal: 4,
   },
   card: {
-    backgroundColor: mono.surface,
-    borderRadius: radius.lg,
+    backgroundColor: ui.surface,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: mono.border,
+    borderColor: ui.border,
     overflow: "hidden",
   },
-  divider: { height: 1, backgroundColor: mono.divider, marginLeft: 60 },
+  divider: { height: 1, backgroundColor: ui.divider, marginLeft: 56 },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    gap: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 17,
   },
-  rowPressed: { backgroundColor: mono.bubble },
-  rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: mono.bubble,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  rowPressed: { backgroundColor: "#F7FAFE" },
   rowLabel: {
     flex: 1,
-    fontFamily: font.medium,
-    fontSize: 14.5,
-    color: mono.ink,
+    fontFamily: font.bold,
+    fontSize: 16,
+    color: ui.ink,
   },
-  rowLabelMuted: { color: mono.inkFaint },
-  rowValue: { fontFamily: font.bold, fontSize: 13.5, color: mono.inkSoft },
-  soonPill: {
-    backgroundColor: mono.bubble,
-    borderRadius: radius.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  soonLabel: { fontFamily: font.semibold, fontSize: 10.5, color: mono.inkFaint },
-
-  signOut: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: mono.bg,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    borderRadius: radius.pill,
-    paddingVertical: 15,
-    marginTop: 2,
-  },
-  signOutLabel: { fontFamily: font.semibold, fontSize: 15, color: mono.ink },
+  rowValue: { fontFamily: font.medium, fontSize: 15, color: ui.inkSoft },
 });
