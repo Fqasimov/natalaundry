@@ -12,12 +12,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
+import { AppLogo } from "@/components/AppLogo";
 import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import { useCart } from "@/lib/state/cart";
-import { tierFor, nextTierFor, pointsToNextTier } from "@/lib/membership";
+import { tierFor } from "@/lib/membership";
 import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 
 // Profile rebuilt to the structure of the Laravel/React reference build:
@@ -143,10 +144,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const points = profile.points ?? 0;
-  const tier = tierFor(points);
-  const nextTier = nextTierFor(points);
-  const remaining = pointsToNextTier(points);
+  const tier = tierFor(profile.points ?? 0);
   const email = profile.email ?? session?.user.email ?? null;
 
   return (
@@ -162,40 +160,24 @@ export default function ProfileScreen() {
         >
           <Text style={s.heroTitle}>{t("profile")}</Text>
 
-          {/* Avatar and credentials are centred against each other, and the
-              contact lines share one rhythm, so the block reads as a single
-              unit instead of three loose lines beside a circle. */}
+          {/* One centred column: mark, name, then the contact lines. Stacking
+              them on a single axis keeps the block aligned no matter how long
+              a name or address runs. */}
           <View style={s.identity}>
-            <View style={s.avatar}>
-              <Ionicons name="person" size={32} color={mono.inverse} />
-            </View>
-            <View style={s.credentials}>
-              <Text style={s.name} numberOfLines={1}>
-                {profile.name?.trim() || "—"}
-              </Text>
-              {profile.phone ? (
-                <Text style={s.contact} numberOfLines={1}>
-                  {profile.phone}
-                </Text>
-              ) : null}
-              {email ? (
-                <Text style={s.contact} numberOfLines={1}>
-                  {email}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-
-          <View style={s.tierRow}>
-            <View style={s.tierBadge}>
-              <AppIcon name="mci:medal-outline" size={14} color={colors.primary} />
-              <Text style={s.tierName}>{tier.name}</Text>
-            </View>
-            <Text style={s.tierProgress} numberOfLines={2}>
-              {remaining !== null && nextTier
-                ? t("levelProgress", { name: nextTier.name, points: remaining })
-                : t("levelMax")}
+            <AppLogo size={84} />
+            <Text style={s.name} numberOfLines={1}>
+              {profile.name?.trim() || "—"}
             </Text>
+            {profile.phone ? (
+              <Text style={s.contact} numberOfLines={1}>
+                {profile.phone}
+              </Text>
+            ) : null}
+            {email ? (
+              <Text style={s.contact} numberOfLines={1}>
+                {email}
+              </Text>
+            ) : null}
           </View>
         </LinearGradient>
 
@@ -303,53 +285,30 @@ const s = StyleSheet.create({
   },
 
   // ── Hero ──
-  hero: { paddingHorizontal: 20, paddingBottom: 24 },
+  hero: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
   heroTitle: {
+    alignSelf: "flex-start",
     fontFamily: font.extrabold,
     fontSize: 26,
     letterSpacing: -0.4,
     color: mono.inverse,
   },
-  identity: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 20 },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.20)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  credentials: { flex: 1, justifyContent: "center" },
+  identity: { alignItems: "center", marginTop: 18, alignSelf: "stretch" },
   name: {
     fontFamily: font.bold,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: -0.2,
     color: mono.inverse,
-    marginBottom: 3,
+    marginTop: 14,
+    textAlign: "center",
   },
   contact: {
     fontFamily: font.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.80)",
-  },
-  tierRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 20 },
-  tierBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: mono.inverse,
-    borderRadius: radius.pill,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  tierName: { fontFamily: font.bold, fontSize: 12.5, color: colors.primary },
-  tierProgress: {
-    flex: 1,
-    fontFamily: font.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.80)",
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.82)",
+    textAlign: "center",
   },
 
   // ── Body ──
