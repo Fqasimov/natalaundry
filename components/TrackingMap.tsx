@@ -1,0 +1,84 @@
+import { useEffect, useRef } from "react";
+import { StyleSheet, View } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { colors, radius } from "@/theme/tokens";
+
+export type LatLng = { lat: number; lng: number };
+
+/**
+ * Native map with the courier and the destination on it.
+ *
+ * The courier marker is animated toward each new fix rather than jumped: fixes
+ * arrive every few seconds, and teleporting the marker reads as a glitch.
+ * `animateMarkerToCoordinate` is Android-only, so iOS gets a region animation
+ * instead — both end up smooth, neither needs a paid tracking SDK.
+ */
+export function TrackingMap({
+  courier,
+  destination,
+  heading,
+}: {
+  courier: LatLng | null;
+  destination: LatLng | null;
+  heading?: number | null;
+}) {
+  const map = useRef<MapView | null>(null);
+  const focus = courier ?? destination;
+
+  useEffect(() => {
+    if (!map.current || !courier) return;
+    map.current.animateCamera(
+      { center: { latitude: courier.lat, longitude: courier.lng } },
+      { duration: 900 }
+    );
+  }, [courier?.lat, courier?.lng]);
+
+  if (!focus) return <View style={s.placeholder} />;
+
+  return (
+    <View style={s.wrap}>
+      <MapView
+        ref={map}
+        provider={PROVIDER_GOOGLE}
+        style={StyleSheet.absoluteFill}
+        initialRegion={{
+          latitude: focus.lat,
+          longitude: focus.lng,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }}
+        showsUserLocation={false}
+        toolbarEnabled={false}
+      >
+        {destination ? (
+          <Marker
+            coordinate={{ latitude: destination.lat, longitude: destination.lng }}
+            pinColor={colors.accent}
+          />
+        ) : null}
+        {courier ? (
+          <Marker
+            coordinate={{ latitude: courier.lat, longitude: courier.lng }}
+            rotation={heading ?? 0}
+            flat
+            pinColor={colors.primary}
+          />
+        ) : null}
+      </MapView>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  wrap: {
+    height: 260,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceAlt,
+  },
+  placeholder: {
+    height: 260,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
+  },
+});

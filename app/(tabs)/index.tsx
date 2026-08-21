@@ -232,7 +232,7 @@ export default function HomeScreen() {
           {activeOrder ? (
             <Pressable
               style={styles.orderCard}
-              onPress={() => router.push(`/order/${activeOrder.id}`)}
+              onPress={() => router.push(`/track/${activeOrder.id}`)}
             >
               <View style={styles.orderTopRow}>
                 <Text style={styles.heroOrderLabel}>{t("activeOrder")}</Text>
