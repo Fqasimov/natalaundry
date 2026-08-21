@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppIcon } from "@/components/AppIcon";
+import { AppIcon, type IconName } from "@/components/AppIcon";
 import { colors, font, radius } from "@/theme/tokens";
 import { CATALOG } from "@/lib/catalog";
 import { useI18n } from "@/lib/language-context";
@@ -80,7 +80,7 @@ function ServiceIcon({
   fg,
   size = 46,
 }: {
-  icon: string;
+  icon: IconName;
   bg: string;
   fg: string;
   size?: number;
@@ -97,7 +97,7 @@ function ServiceIcon({
       }}
     >
       <AppIcon
-        name={icon as never}
+        name={icon}
         size={size * 0.52}
         color={fg}
       />
