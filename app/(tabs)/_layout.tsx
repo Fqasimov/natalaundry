@@ -3,16 +3,26 @@ import { Redirect, Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, font } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
+import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 
 // Three-slot tab bar from the video: Ana səhifə, a raised orange "+" that
 // jumps straight into the catalogue, and Profil.
 export default function TabsLayout() {
   const { session, isLoading } = useAuth();
+  const { profile, isLoading: profileLoading } = useProfile();
   const { t } = useI18n();
 
   if (!isLoading && !session) {
     return <Redirect href="/(auth)/login" />;
+  }
+
+  // Couriers work a different job entirely — offered orders and one active
+  // task — so they get their own screen rather than the customer's catalogue
+  // and basket. Waiting for the profile avoids bouncing a courier through the
+  // customer tabs for a frame while their role loads.
+  if (!profileLoading && profile?.role === "courier") {
+    return <Redirect href="/courier" />;
   }
 
   return (

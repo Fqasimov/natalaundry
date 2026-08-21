@@ -101,6 +101,19 @@ Key invariants:
 - **i18n**: AZ is the source of truth (verbatim from the video), RU/EN are
   translations. Every new string needs all three. Never hardcode display
   copy or currency amounts in a screen — parameterise through `t()`.
+- **Order lifecycle**: nine states in `orders.lifecycle_state`
+  (`App\Support\OrderLifecycle` ↔ `lib/lifecycle.ts`). `orders.status` is
+  derived from it on every transition and must never be written directly —
+  it only has six values and the live RLS policies depend on them. All
+  transitions go through `OrderLifecycleService::transition()`.
+- **Claim races**: courier assignment is first-to-claim, decided by the
+  database (`lockForUpdate()` server-side, conditional `UPDATE` from the app).
+  Never check-then-write.
+- **Tracking**: our own `courier_locations` table and polling — deliberately
+  not Google Fleet Engine or any per-trip billed API. The GPS loop is driven
+  by the order's state, never by a manual toggle.
+- **ILK20**: 20% off the first order, applied server-side. The app never
+  sends the code; it only announces the offer.
 
 ## Still unresolved
 

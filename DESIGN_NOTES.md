@@ -105,6 +105,85 @@ Settlement, in `OrderService::countBulk()`:
 The three-photo gate that guards itemised orders deliberately does **not**
 apply here — there is nothing to photograph before the load is collected.
 
+## Order lifecycle, dispatch and tracking
+
+The nine-step collection → laundry → delivery flow is a real state machine:
+`App\Support\OrderLifecycle` server-side, `lib/lifecycle.ts` in the app.
+
+`orders.status` only has six values and is baked into the live RLS policies
+and the shipped 1.0.2 build, so it could not be widened. The nine states live
+in a new `lifecycle_state` column, and every transition derives `status` from
+it — the two never drift, and nothing that reads the old column had to change.
+
+| State | Driven by | Legacy `status` |
+| --- | --- | --- |
+| `order_placed` | customer | pending |
+| `assigning_couriers` | admin | pending |
+| `courier_assigned` | courier (claim) | pending |
+| `courier_en_route_pickup` | courier | collecting |
+| `picked_up` | courier | collecting |
+| `at_laundry` | admin or courier | cleaning |
+| `processing_finished` | admin | cleaning |
+| `courier_en_route_delivery` | courier | delivering |
+| `delivered` | courier | completed |
+
+Transitions are strictly sequential and gated on the actor's role; courier
+steps additionally require being the *assigned* courier. Callers name the
+target state rather than saying "advance", so a double-tap fails the check
+instead of skipping a step. Every move appends an `order_status_logs` row —
+that table is what the customer's timeline renders, so each step shows the
+time it actually happened.
+
+Notifications are stored as an i18n key plus vars, not a finished sentence:
+the app is Azerbaijani-first with RU/EN, so rendering belongs on the client.
+The AZ string is kept as `body` for channels that cannot translate.
+
+### First-to-claim dispatch
+
+An admin broadcasts an order to a pool of couriers (`courier_assignments`).
+The first courier to accept wins, and that is decided by the database, not by
+application logic: the Laravel path re-reads the order inside the transaction
+with `lockForUpdate()`, so concurrent claims serialise — the loser blocks,
+then sees `courier_id` already set and gets a 409 the app shows as "Sifariş
+artıq götürülüb". The app's direct-to-Postgres path gets the same guarantee
+from a conditional `UPDATE ... WHERE courier_id IS NULL`, which matches zero
+rows for the loser. Checking before taking the lock would be the race, not the
+fix.
+
+### Live tracking, without a paid fleet product
+
+Deliberately **not** Google Fleet Engine: two narrow endpoints and one table.
+The courier posts a fix every few seconds while en route
+(`useLocationBroadcast`, driven by the order's own state so it starts and
+stops itself); the customer polls the newest one. Pings outside the en-route
+states are rejected server-side, so a loop that failed to stop cannot keep
+writing after delivery. A fix older than the staleness window flips the badge
+from "Canlı" to waiting-for-signal, so a frozen marker is never shown as live.
+
+Navigation hands off to Google Maps or the platform's own app rather than
+rebuilding turn-by-turn — couriers already have a navigator they trust, and an
+in-app route would need a billed directions API.
+
+`react-native-maps` has no web implementation, so `TrackingMap.web.tsx` keeps
+the web export (used for previews) building; the phone build gets the real map.
+
+## The ILK20 welcome offer
+
+20% off the first order, applied automatically. The customer never types it —
+it is announced on the home screen and the server applies it at order time, so
+the app sends no promo code at all. A cancelled attempt does not consume it.
+An entered code wins only when it is worth more, so nobody is silently
+downgraded. It is seeded as a real `promo_codes` row rather than special-cased
+in application code, so it shares the normal redemption bookkeeping.
+
+## Admin is on the website, not in the app
+
+The app ships customer and courier roles only. Facility work — the incoming
+order feed, dispatch, and the two facility toggles — suits a desk, and putting
+those controls in every install would widen the blast radius for no benefit.
+The API still exposes the admin endpoints (`POST /orders/{order}/broadcast`
+and the admin-only transitions); only the client differs.
+
 ## Still unverified
 
 - **`service_prices` columns.** Only `service_id` and `item_id` came back from
