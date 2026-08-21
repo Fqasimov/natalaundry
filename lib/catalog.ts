@@ -166,8 +166,8 @@ export const CATALOG: CatalogService[] = [
   },
   {
     serviceId: "bedding",
-    name: "Yataq Dəstləri",
-    tagline: "Yataq və ev tekstili üçün.",
+    name: "Ev Tekstili",
+    tagline: "Yorğanlar, yastıqlar, pərdələr üçün.",
     icon: "mci:bed-king-outline",
     categories: [
       {
@@ -196,8 +196,8 @@ export const CATALOG: CatalogService[] = [
   },
   {
     serviceId: "bags",
-    name: "Çanta Təmizləmə",
-    tagline: "Çanta və dəri aksesuarlar üçün.",
+    name: "Aksesuarlar",
+    tagline: "Çantalar, kəmər, aksesuar üçün.",
     icon: "mci:purse",
     categories: [
       {

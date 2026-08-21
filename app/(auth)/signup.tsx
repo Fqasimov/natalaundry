@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, radius } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
@@ -32,11 +33,15 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.root}>
+      {/* ── Blue hero header ── */}
       <LinearGradient
-        colors={[colors.heroFrom, colors.heroTo]}
-        style={[styles.hero, { paddingTop: insets.top + 16 }]}
+        colors={["#5AADEC", "#3184EC", "#1A6AD4"]}
+        start={{ x: 0.3, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + 12 }]}
       >
-        <View style={styles.langSwitch}>
+        {/* Language selector */}
+        <View style={styles.langRow}>
           {LANGUAGES.map((code: Language) => (
             <Pressable
               key={code}
@@ -49,38 +54,77 @@ export default function SignupScreen() {
             </Pressable>
           ))}
         </View>
-        <Text style={styles.brand}>{t("brand")}</Text>
-        <Text style={styles.heroTitle}>{t("heroTitle")}</Text>
+
+        {/* Back button */}
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+          <View style={styles.backCircle}>
+            <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
+          </View>
+        </Pressable>
+
+        {/* Title */}
+        <Text style={styles.heroTitle}>{t("signupTitle")}</Text>
+        <Text style={styles.heroSub}>{t("signupSubtitle")}</Text>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-        <Text style={styles.formTitle}>{t("signup")}</Text>
+      {/* ── Form area ── */}
+      <ScrollView
+        contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 32 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Email field */}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>{t("emailLabel")}</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="mail-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder={t("email")}
-          placeholderTextColor={colors.textSecondary}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={t("password")}
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        {/* Password field */}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>{t("passwordLabel")}</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder={t("passwordPlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+        </View>
 
+        {/* Error message */}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <BigButton label={t("signup")} tone="primary" onPress={onSubmit} loading={submitting} />
+        {/* Sign up button */}
+        <BigButton
+          label={t("signupBtn")}
+          tone="primary"
+          onPress={onSubmit}
+          loading={submitting}
+          iconRight="person-add-outline"
+        />
 
-        <Link href="/(auth)/login" style={styles.link}>
-          <Text style={styles.linkLabel}>{t("login")}</Text>
-        </Link>
+        {/* Login link */}
+        <View style={styles.loginRow}>
+          <Text style={styles.loginText}>{t("alreadyHaveAccount")} </Text>
+          <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={8}>
+            <Text style={styles.loginLink}>{t("loginLink")}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -88,33 +132,101 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  hero: { paddingHorizontal: 24, paddingBottom: 34 },
-  langSwitch: { flexDirection: "row", gap: 6 },
-  langPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill },
-  langPillActive: { backgroundColor: colors.surface },
-  langLabel: { fontFamily: font.semibold, fontSize: 13, color: "rgba(255,255,255,0.85)" },
-  langLabelActive: { color: colors.textPrimary },
-  brand: { fontFamily: font.semibold, fontSize: 16, color: "rgba(255,255,255,0.85)", marginTop: 24 },
-  heroTitle: {
-    fontFamily: font.bold,
-    fontSize: 27,
-    lineHeight: 35,
-    color: colors.textInverse,
-    marginTop: 6,
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 36,
   },
-  form: { padding: 24, gap: 12 },
-  formTitle: { fontFamily: font.bold, fontSize: 22, color: colors.textPrimary, marginBottom: 4 },
-  input: {
+  langRow: {
+    flexDirection: "row",
+    alignSelf: "flex-end",
+    gap: 4,
+    marginBottom: 12,
+  },
+  langPill: {
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  langPillActive: { backgroundColor: colors.surface },
+  langLabel: {
+    fontFamily: font.semibold,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.80)",
+  },
+  langLabelActive: { color: colors.textPrimary },
+
+  backBtn: { marginBottom: 18, alignSelf: "flex-start" },
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  heroTitle: {
+    fontFamily: font.extrabold,
+    fontSize: 30,
+    color: colors.textInverse,
+    marginBottom: 6,
+  },
+  heroSub: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.85)",
+  },
+
+  // ── Form ──────────────────────────────────────────────────────────────────
+  form: { padding: 24, gap: 16 },
+
+  fieldWrap: { gap: 6 },
+  fieldLabel: {
+    fontFamily: font.medium,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: 15,
+    paddingHorizontal: 14,
+  },
+  inputIcon: { marginRight: 10 },
+  input: {
+    flex: 1,
+    paddingVertical: 16,
     fontFamily: font.regular,
     fontSize: 15,
     color: colors.textPrimary,
   },
-  error: { fontFamily: font.regular, fontSize: 13, color: colors.danger },
-  link: { alignSelf: "center", marginTop: 18 },
-  linkLabel: { fontFamily: font.medium, fontSize: 15, color: colors.primary },
+
+  error: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: colors.danger,
+    marginTop: -4,
+  },
+
+  loginRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  loginText: {
+    fontFamily: font.regular,
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  loginLink: {
+    fontFamily: font.semibold,
+    fontSize: 15,
+    color: colors.primary,
+  },
 });
