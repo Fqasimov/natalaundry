@@ -312,6 +312,7 @@ const az = {
   howStep2Body: "Kuryer qeyd etdiyiniz vaxtda qapınızda olacaq.",
   howStep3Title: "Təmiz paltarlarınızı alın",
   howStep3Body: "Paltarlarınız təmiz və ütülü şəkildə çatdırılacaq.",
+  unreadCount: "{count} yeni bildiriş",
 } as const;
 
 export type StringKey = keyof typeof az;
@@ -595,6 +596,7 @@ const ru: Record<StringKey, string> = {
   howStep2Body: "Курьер приедет к вам в указанное время.",
   howStep3Title: "Получите чистые вещи",
   howStep3Body: "Вещи вернутся чистыми и выглаженными.",
+  unreadCount: "{count} новых уведомлений",
 };
 
 const en: Record<StringKey, string> = {
@@ -876,6 +878,7 @@ const en: Record<StringKey, string> = {
   howStep2Body: "The courier arrives at your door at the time you chose.",
   howStep3Title: "Get your clean clothes",
   howStep3Body: "Your clothes come back clean and pressed.",
+  unreadCount: "{count} new notifications",
 };
 
 export const dictionaries: Record<Language, Record<StringKey, string>> = {

@@ -21,6 +21,8 @@ import { useCart } from "@/lib/state/cart";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { fetchActiveOrder, hasAnyOrder } from "@/lib/tracking";
+import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
+import { countUnreadNotifications } from "@/lib/notifications";
 import { LIFECYCLE_LABEL, stepIndex, LIFECYCLE_STATES } from "@/lib/lifecycle";
 import { FIRST_ORDER_CODE } from "@/lib/promo";
 import type { Order } from "@/types/database";
@@ -120,8 +122,12 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const { profile } = useProfile();
 
+  const { add, setQty, reset } = useCart();
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [ordered, setOrdered] = useState<boolean | null>(null);
+  const [unread, setUnread] = useState(0);
+  const [canRepeat, setCanRepeat] = useState(false);
+  const [repeating, setRepeating] = useState(false);
 
   // Refreshed whenever the screen regains focus rather than on an interval:
   // the hero only has to be right when someone is looking at it, and polling
@@ -130,12 +136,16 @@ export default function HomeScreen() {
     const userId = session?.user.id;
     if (!userId) return;
     try {
-      const [order, has] = await Promise.all([
+      const [order, has, unreadCount, last] = await Promise.all([
         fetchActiveOrder(userId),
         hasAnyOrder(userId),
+        countUnreadNotifications(userId),
+        fetchLastCompletedOrder(),
       ]);
       setActiveOrder(order);
       setOrdered(has);
+      setUnread(unreadCount);
+      setCanRepeat(last !== null);
     } catch {
       // A failed refresh leaves the last known state on screen; the hero is
       // informational, so a transient error shouldn't blank it or interrupt.
@@ -145,6 +155,33 @@ export default function HomeScreen() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Rebuilds the basket from the last completed order and jumps to checkout.
+  // Items carry their own name and price, so no catalogue lookup is needed —
+  // and a stale price is harmless, since the server reprices at order time.
+  const repeatLastOrder = useCallback(async () => {
+    setRepeating(true);
+    try {
+      const last = await fetchLastCompletedOrder();
+      const items = last ? await fetchOrderItems(last.id) : [];
+      if (items.length === 0) return;
+      reset();
+      for (const item of items) {
+        add({
+          serviceId: item.service_id,
+          itemId: item.item_id,
+          name: item.item_name,
+          price: item.price,
+        });
+        setQty(item.service_id, item.item_id, item.quantity);
+      }
+      router.push("/checkout/schedule");
+    } catch {
+      // Leave the hero as it is; the customer can still order normally.
+    } finally {
+      setRepeating(false);
+    }
+  }, [add, setQty, reset]);
 
   // Only the given name — "Salam, Məhəmməd" reads better than the full name.
   const firstName = profile?.name?.trim().split(/\s+/)[0] ?? "";
@@ -202,9 +239,24 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
+          <Text style={styles.brand}>{t("brand")}</Text>
           <Text style={styles.greeting}>
-            {firstName ? t("greeting", { name: firstName }) : t("greetingNoName")}
+            {firstName ? t("greeting", { name: firstName }) : t("greetingNoName")} 👋
           </Text>
+
+          {/* Inbox state, so the bell isn't the only way to know. Shows the
+              reassuring "nothing unread" line rather than hiding when empty —
+              an absent strip reads as a loading failure. */}
+          <Pressable style={styles.inbox} onPress={() => router.push("/notifications")}>
+            <Ionicons
+              name={unread > 0 ? "mail-unread" : "checkmark-circle"}
+              size={18}
+              color={unread > 0 ? "#FFD98A" : "#8FE3B0"}
+            />
+            <Text style={styles.inboxLabel} numberOfLines={2}>
+              {unread > 0 ? t("unreadCount", { count: unread }) : t("notificationsEmpty")}
+            </Text>
+          </Pressable>
 
           {/* The welcome offer, shown only until the first order exists. It
               isn't typed in anywhere — the server applies it automatically —
@@ -270,6 +322,30 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
+
+          {/* One-tap reorder, only when there is something to repeat. */}
+          {canRepeat ? (
+            <View style={styles.repeatCard}>
+              <View style={styles.repeatIcon}>
+                <Ionicons name="refresh" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.repeatTitle}>⚡ {t("repeatPrevTitle")}</Text>
+                <Text style={styles.repeatBody} numberOfLines={1}>
+                  {t("repeatPrevBody")}
+                </Text>
+              </View>
+              <Pressable
+                style={[styles.repeatButton, repeating && styles.repeatButtonBusy]}
+                disabled={repeating}
+                onPress={repeatLastOrder}
+              >
+                <Text style={styles.repeatButtonLabel}>
+                  {repeating ? "…" : `${t("repeatPrevAction")} ↺`}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           <Pressable
             style={styles.giftBanner}
@@ -466,6 +542,35 @@ export default function HomeScreen() {
             </PressCard>
           </View>
         </View>
+
+        {/* How it works — three numbered steps, for anyone opening the app
+            before they have ordered anything. */}
+        <View style={styles.howSection}>
+          <Text style={styles.sectionTitle}>{t("howItWorks")}</Text>
+          {[
+            { icon: "phone-portrait-outline", title: t("howStep1Title"), body: t("howStep1Body") },
+            { icon: "car-outline", title: t("howStep2Title"), body: t("howStep2Body") },
+            { icon: "checkmark-circle-outline", title: t("howStep3Title"), body: t("howStep3Body") },
+          ].map((step, i, all) => (
+            <View key={step.title} style={styles.howStep}>
+              <View style={styles.howRail}>
+                <View style={styles.howBubble}>
+                  <Ionicons
+                    name={step.icon as keyof typeof Ionicons.glyphMap}
+                    size={20}
+                    color={colors.primary}
+                  />
+                </View>
+                {i < all.length - 1 ? <View style={styles.howLine} /> : null}
+              </View>
+              <View style={styles.howBody}>
+                <Text style={styles.howNumber}>{`0${i + 1}`}</Text>
+                <Text style={styles.howTitle}>{step.title}</Text>
+                <Text style={styles.howText}>{step.body}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
       </ScrollView>
 
       {/* Cart FAB */}
@@ -507,13 +612,107 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  brand: {
+    fontFamily: font.extrabold,
+    fontSize: 26,
+    letterSpacing: -0.5,
+    color: colors.textInverse,
+    marginTop: 18,
+  },
+  // Gold, as in the shipped design — it lifts the greeting off the blue far
+  // better than white-on-blue does.
   greeting: {
     fontFamily: font.extrabold,
+    color: "#FFD64A",
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.5,
-    color: colors.textInverse,
-    marginTop: 20,
+    marginTop: 2,
+  },
+
+  inbox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderRadius: radius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    marginTop: 18,
+  },
+  inboxLabel: {
+    flex: 1,
+    fontFamily: font.medium,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: "rgba(255,255,255,0.92)",
+  },
+
+  repeatCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 14,
+    marginTop: 16,
+  },
+  repeatIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#E7F0FB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  repeatTitle: { fontFamily: font.bold, fontSize: 14.5, color: colors.textPrimary },
+  repeatBody: {
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  repeatButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  repeatButtonBusy: { opacity: 0.6 },
+  repeatButtonLabel: { fontFamily: font.bold, fontSize: 12.5, color: colors.textInverse },
+
+  // How it works
+  howSection: { paddingHorizontal: 16, paddingTop: 26, gap: 10 },
+  howStep: { flexDirection: "row", gap: 14 },
+  howRail: { alignItems: "center", width: 44 },
+  howBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E7F0FB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  howLine: { flex: 1, width: 2, minHeight: 26, backgroundColor: colors.border },
+  howBody: { flex: 1, paddingBottom: 22 },
+  howNumber: {
+    fontFamily: font.bold,
+    fontSize: 12.5,
+    letterSpacing: 0.5,
+    color: colors.primary,
+  },
+  howTitle: {
+    fontFamily: font.bold,
+    fontSize: 17,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  howText: {
+    fontFamily: font.regular,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    marginTop: 3,
   },
 
   // First-order offer
