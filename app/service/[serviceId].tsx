@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -12,15 +12,21 @@ import {
   ITEMISED_SERVICES,
   type ServiceKey,
 } from "@/theme/tokens";
-import { CATALOG, findService } from "@/lib/catalog";
+import { findService } from "@/lib/catalog";
 import { useI18n } from "@/lib/language-context";
 import { useCart } from "@/lib/state/cart";
 import { FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
 import { AddButton, BigButton, IconBubble, Pill, ScreenHeader, Stepper } from "@/components/ui";
+import { AppIcon } from "@/components/AppIcon";
 
 // "Xidmət icmalı" — the catalogue. Service circles across the top, a tinted
-// hero banner for the active service, then one accordion per category with
-// per-item pricing, and a floating estimate bar pinned to the bottom.
+// hero banner for the active service, then a single flat price list, and a
+// floating estimate bar pinned to the bottom.
+//
+// The list is deliberately flat: no category headers and no accordions, so
+// every item is visible and tappable without a disclosure step. Categories
+// still exist in lib/catalog.ts (they mirror how service_prices groups rows)
+// and are simply flattened for display.
 export default function ServiceCatalogueScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const insets = useSafeAreaInsets();
@@ -31,28 +37,12 @@ export default function ServiceCatalogueScreen() {
   const service = findService(activeId);
   const theme = serviceTheme[activeId] ?? serviceTheme.dry_cleaning;
 
-  const [expanded, setExpanded] = useState<string[]>([service.categories[0]?.categoryId]);
   const [upsellOpen, setUpsellOpen] = useState(false);
 
-  const allExpanded = expanded.length === service.categories.length;
-
-  const toggle = (categoryId: string) =>
-    setExpanded((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-
-  const selectedPerCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const category of service.categories) {
-      map[category.categoryId] = category.items.reduce(
-        (sum, item) => sum + quantityOf(service.serviceId, item.itemId),
-        0
-      );
-    }
-    return map;
-  }, [service, quantityOf]);
+  const items = useMemo(
+    () => service.categories.flatMap((category) => category.items),
+    [service]
+  );
 
   const goToCheckout = () => {
     if (subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD) {
@@ -70,7 +60,14 @@ export default function ServiceCatalogueScreen() {
         contentContainerStyle={{ paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.serviceRow}>
+        {/* Six circles no longer fit across a phone at this size, so the row
+            scrolls instead of squeezing them together; adding a service later
+            can't crush the spacing either. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.serviceRow}
+        >
           {ITEMISED_SERVICES.map((key) => {
             const entryTheme = serviceTheme[key];
             return (
@@ -79,7 +76,7 @@ export default function ServiceCatalogueScreen() {
                   name={entryTheme.icon}
                   tint={entryTheme.tint}
                   fg={entryTheme.fg}
-                  size={58}
+                  size={56}
                   selected={key === activeId}
                 />
               </Pressable>
@@ -92,10 +89,10 @@ export default function ServiceCatalogueScreen() {
               name={serviceTheme.toplu.icon}
               tint={serviceTheme.toplu.tint}
               fg={serviceTheme.toplu.fg}
-              size={58}
+              size={56}
             />
           </Pressable>
-        </View>
+        </ScrollView>
 
         <View style={[styles.heroBanner, { backgroundColor: theme.tint }]}>
           <View style={{ flex: 1 }}>
@@ -106,7 +103,7 @@ export default function ServiceCatalogueScreen() {
             </Pressable>
           </View>
           <View style={[styles.heroIcon, { backgroundColor: "rgba(255,255,255,0.45)" }]}>
-            <Ionicons name={service.icon as never} size={34} color={theme.fg} />
+            <AppIcon name={service.icon} size={34} color={theme.fg} />
           </View>
         </View>
 
@@ -115,77 +112,42 @@ export default function ServiceCatalogueScreen() {
             <Text style={styles.priceTitle}>{t("priceList")}</Text>
             <Text style={styles.priceSubtitle}>{t("pricePerItem")}</Text>
           </View>
-          <Pressable
-            style={styles.expandToggle}
-            onPress={() =>
-              setExpanded(allExpanded ? [] : service.categories.map((c) => c.categoryId))
-            }
-          >
-            <Text style={styles.expandToggleLabel}>
-              {allExpanded ? t("collapseAll") : t("expandAll")}
-            </Text>
-          </Pressable>
+          <Text style={styles.priceCount}>
+            {items.length} {t("products")}
+          </Text>
         </View>
 
-        {service.categories.map((category) => {
-          const isOpen = expanded.includes(category.categoryId);
-          const selected = selectedPerCategory[category.categoryId] ?? 0;
-          return (
-            <View
-              key={category.categoryId}
-              style={[styles.accordion, isOpen && styles.accordionOpen]}
-            >
-              <Pressable style={styles.accordionHeader} onPress={() => toggle(category.categoryId)}>
-                <IconBubble
-                  name={category.icon as never}
-                  tint={theme.tint}
-                  fg={theme.fg}
-                  size={36}
-                />
-                <Text style={styles.accordionTitle}>{category.name}</Text>
-                {selected > 0 ? <Pill label={String(selected)} tone="primary" /> : null}
-                <Pill label={`${category.items.length} ${t("products")}`} tone="info" />
-                <Ionicons
-                  name={isOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
-
-              {isOpen
-                ? category.items.map((item, index) => {
-                    const qty = quantityOf(service.serviceId, item.itemId);
-                    return (
-                      <View
-                        key={item.itemId}
-                        style={[styles.itemRow, index > 0 && styles.itemRowDivided]}
-                      >
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>{money(item.price)}</Text>
-                        {qty > 0 ? (
-                          <Stepper
-                            value={qty}
-                            onChange={(next) => setQty(service.serviceId, item.itemId, next)}
-                          />
-                        ) : (
-                          <AddButton
-                            onPress={() =>
-                              add({
-                                serviceId: service.serviceId,
-                                itemId: item.itemId,
-                                name: item.name,
-                                price: item.price,
-                              })
-                            }
-                          />
-                        )}
-                      </View>
-                    );
-                  })
-                : null}
-            </View>
-          );
-        })}
+        <View style={styles.list}>
+          {items.map((item, index) => {
+            const qty = quantityOf(service.serviceId, item.itemId);
+            return (
+              <View
+                key={item.itemId}
+                style={[styles.itemRow, index > 0 && styles.itemRowDivided]}
+              >
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemPrice}>{money(item.price)}</Text>
+                {qty > 0 ? (
+                  <Stepper
+                    value={qty}
+                    onChange={(next) => setQty(service.serviceId, item.itemId, next)}
+                  />
+                ) : (
+                  <AddButton
+                    onPress={() =>
+                      add({
+                        serviceId: service.serviceId,
+                        itemId: item.itemId,
+                        name: item.name,
+                        price: item.price,
+                      })
+                    }
+                  />
+                )}
+              </View>
+            );
+          })}
+        </View>
 
         <View style={styles.helpCard}>
           <Text style={styles.helpTitle}>{t("cantFindItem")}</Text>
@@ -246,9 +208,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   serviceRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   heroBanner: {
     flexDirection: "row",
@@ -285,25 +248,15 @@ const styles = StyleSheet.create({
   },
   priceTitle: { fontFamily: font.extrabold, fontSize: 18, letterSpacing: -0.3, color: colors.textPrimary },
   priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary },
-  expandToggle: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  expandToggleLabel: { fontFamily: font.medium, fontSize: 12, color: colors.primary },
-  accordion: {
+  priceCount: { fontFamily: font.medium, fontSize: 12.5, color: colors.textSecondary },
+  list: {
     marginHorizontal: 16,
-    marginBottom: 10,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
   },
-  accordionOpen: { borderColor: colors.primary },
-  accordionHeader: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12 },
-  accordionTitle: { flex: 1, fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
