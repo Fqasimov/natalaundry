@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\UsesUuidKey;
+use App\Support\OrderLifecycle;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *                     cleaning → delivering → completed (or cancelled)
  *  - `dispatch_state` internal admin workflow: awaiting_admin → approved →
  *                     offered → assigned
+ *  - `lifecycle_state` the nine-step collection → laundry → delivery flow
+ *                     (App\Support\OrderLifecycle). `status` is derived from
+ *                     it on every transition, so the two never drift.
  */
 class Order extends Model
 {
@@ -44,6 +48,7 @@ class Order extends Model
         'delivering_at' => 'datetime',
         'delivered_at' => 'datetime',
         'counted_at' => 'datetime',
+        'processing_finished_at' => 'datetime',
     ];
 
     public function items(): HasMany
@@ -76,8 +81,48 @@ class Order extends Model
         return $query->where('status', 'pending')->whereNull('courier_id');
     }
 
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(OrderStatusLog::class, 'order_id');
+    }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(CourierLocation::class, 'order_id');
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(CourierAssignment::class, 'order_id');
+    }
+
+    /**
+     * Both axes must agree. For rows written through OrderLifecycleService the
+     * two are always in sync, so this is exact; for older rows — and anything
+     * that set `status` directly — the legacy column still has the final say,
+     * so an order already being cleaned can't be cancelled just because
+     * `lifecycle_state` was never backfilled.
+     */
     public function isCancellable(): bool
     {
-        return $this->status === 'pending';
+        return $this->status === 'pending'
+            && OrderLifecycle::canTransition(
+                $this->lifecycle_state ?? OrderLifecycle::ORDER_PLACED,
+                OrderLifecycle::CANCELLED,
+            );
+    }
+
+    /** True while the courier app should be streaming its position. */
+    public function isTracking(): bool
+    {
+        return OrderLifecycle::isTracking($this->lifecycle_state);
+    }
+
+    /** Orders broadcast to couriers but not yet claimed. */
+    public function scopeAwaitingClaim($query)
+    {
+        return $query
+            ->where('lifecycle_state', OrderLifecycle::ASSIGNING_COURIERS)
+            ->whereNull('courier_id');
     }
 }

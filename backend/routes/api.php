@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\GiftBoxController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OrderLifecycleController;
+use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +27,19 @@ Route::middleware('supabase')->group(function () {
     Route::post('orders/{order}/claim', [OrderController::class, 'claim']);
     Route::post('orders/{order}/advance', [OrderController::class, 'advance']);
     Route::post('orders/{order}/count', [OrderController::class, 'count']);
+
+    // Lifecycle: the nine-step collection -> laundry -> delivery flow.
+    // 'available' is declared before the {order} routes so the literal
+    // segment is not swallowed by the wildcard.
+    Route::get('lifecycle/available', [OrderLifecycleController::class, 'available']);
+    Route::post('orders/{order}/broadcast', [OrderLifecycleController::class, 'broadcast']);
+    Route::post('orders/{order}/lifecycle/claim', [OrderLifecycleController::class, 'claim']);
+    Route::post('orders/{order}/lifecycle/transition', [OrderLifecycleController::class, 'transition']);
+    Route::get('orders/{order}/timeline', [OrderLifecycleController::class, 'timeline']);
+
+    // Live tracking: courier writes, customer reads.
+    Route::post('orders/{order}/location', [TrackingController::class, 'store']);
+    Route::get('orders/{order}/location', [TrackingController::class, 'show']);
 
     Route::get('gift-boxes', [GiftBoxController::class, 'index']);
     Route::post('gift-boxes/open', [GiftBoxController::class, 'open']);

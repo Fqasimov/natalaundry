@@ -63,6 +63,9 @@ class SupabaseSchema
             $table->boolean('is_outside_city')->default(false);
             $table->json('item_photos')->nullable();
             $table->string('dispatch_state')->default('awaiting_admin');
+            $table->string('lifecycle_state')->default('order_placed');
+            $table->timestamp('processing_finished_at')->nullable();
+            $table->string('promo_code')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('offered_at')->nullable();
             $table->timestamp('assigned_at')->nullable();
@@ -74,6 +77,50 @@ class SupabaseSchema
             $table->timestamp('cleaning_started_at')->nullable();
             $table->timestamp('delivering_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
+        });
+
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->index();
+            $table->string('title')->nullable();
+            $table->text('body')->nullable();
+            $table->boolean('read')->default(false);
+            $table->json('payload')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('order_status_logs', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('order_id')->index();
+            $table->string('from_state')->nullable();
+            $table->string('to_state');
+            $table->uuid('actor_id')->nullable();
+            $table->string('actor_role')->nullable();
+            $table->text('note')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('courier_assignments', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('order_id')->index();
+            $table->uuid('courier_id')->index();
+            $table->timestamp('offered_at')->nullable();
+            $table->timestamp('claimed_at')->nullable();
+            $table->timestamp('created_at')->nullable();
+            $table->unique(['order_id', 'courier_id']);
+        });
+
+        Schema::create('courier_locations', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('order_id')->index();
+            $table->uuid('courier_id')->index();
+            $table->decimal('lat', 10, 7);
+            $table->decimal('lng', 10, 7);
+            $table->decimal('heading', 6, 2)->nullable();
+            $table->decimal('speed', 8, 2)->nullable();
+            $table->decimal('accuracy', 8, 2)->nullable();
+            $table->timestamp('recorded_at')->nullable();
+            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('order_items', function (Blueprint $table) {
