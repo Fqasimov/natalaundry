@@ -208,6 +208,134 @@ export async function recordTopluCount(
   if (error) throw error;
 }
 
+/**
+ * Courier: orders broadcast to me and still unclaimed.
+ *
+ * The pool is the source of truth — an order offered to named couriers must
+ * not appear for anyone else — so this reads courier_assignments rather than
+ * scanning every pending order.
+ */
+export async function fetchOfferedOrders(courierId: string) {
+  const { data: offers, error: offerError } = await supabase
+    .from("courier_assignments")
+    .select("order_id")
+    .eq("courier_id", courierId)
+    .is("claimed_at", null);
+  if (offerError) throw offerError;
+
+  const ids = (offers ?? []).map((o: { order_id: string }) => o.order_id);
+  if (ids.length === 0) return [] as Order[];
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .in("id", ids)
+    .eq("lifecycle_state", "assigning_couriers")
+    .is("courier_id", null)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Order[];
+}
+
+/** Courier: the job I am currently working, if any. */
+export async function fetchMyActiveJob(courierId: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("courier_id", courierId)
+    .not("lifecycle_state", "in", '("delivered","cancelled")')
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return ((data ?? []) as Order[])[0] ?? null;
+}
+
+/**
+ * Claim a broadcast order. First-to-claim wins, decided by the database:
+ * the update is conditional on courier_id still being null, so a courier who
+ * loses the race updates zero rows and is told so rather than overwriting the
+ * winner. The Laravel endpoint takes a row lock for the same reason; this is
+ * the same guarantee expressed as a conditional write.
+ *
+ * @returns true when this courier won the race.
+ */
+export async function claimOrderAtomically(orderId: string, courierId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("orders")
+    .update({
+      courier_id: courierId,
+      lifecycle_state: "courier_assigned",
+      status: "pending",
+      assigned_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .eq("lifecycle_state", "assigning_couriers")
+    .is("courier_id", null)
+    .select("id");
+  if (error) throw error;
+
+  const won = (data ?? []).length > 0;
+  if (won) {
+    await supabase
+      .from("courier_assignments")
+      .update({ claimed_at: new Date().toISOString() })
+      .eq("order_id", orderId)
+      .eq("courier_id", courierId);
+  }
+  return won;
+}
+
+/**
+ * Move an order to an explicit next lifecycle state.
+ *
+ * Conditional on the current state so a double-tap can't skip a step: the
+ * second write matches no rows. `status` is kept in step with the same mapping
+ * the server uses, so the legacy column never drifts.
+ */
+const LEGACY_STATUS: Record<string, OrderStatus> = {
+  order_placed: "pending",
+  assigning_couriers: "pending",
+  courier_assigned: "pending",
+  courier_en_route_pickup: "collecting",
+  picked_up: "collecting",
+  at_laundry: "cleaning",
+  processing_finished: "cleaning",
+  courier_en_route_delivery: "delivering",
+  delivered: "completed",
+  cancelled: "cancelled",
+};
+
+const TIMESTAMP_COLUMN: Record<string, string | undefined> = {
+  picked_up: "collected_at",
+  at_laundry: "cleaning_started_at",
+  processing_finished: "processing_finished_at",
+  courier_en_route_delivery: "delivering_at",
+  delivered: "delivered_at",
+};
+
+export async function transitionOrder(
+  orderId: string,
+  from: string,
+  to: string
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    lifecycle_state: to,
+    status: LEGACY_STATUS[to] ?? "pending",
+  };
+  const stamp = TIMESTAMP_COLUMN[to];
+  if (stamp) patch[stamp] = now;
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update(patch)
+    .eq("id", orderId)
+    .eq("lifecycle_state", from)
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
 // "Users can cancel their own pending orders." — only while still pending.
 export async function cancelOrder(orderId: string) {
   const { error } = await supabase

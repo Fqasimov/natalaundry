@@ -47,4 +47,12 @@ return [
         ],
     ],
 
+
+    // Geocoding only — restricted to the Maps JavaScript API and Geocoding API
+    // in the Cloud Console. Live courier tracking deliberately does not use a
+    // Google product; see App\Http\Controllers\Api\TrackingController.
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
 ];

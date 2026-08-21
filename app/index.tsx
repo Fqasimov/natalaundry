@@ -9,15 +9,20 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { AppLogo } from "@/components/AppLogo";
 import { colors, font, radius } from "@/theme/tokens";
 
-type Role = "customer" | "courier" | "admin";
+// Admin lives on the website, not in the app: facility staff work at a desk
+// with an order feed and dispatch controls, which is a poor fit for a phone,
+// and shipping those controls to every install widens the app's blast radius
+// for no benefit. The API still exposes the admin endpoints — only the client
+// differs.
+type Role = "customer" | "courier";
 
 const ROLES: Array<{
   key: Role;
   icon: keyof typeof Ionicons.glyphMap;
   tint: string;
   fg: string;
-  titleKey: "roleCustomer" | "roleCourier" | "roleAdmin";
-  descKey: "roleCustomerDesc" | "roleCourierDesc" | "roleAdminDesc";
+  titleKey: "roleCustomer" | "roleCourier";
+  descKey: "roleCustomerDesc" | "roleCourierDesc";
 }> = [
   {
     key: "customer",
@@ -34,14 +39,6 @@ const ROLES: Array<{
     fg: colors.accent,
     titleKey: "roleCourier",
     descKey: "roleCourierDesc",
-  },
-  {
-    key: "admin",
-    icon: "construct",        // tools/wrench — system management
-    tint: "#FEF0D0",
-    fg: "#E8912A",
-    titleKey: "roleAdmin",
-    descKey: "roleAdminDesc",
   },
 ];
 
@@ -67,11 +64,9 @@ export default function WelcomeScreen() {
   const onRolePress = (role: Role) => {
     if (role === "customer") {
       router.push("/(auth)/customer-portal");
-    } else if (role === "courier") {
-      // Placeholder: courier auth flow
-      router.push("/(auth)/login");
     } else {
-      // Placeholder: admin auth flow
+      // Couriers sign in with the same credentials screen; their role on the
+      // profile decides which dashboard they land on after authenticating.
       router.push("/(auth)/login");
     }
   };
