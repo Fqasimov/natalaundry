@@ -13,6 +13,7 @@ import {
   type ServiceKey,
 } from "@/theme/tokens";
 import { findService } from "@/lib/catalog";
+import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { useI18n } from "@/lib/language-context";
 import { useCart } from "@/lib/state/cart";
 import { FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
@@ -35,6 +36,7 @@ export default function ServiceCatalogueScreen() {
 
   const activeId = (serviceId as ServiceKey) ?? "dry_cleaning";
   const service = findService(activeId);
+  const copy = useCatalogCopy();
   const theme = serviceTheme[activeId] ?? serviceTheme.dry_cleaning;
 
   const [upsellOpen, setUpsellOpen] = useState(false);
@@ -96,8 +98,8 @@ export default function ServiceCatalogueScreen() {
 
         <View style={[styles.heroBanner, { backgroundColor: theme.tint }]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroName}>{theme.label}</Text>
-            <Text style={styles.heroTagline}>{service.tagline}</Text>
+            <Text style={styles.heroName}>{copy.label(activeId, theme.label)}</Text>
+            <Text style={styles.heroTagline}>{copy.tagline(service)}</Text>
             <Pressable style={[styles.heroButton, { backgroundColor: theme.fg }]}>
               <Text style={styles.heroButtonLabel}>{t("more")}</Text>
             </Pressable>
@@ -122,7 +124,7 @@ export default function ServiceCatalogueScreen() {
             const qty = quantityOf(service.serviceId, item.itemId);
             return (
               <View key={item.itemId} style={styles.itemRow}>
-                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemName}>{copy.item(item)}</Text>
                 <Text style={styles.itemPrice}>{money(item.price)}</Text>
                 {qty > 0 ? (
                   <Stepper
@@ -135,7 +137,9 @@ export default function ServiceCatalogueScreen() {
                       add({
                         serviceId: service.serviceId,
                         itemId: item.itemId,
-                        name: item.name,
+                        // The basket keeps the reader's rendering, so the
+                        // summary and the order both read back the same.
+                        name: copy.item(item),
                         price: item.price,
                       })
                     }

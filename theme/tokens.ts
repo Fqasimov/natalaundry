@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 // Design tokens sampled directly from the Nata Laundry screen recording
 // (WhatsApp video, 2026-08-05) — the shipped 1.0.2 build. Every value here
 // comes from a frame of that video rather than being invented, so screens
@@ -86,12 +88,26 @@ export const ITEMISED_SERVICES = [
 // package only carries a latin-only subset besides, so ş/ğ were missing too.
 // Verified against every weight used here: Plus Jakarta Sans covers the full
 // Azerbaijani alphabet (ə, ş, ğ, ı, ç, ö, ü and their capitals).
+//
+// Plus Jakarta Sans carries no Cyrillic, so Russian never renders in it. On
+// iOS and Android that is invisible: both text engines fall back per glyph to
+// the system face, and Russian comes out in SF Pro / Roboto. The browser does
+// not do that — with a bare family name and nothing after it, CSS drops all
+// the way to the default *serif*, which is how the Russian price list ended up
+// set in Times. The stack below is what stops that; keep a real fallback on
+// any family added here.
+const WEB_FALLBACK =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+const family = (name: string) =>
+  Platform.OS === "web" ? `${name}, ${WEB_FALLBACK}` : name;
+
 export const font = {
-  regular: "PlusJakartaSans_400Regular",
-  medium: "PlusJakartaSans_500Medium",
-  semibold: "PlusJakartaSans_600SemiBold",
-  bold: "PlusJakartaSans_700Bold",
-  extrabold: "PlusJakartaSans_800ExtraBold",
+  regular: family("PlusJakartaSans_400Regular"),
+  medium: family("PlusJakartaSans_500Medium"),
+  semibold: family("PlusJakartaSans_600SemiBold"),
+  bold: family("PlusJakartaSans_700Bold"),
+  extrabold: family("PlusJakartaSans_800ExtraBold"),
 } as const;
 
 // A small type scale so headings/body/labels stay consistent instead of

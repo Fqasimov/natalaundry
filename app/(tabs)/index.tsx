@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
 import { colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { CATALOG } from "@/lib/catalog";
+import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { TOPLU_DEPOSIT } from "@/lib/toplu";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
@@ -190,6 +191,7 @@ export default function HomeScreen() {
   const showPromo = ordered === false;
 
   const [feat, ironing, shoes, bedding, bags] = CATALOG;
+  const copy = useCatalogCopy();
   const featTheme  = SERVICE_THEME.dry_cleaning;
   const ironTheme  = SERVICE_THEME.ironing;
   const shoeTheme  = SERVICE_THEME.shoes;
@@ -395,11 +397,11 @@ export default function HomeScreen() {
                     <Text style={styles.popularLabel}>{t("mostPopular")}</Text>
                   </View>
                 </View>
-                <Text style={styles.featureTitle}>{feat.name}</Text>
-                <Text style={styles.featureTagline}>{feat.tagline}</Text>
+                <Text style={styles.featureTitle}>{copy.service(feat)}</Text>
+                <Text style={styles.featureTagline}>{copy.tagline(feat)}</Text>
               </View>
               <View style={styles.orderRow}>
-                <Text style={styles.orderLabel}>Sifariş et</Text>
+                <Text style={styles.orderLabel}>{t("order")}</Text>
                 <Ionicons
                   name="arrow-forward"
                   size={14}
@@ -423,9 +425,9 @@ export default function HomeScreen() {
                   size={42}
                 />
                 <View>
-                  <Text style={styles.mediumTitle}>{ironing.name}</Text>
+                  <Text style={styles.mediumTitle}>{copy.service(ironing)}</Text>
                   <View style={styles.baxRow}>
-                    <Text style={[styles.baxLabel, { color: "#C96D12" }]}>Bax</Text>
+                    <Text style={[styles.baxLabel, { color: "#C96D12" }]}>{t("view")}</Text>
                     <Ionicons
                       name="arrow-forward"
                       size={12}
@@ -448,9 +450,9 @@ export default function HomeScreen() {
                   size={42}
                 />
                 <View>
-                  <Text style={styles.mediumTitle}>Ayaqqabı təmizliyi</Text>
+                  <Text style={styles.mediumTitle}>{copy.service(shoes)}</Text>
                   <View style={styles.baxRow}>
-                    <Text style={[styles.baxLabel, { color: "#735345" }]}>Bax</Text>
+                    <Text style={[styles.baxLabel, { color: "#735345" }]}>{t("view")}</Text>
                     <Ionicons
                       name="arrow-forward"
                       size={12}
@@ -477,7 +479,7 @@ export default function HomeScreen() {
               size={46}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.topluTitle}>{serviceTheme.toplu.label}</Text>
+              <Text style={styles.topluTitle}>{copy.label("toplu", serviceTheme.toplu.label)}</Text>
               <Text style={styles.topluTagline}>{t("topluTagline")}</Text>
             </View>
             <View style={styles.topluDepositPill}>
@@ -502,9 +504,9 @@ export default function HomeScreen() {
                 size={40}
               />
               <View style={styles.wideText}>
-                <Text style={styles.wideTitle}>Ev Tekstili</Text>
+                <Text style={styles.wideTitle}>{copy.service(bedding)}</Text>
                 <Text style={styles.wideTagline} numberOfLines={1}>
-                  Yorğanlar, yastı...
+                  {copy.tagline(bedding)}
                 </Text>
               </View>
               <Ionicons
@@ -528,10 +530,10 @@ export default function HomeScreen() {
               />
               <View style={styles.wideText}>
                 <Text style={styles.wideTitle} numberOfLines={2}>
-                  {"Aksesuarlar\nvə Oyuncaqlar"}
+                  {copy.service(bags)}
                 </Text>
                 <Text style={styles.wideTagline} numberOfLines={1}>
-                  Çantalar, oyunc...
+                  {copy.tagline(bags)}
                 </Text>
               </View>
               <Ionicons
