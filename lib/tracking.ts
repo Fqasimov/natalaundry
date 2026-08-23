@@ -1,3 +1,4 @@
+import { ApiError, apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
 import { isActive, isTracking, type LifecycleState } from "./lifecycle";
 import type { CourierLocation, Order, OrderStatusLog } from "@/types/database";
@@ -68,7 +69,14 @@ export async function fetchLatestLocation(orderId: string): Promise<CourierLocat
   return ((data ?? []) as CourierLocation[])[0] ?? null;
 }
 
-/** Courier side: push one fix. No-op unless the order is in an en-route state. */
+/**
+ * Courier side: push one fix.
+ *
+ * Through the API, which checks the pinger is the order's assigned courier and
+ * that the order is actually in an en-route state — so a loop that failed to
+ * stop cannot keep writing rows after delivery, and one courier cannot write
+ * positions onto another's job.
+ */
 export async function pushLocation(input: {
   orderId: string;
   courierId: string;
@@ -78,17 +86,21 @@ export async function pushLocation(input: {
   speed?: number | null;
   accuracy?: number | null;
 }): Promise<void> {
-  const { error } = await supabase.from("courier_locations").insert({
-    order_id: input.orderId,
-    courier_id: input.courierId,
-    lat: input.lat,
-    lng: input.lng,
-    heading: input.heading ?? null,
-    speed: input.speed ?? null,
-    accuracy: input.accuracy ?? null,
-    recorded_at: new Date().toISOString(),
-  });
-  if (error) throw error;
+  try {
+    await apiPost(`orders/${input.orderId}/location`, {
+      lat: input.lat,
+      lng: input.lng,
+      heading: input.heading ?? null,
+      speed: input.speed ?? null,
+      accuracy: input.accuracy ?? null,
+      recorded_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    // 409 means the order left the en-route states while a ping was in
+    // flight. That is the loop being right on time, not an error.
+    if (e instanceof ApiError && e.status === 409) return;
+    throw e;
+  }
 }
 
 export function isFixStale(location: CourierLocation | null): boolean {

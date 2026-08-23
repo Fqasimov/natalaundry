@@ -1,4 +1,4 @@
-import { apiPost } from "@/lib/api";
+import { ApiError, apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
@@ -149,24 +149,20 @@ export async function createTopluOrder(input: NewTopluOrderInput) {
 }
 
 /**
- * Courier records the counted value of a bulk load. Scoped to the assigned
- * courier by the same RLS policy that guards every other courier update.
+ * Courier records the counted value of a bulk load.
+ *
+ * This is the price of the order, so it goes through the API: the server
+ * checks that the caller is the assigned courier, that the order is actually a
+ * bulk one at a stage where counting makes sense, and that the figure is in
+ * range. RLS can say "the assigned courier may update this row"; it cannot say
+ * what a sane value for it is.
  */
 export async function recordTopluCount(
   orderId: string,
-  courierId: string,
+  _courierId: string,
   countedTotal: number
 ) {
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      counted_total: countedTotal,
-      counted_at: new Date().toISOString(),
-      counted_by: courierId,
-    })
-    .eq("id", orderId)
-    .eq("courier_id", courierId);
-  if (error) throw error;
+  await apiPost(`orders/${orderId}/count`, { counted_total: countedTotal });
 }
 
 /**
@@ -220,30 +216,16 @@ export async function fetchMyActiveJob(courierId: string) {
  *
  * @returns true when this courier won the race.
  */
-export async function claimOrderAtomically(orderId: string, courierId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      courier_id: courierId,
-      lifecycle_state: "courier_assigned",
-      status: "pending",
-      assigned_at: new Date().toISOString(),
-    })
-    .eq("id", orderId)
-    .eq("lifecycle_state", "assigning_couriers")
-    .is("courier_id", null)
-    .select("id");
-  if (error) throw error;
-
-  const won = (data ?? []).length > 0;
-  if (won) {
-    await supabase
-      .from("courier_assignments")
-      .update({ claimed_at: new Date().toISOString() })
-      .eq("order_id", orderId)
-      .eq("courier_id", courierId);
+export async function claimOrderAtomically(orderId: string, _courierId: string): Promise<boolean> {
+  try {
+    await apiPost(`orders/${orderId}/lifecycle/claim`);
+    return true;
+  } catch (e) {
+    // 409 is the ordinary outcome of losing the race, not a failure worth
+    // surfacing as an error. Anything else is.
+    if (e instanceof ApiError && e.status === 409) return false;
+    throw e;
   }
-  return won;
 }
 
 /**
@@ -253,48 +235,20 @@ export async function claimOrderAtomically(orderId: string, courierId: string): 
  * second write matches no rows. `status` is kept in step with the same mapping
  * the server uses, so the legacy column never drifts.
  */
-const LEGACY_STATUS: Record<string, OrderStatus> = {
-  order_placed: "pending",
-  assigning_couriers: "pending",
-  courier_assigned: "pending",
-  courier_en_route_pickup: "collecting",
-  picked_up: "collecting",
-  at_laundry: "cleaning",
-  processing_finished: "cleaning",
-  courier_en_route_delivery: "delivering",
-  delivered: "completed",
-  cancelled: "cancelled",
-};
-
-const TIMESTAMP_COLUMN: Record<string, string | undefined> = {
-  picked_up: "collected_at",
-  at_laundry: "cleaning_started_at",
-  processing_finished: "processing_finished_at",
-  courier_en_route_delivery: "delivering_at",
-  delivered: "delivered_at",
-};
-
 export async function transitionOrder(
   orderId: string,
-  from: string,
+  _from: string,
   to: string
 ): Promise<boolean> {
-  const now = new Date().toISOString();
-  const patch: Record<string, unknown> = {
-    lifecycle_state: to,
-    status: LEGACY_STATUS[to] ?? "pending",
-  };
-  const stamp = TIMESTAMP_COLUMN[to];
-  if (stamp) patch[stamp] = now;
-
-  const { data, error } = await supabase
-    .from("orders")
-    .update(patch)
-    .eq("id", orderId)
-    .eq("lifecycle_state", from)
-    .select("id");
-  if (error) throw error;
-  return (data ?? []).length > 0;
+  try {
+    await apiPost(`orders/${orderId}/lifecycle/transition`, { to });
+    return true;
+  } catch (e) {
+    // 422 is the state machine refusing the move — a double-tap, or a step
+    // this actor may not take. The caller reloads and shows the real state.
+    if (e instanceof ApiError && e.status === 422) return false;
+    throw e;
+  }
 }
 
 /**
@@ -321,50 +275,32 @@ export async function fetchRecentAddresses(userId: string, limit = 8): Promise<s
   return [...seen];
 }
 
-// "Users can cancel their own pending orders." — only while still pending.
+/**
+ * Cancel an order. The server decides whether it is still cancellable —
+ * a customer must not be able to cancel a load a courier already collected.
+ */
 export async function cancelOrder(orderId: string) {
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "cancelled" satisfies OrderStatus })
-    .eq("id", orderId)
-    .eq("status", "pending" satisfies OrderStatus);
-  if (error) throw error;
+  await apiPost(`orders/${orderId}/cancel`);
 }
 
-// "Couriers can update orders" — claim a pending, unassigned order.
-export async function claimOrder(orderId: string, courierId: string) {
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      courier_id: courierId,
-      status: "collecting" satisfies OrderStatus,
-      assigned_at: new Date().toISOString(),
-    })
-    .eq("id", orderId)
-    .eq("status", "pending" satisfies OrderStatus)
-    .is("courier_id", null);
-  if (error) throw error;
+/**
+ * Claim a pending, unassigned order (the pre-lifecycle path still used by the
+ * order detail screen). The race is settled by a row lock on the server, so
+ * two couriers tapping at once produce one winner and one 409.
+ */
+export async function claimOrder(orderId: string, _courierId: string) {
+  await apiPost(`orders/${orderId}/claim`);
 }
 
-const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; timestampColumns: string[] }>> = {
-  // The schema has both collected_at and cleaning_started_at — we don't
-  // model a separate "collected" state, so this one transition stamps both.
-  collecting: { status: "cleaning", timestampColumns: ["collected_at", "cleaning_started_at"] },
-  cleaning: { status: "delivering", timestampColumns: ["delivering_at"] },
-  delivering: { status: "completed", timestampColumns: ["delivered_at"] },
-};
-
-// "Couriers update assigned orders" — advance the job one step, stamping the
-// matching *_at timestamp column(s) the schema provides for each stage.
-export async function advanceOrderStatus(orderId: string, currentStatus: OrderStatus) {
-  const next = NEXT_STATUS[currentStatus];
-  if (!next) throw new Error(`No next status after "${currentStatus}"`);
-  const now = new Date().toISOString();
-  const timestamps = Object.fromEntries(next.timestampColumns.map((col) => [col, now]));
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: next.status, ...timestamps })
-    .eq("id", orderId);
-  if (error) throw error;
-  return next.status;
+/**
+ * Advance the job one step.
+ *
+ * The step itself is chosen by the server from the order's current state, and
+ * it checks the caller is the assigned courier first. The previous version
+ * wrote the status column directly with no condition beyond the order id, so
+ * any caller RLS let through could mark any order delivered.
+ */
+export async function advanceOrderStatus(orderId: string, _currentStatus: OrderStatus) {
+  const { data } = await apiPost<{ data: Order }>(`orders/${orderId}/advance`);
+  return data.status;
 }
