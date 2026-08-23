@@ -48,6 +48,57 @@ class GiftBoxServiceTest extends TestCase
         ]);
     }
 
+    /**
+     * One prize per opening, checked from a stale "available" verdict — the
+     * state a second request holds when both reach the gate together.
+     *
+     * This does not prove the concurrency fix: the suite is single-process
+     * against SQLite, so it cannot make two openings overlap, and this passes
+     * against the check-then-write version too. What stops the real race is
+     * the eligibility check running inside the transaction against a locked
+     * profile row; this pins the sequential half of that contract.
+     */
+    public function test_the_daily_box_cannot_be_opened_twice(): void
+    {
+        $this->reward('eco_care_package', [], GiftBoxService::TIER_DAILY);
+        $customer = $this->customer();
+
+        // Both requests reach the gate before either has written anything.
+        $first = $this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY);
+        $second = $this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY);
+        $this->assertTrue($first['available']);
+        $this->assertTrue($second['available']);
+
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+
+        $this->expectException(RuntimeException::class);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+    }
+
+    /** One completed order grants one prize, not one per request. */
+    public function test_a_gold_box_cannot_be_opened_twice_for_one_order(): void
+    {
+        $this->reward('eco_care_package', [], GiftBoxService::TIER_GOLD);
+        $customer = $this->customer();
+        $order = Order::forceCreate([
+            'id' => (string) Str::uuid(),
+            'user_id' => $customer->id,
+            'status' => 'completed',
+            'subtotal' => 10,
+            'discount' => 0,
+            'delivery_fee' => 0,
+            'total' => 10,
+            'collection_time' => 'Bu gün, 18:00 - 20:00',
+            'delivery_time' => 'Sabah, 12:00 - 14:00',
+            'created_at' => now(),
+        ]);
+
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_GOLD, $order->id);
+
+        $this->expectException(RuntimeException::class);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_GOLD, $order->id);
+    }
+
     public function test_the_daily_box_can_be_opened_once_then_enters_cooldown(): void
     {
         $this->reward('eco_care_package', [], GiftBoxService::TIER_DAILY);

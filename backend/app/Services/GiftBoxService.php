@@ -105,15 +105,24 @@ class GiftBoxService
 
     /**
      * Open a box: draw a prize, grant it, and log the opening.
+     *
+     * The eligibility check runs inside the transaction, against a locked
+     * profile row. It used to run before it, which made this a check-then-write:
+     * two taps in the same instant both read "available" and both got a prize,
+     * so the daily box was openable as often as you could tap and one completed
+     * order could pay out twice. Locking the profile serialises a given
+     * customer's openings, and the re-check inside then rejects the loser.
      */
     public function open(Profile $profile, string $tier, ?string $orderId = null): UserReward
     {
-        $availability = $this->availability($profile, $tier, $orderId);
-        if (! $availability['available']) {
-            throw new RuntimeException("Gift box unavailable: {$availability['reason']}");
-        }
-
         return DB::transaction(function () use ($profile, $tier, $orderId) {
+            Profile::query()->lockForUpdate()->findOrFail($profile->id);
+
+            $availability = $this->availability($profile, $tier, $orderId);
+            if (! $availability['available']) {
+                throw new RuntimeException("Gift box unavailable: {$availability['reason']}");
+            }
+
             $reward = $this->draw($tier);
 
             $userReward = UserReward::create([
