@@ -114,6 +114,16 @@ Key invariants:
   by the order's state, never by a manual toggle.
 - **ILK20**: 20% off the first order, applied server-side. The app never
   sends the code; it only announces the offer.
+- **Writes go through the API.** Reads use Supabase directly under RLS, but
+  anything that decides money or state — order creation, lifecycle
+  transitions, claims, the toplu count, location pings, cancellation — goes
+  through Laravel via `lib/api.ts`, because RLS chooses rows and has no
+  opinion about the values in them. Never add a direct table write for those.
+  `EXPO_PUBLIC_API_URL` is required, deliberately with no fallback.
+- **RLS is not applied.** `backend/database/policies/rls.sql` holds the
+  policies the app assumes, unrun because Supabase is unreachable here. The
+  `profiles` column grant in it is what stops a customer setting their own
+  `role` to `admin`. See `SECURITY.md`.
 
 ## Still unresolved
 
