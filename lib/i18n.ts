@@ -185,6 +185,9 @@ const az = {
   // Legacy six-value `orders.status`, shown on the order list badge. The nine
   // lifecycle states have their own labels (state*) — these are the coarse
   // ones the badge uses.
+  notificationsTitle: "Bildirişlər",
+  notificationsNone: "Hələ bildiriş yoxdur",
+  markAllRead: "Oxundu",
   statusPending: "Gözləyir",
   statusCollecting: "Götürülür",
   statusCleaning: "Təmizlənir",
@@ -483,6 +486,9 @@ const ru: Record<StringKey, string> = {
   profileSectionSupport: "Поддержка",
   repeatLastOrder: "Повторить последний заказ",
   pastOrders: "История заказов",
+  notificationsTitle: "Уведомления",
+  notificationsNone: "Уведомлений пока нет",
+  markAllRead: "Прочитано",
   statusPending: "Ожидает",
   statusCollecting: "Забирается",
   statusCleaning: "В чистке",
@@ -772,6 +778,9 @@ const en: Record<StringKey, string> = {
   profileSectionSupport: "Support",
   repeatLastOrder: "Repeat last order",
   pastOrders: "Past orders",
+  notificationsTitle: "Notifications",
+  notificationsNone: "Nothing yet",
+  markAllRead: "Mark read",
   statusPending: "Pending",
   statusCollecting: "Collecting",
   statusCleaning: "Cleaning",

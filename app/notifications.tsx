@@ -1,72 +1,167 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from "react-native";
-import { Stack } from "expo-router";
-import { supabase } from "@/lib/supabase";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+} from "react-native";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppIcon } from "@/components/AppIcon";
+import { ScreenHeader } from "@/components/ui";
+import { colors, font, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
-import type { Notification } from "@/types/database";
+import { useI18n } from "@/lib/language-context";
+import {
+  fetchNotifications,
+  markAllRead,
+  type AppNotification,
+} from "@/lib/notifications";
 
+/**
+ * The notification inbox.
+ *
+ * Rows carry an i18n key plus vars, so the message is rendered in the reader's
+ * own language here rather than shown in whatever language it was written in.
+ * `body` is the pre-rendered Azerbaijani fallback for rows that predate the
+ * key, and for channels that cannot translate.
+ */
 export default function NotificationsScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const [items, setItems] = useState<Notification[] | null>(null);
+  const { t } = useI18n();
 
-  const load = useCallback(() => {
-    if (!session?.user.id) return;
-    supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setItems((data as Notification[]) ?? []));
-  }, [session?.user.id]);
+  const [items, setItems] = useState<AppNotification[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(load, [load]);
+  const userId = session?.user.id ?? null;
 
-  const markRead = async (id: string) => {
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
+  const load = useCallback(async () => {
+    if (!userId) {
+      setItems([]);
+      return;
+    }
+    try {
+      setItems(await fetchNotifications(userId));
+    } catch {
+      setItems([]);
+    }
+  }, [userId]);
+
+  useEffect(() => {
     load();
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
   };
 
-  if (!items) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  const readAll = async () => {
+    if (!userId) return;
+    // Optimistic: the list is already on screen and the write is small, so
+    // waiting on the round trip would just make the tap feel slow.
+    setItems((prev) => prev?.map((n) => ({ ...n, read: true })) ?? prev);
+    try {
+      await markAllRead(userId);
+    } catch {
+      await load();
+    }
+  };
+
+  const unread = (items ?? []).filter((n) => !n.read).length;
+
+  const label = (n: AppNotification): string => {
+    const key = n.payload?.key;
+    if (key) return t(key as never, n.payload?.vars);
+    return n.body ?? "";
+  };
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: true, title: "Notifications" }} />
-      <FlatList
-        contentContainerStyle={styles.list}
-        data={items}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>Nothing yet</Text>}
-        renderItem={({ item }) => {
-          // No title/body columns — notifications carry a `kind` + a jsonb
-          // `payload` whose shape isn't confirmed yet. Fall back to whatever
-          // title/body/message keys show up, else dump the kind + raw payload.
-          const payload = item.payload ?? {};
-          const title = (payload.title as string) ?? item.kind;
-          const body = (payload.body as string) ?? (payload.message as string) ?? JSON.stringify(payload);
-          return (
-            <Pressable style={[styles.row, !item.read && styles.rowUnread]} onPress={() => markRead(item.id)}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.body}>{body}</Text>
-            </Pressable>
-          );
-        }}
+    <View style={[s.root, { paddingTop: insets.top + 4 }]}>
+      <ScreenHeader
+        title={t("notificationsTitle")}
+        rightLabel={unread > 0 ? t("markAllRead") : undefined}
+        onRightPress={unread > 0 ? readAll : undefined}
+        backFallback="/(tabs)"
       />
-    </>
+
+      {!items ? (
+        <View style={s.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 32 }]}
+          data={items}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <AppIcon name="ion:notifications-outline" size={30} color={colors.textSecondary} />
+              <Text style={s.emptyLabel}>{t("notificationsNone")}</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const orderId = item.payload?.order_id;
+            return (
+              <Pressable
+                style={[s.card, !item.read && s.cardUnread]}
+                disabled={!orderId}
+                onPress={() => orderId && router.push(`/order/${orderId}`)}
+              >
+                <View style={[s.dot, item.read && s.dotRead]} />
+                <View style={s.cardBody}>
+                  <Text style={s.message}>{label(item)}</Text>
+                  <Text style={s.time}>
+                    {new Date(item.created_at).toLocaleString(undefined, {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </View>
+                {orderId ? (
+                  <AppIcon name="ion:chevron-forward" size={16} color={colors.textSecondary} />
+                ) : null}
+              </Pressable>
+            );
+          }}
+        />
+      )}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  list: { padding: 16 },
-  empty: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
-  row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  rowUnread: { backgroundColor: "#fafafa" },
-  title: { fontFamily: "PlusJakartaSans_600SemiBold" },
-  body: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", marginTop: 2 },
+  list: { paddingHorizontal: 20, gap: 10 },
+  empty: { alignItems: "center", gap: 10, marginTop: 56 },
+  emptyLabel: { ...type.body, color: colors.textSecondary },
+
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  cardUnread: { borderColor: colors.primary },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  dotRead: { backgroundColor: colors.border },
+  cardBody: { flex: 1, gap: 3 },
+  message: { fontFamily: font.medium, fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
+  time: { ...type.caption, color: colors.textSecondary },
 });
