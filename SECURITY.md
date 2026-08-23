@@ -97,12 +97,26 @@ from the token rather than from the request body.
 - **SQL injection.** Every query goes through Eloquent or PostgREST with bound
   parameters; there is no string-built SQL.
 
+### No Content-Security-Policy on the admin console
+
+Fixed at the source is not the same as unexploitable. `AdminConsoleHeaders`
+now serves the page with a per-response nonce, `default-src 'none'` and no
+`unsafe-inline`, so the next injection of that shape does nothing. Plus
+nosniff, same-origin referrers and noindex — the board lists customer names,
+addresses and phone numbers.
+
+### No rate limiting
+
+120 requests/minute generally, 20/hour for order creation, 60/minute for
+position pings. Keyed by user id rather than IP: the app sits behind mobile
+carrier NAT, where an IP limit is one limit shared by a neighbourhood.
+
 ## Worth doing next
 
-- A Content-Security-Policy header on the admin page. The XSS is fixed at the
-  source, but the console holds a session token and a CSP without `unsafe-inline`
-  would make the next mistake of that shape non-exploitable.
-- Rate limiting on the API, particularly order creation and the location
-  endpoint.
 - The admin console's authenticated path has not been exercised end to end,
-  because Supabase is unreachable from the build environment.
+  because Supabase is unreachable from the build environment. The CSP is
+  asserted in tests, including that every inline block carries its nonce, but
+  a real sign-in has not been driven through it.
+- Nothing rotates the staff token; it lives for as long as Supabase says. If
+  the console grows beyond a handful of people, that is the next thing to
+  look at.
