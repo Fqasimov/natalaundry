@@ -62,6 +62,14 @@ restoring; only intended source changes should appear.
 - This session is a **remote cloud container**. It cannot reach the user's
   `localhost:8081`, their machine, or any local dev server. Code moves
   between us only through GitHub.
+- **Higgsfield**: the MCP works once the connector is authorised (the CLI's
+  `auth login` cannot — it is browser OAuth on a loopback port). Generation
+  succeeds, but the results land on `d8j0ntlcm91z4.cloudfront.net`, which the
+  proxy blocks, so generated assets **cannot be downloaded or inspected from
+  here** — the user has to save and commit them. Preflight every call with
+  `get_cost`: on the free plan `gpt_image_2` is refused entirely, `soul_2` is
+  ~0.12 credits, and video runs 3 credits (minimax-fast 512) to 32.5
+  (seedance). Drop a rendered still in via `lib/gift-box-asset.ts`.
 - The agent proxy **blocks `api.supabase.com` and `*.supabase.co` entirely**
   (403 on CONNECT) and blocks ngrok. Schema pulls and live Supabase calls
   have to be done by the user manually. npm, Packagist and Google Fonts are

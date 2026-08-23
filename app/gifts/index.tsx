@@ -14,7 +14,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
+import { Image } from "expo-image";
 import { GiftBoxAnimation } from "@/components/GiftBoxAnimation";
+import { GIFT_BOX_IMAGE } from "@/lib/gift-box-asset";
 import { REWARD_PRESENTATION, REWARD_TTL_DAYS } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import {
@@ -104,7 +106,11 @@ export default function GiftBoxScreen() {
         }
       >
         <LinearGradient colors={["#16233D", "#0D1B33"]} style={s.hero}>
-          <GiftBoxAnimation opening={false} size={120} />
+          {GIFT_BOX_IMAGE ? (
+            <Image source={GIFT_BOX_IMAGE} style={s.heroImage} contentFit="contain" />
+          ) : (
+            <GiftBoxAnimation opening={false} size={120} />
+          )}
           <Text style={s.heroTitle}>{t("giftBoxes")}</Text>
           <Text style={s.heroBody}>{t("giftBoxesIntro")}</Text>
         </LinearGradient>
@@ -227,6 +233,7 @@ const s = StyleSheet.create({
   },
 
   hero: { borderRadius: radius.lg, alignItems: "center", paddingVertical: 22, gap: 6 },
+  heroImage: { width: 150, height: 150 },
   heroTitle: { fontFamily: font.bold, fontSize: 20, color: colors.textInverse },
   heroBody: {
     fontFamily: font.regular,
