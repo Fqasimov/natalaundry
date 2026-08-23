@@ -203,40 +203,59 @@ let pollTimer = null;
 let couriers = [];
 
 function orderCard(order) {
+  // Built with textContent, never innerHTML. Customer and courier names and
+  // the address are attacker-controlled — a customer picks their own profile
+  // name — so interpolating them into markup is stored XSS straight into the
+  // admin's session, and the admin token is reachable from JS on this origin.
   const el = document.createElement('div');
   el.className = 'card';
-  const when = order.created_at ? new Date(order.created_at).toLocaleString() : '';
-  el.innerHTML = `
-    <div class="row">
-      <div class="grow">
-        <div class="row">
-          <strong>Sifariş #${order.order_no ?? '—'}</strong>
-          <span class="state">${STATE_LABEL[order.lifecycle_state] ?? order.lifecycle_state}</span>
-        </div>
-        <div class="muted">${order.customer?.name ?? '—'} · ${order.customer?.phone ?? ''}</div>
-        <div class="muted">${order.address ?? '—'}</div>
-        <div class="muted">${order.collection_time ?? ''} · ${when}</div>
-        ${order.courier ? `<div class="muted">Kuryer: ${order.courier.name}</div>` : ''}
-      </div>
-      <div style="text-align:right">
-        <div style="font-weight:700;font-size:17px">₼${Number(order.total).toFixed(2)}</div>
-      </div>
-    </div>
-    <div class="row" style="margin-top:12px"></div>`;
 
-  const actions = el.querySelector('.row:last-child');
+  const top = div('row');
+  const info = div('grow');
+
+  const titleRow = div('row');
+  titleRow.append(el2('strong', `Sifariş #${order.order_no ?? '—'}`));
+  titleRow.append(el2('span', STATE_LABEL[order.lifecycle_state] ?? order.lifecycle_state, 'state'));
+  info.append(titleRow);
+
+  const customer = [order.customer?.name ?? '—', order.customer?.phone ?? ''].filter(Boolean).join(' · ');
+  info.append(el2('div', customer, 'muted'));
+  info.append(el2('div', order.address ?? '—', 'muted'));
+  info.append(el2('div', [order.collection_time ?? '', order.created_at ? new Date(order.created_at).toLocaleString() : ''].filter(Boolean).join(' · '), 'muted'));
+  if (order.courier) info.append(el2('div', `Kuryer: ${order.courier.name ?? ''}`, 'muted'));
+
+  const money = div();
+  money.style.textAlign = 'right';
+  const total = el2('div', '₼' + Number(order.total).toFixed(2));
+  total.style.cssText = 'font-weight:700;font-size:17px';
+  money.append(total);
+
+  top.append(info, money);
+  el.append(top);
+
+  const actions = div('row');
+  actions.style.marginTop = '12px';
   // Only actions the state machine would accept are rendered, so a click can
   // never come back as a 422.
-  if (order.can.broadcast) {
-    actions.append(button('Kuryerlərə göndər', () => openAssign(order)));
-  }
-  if (order.can.at_laundry) {
-    actions.append(button('Yuyucu mərkəzə çatdı', () => transition(order, 'at_laundry')));
-  }
-  if (order.can.processing_finished) {
-    actions.append(button('Təmizləndi, hazırdır', () => transition(order, 'processing_finished')));
-  }
+  if (order.can.broadcast) actions.append(button('Kuryerlərə göndər', () => openAssign(order)));
+  if (order.can.at_laundry) actions.append(button('Yuyucu mərkəzə çatdı', () => transition(order, 'at_laundry')));
+  if (order.can.processing_finished) actions.append(button('Təmizləndi, hazırdır', () => transition(order, 'processing_finished')));
+  el.append(actions);
+
   return el;
+}
+
+function div(className) {
+  const d = document.createElement('div');
+  if (className) d.className = className;
+  return d;
+}
+
+function el2(tag, text, className) {
+  const e = document.createElement(tag);
+  e.textContent = text;
+  if (className) e.className = className;
+  return e;
 }
 
 function button(label, onClick) {
@@ -263,11 +282,15 @@ async function transition(order, to) {
 async function openAssign(order) {
   $('assign-order').textContent = `Sifariş #${order.order_no ?? '—'}`;
   const list = $('courier-list');
-  list.innerHTML = '';
+  list.replaceChildren();
   couriers.forEach((c) => {
     const row = document.createElement('label');
-    row.innerHTML = `<input type="checkbox" value="${c.id}"> <span>${c.name}</span>
-                     <span class="muted" style="margin-left:auto">${c.phone ?? ''}</span>`;
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.value = c.id;
+    const phone = el2('span', c.phone ?? '', 'muted');
+    phone.style.marginLeft = 'auto';
+    row.append(box, el2('span', c.name ?? ''), phone);
     list.append(row);
   });
   const dialog = $('assign');
@@ -303,9 +326,9 @@ async function broadcast(courierIds) {
 async function loadOrders() {
   const { data } = await api('/admin/orders');
   const wrap = $('orders');
-  wrap.innerHTML = '';
+  wrap.replaceChildren();
   if (data.length === 0) {
-    wrap.innerHTML = '<div class="card muted">Aktiv sifariş yoxdur</div>';
+    wrap.append(el2('div', 'Aktiv sifariş yoxdur', 'card muted'));
   } else {
     data.forEach((order) => wrap.append(orderCard(order)));
   }
