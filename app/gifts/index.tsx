@@ -16,7 +16,11 @@ import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { Image } from "expo-image";
 import { GiftBoxAnimation } from "@/components/GiftBoxAnimation";
-import { GIFT_BOX_IMAGE } from "@/lib/gift-box-asset";
+import {
+  GIFT_BOX_IMAGE,
+  GIFT_BOX_REVEAL,
+  GIFT_BOX_REVEAL_MS,
+} from "@/lib/gift-box-asset";
 import { REWARD_PRESENTATION, REWARD_TTL_DAYS } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import {
@@ -45,6 +49,7 @@ export default function GiftBoxScreen() {
   const [opening, setOpening] = useState<UnopenedBox | null>(null);
   const [lidUp, setLidUp] = useState(false);
   const [won, setWon] = useState<ActiveReward | null>(null);
+  const [burst, setBurst] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -84,10 +89,22 @@ export default function GiftBoxScreen() {
     }
   };
 
+  // The prize lands on the burst rather than the moment the request returns,
+  // so a fast network does not skip the animation.
+  useEffect(() => {
+    if (!lidUp) {
+      setBurst(false);
+      return;
+    }
+    const timer = setTimeout(() => setBurst(true), GIFT_BOX_REVEAL_MS);
+    return () => clearTimeout(timer);
+  }, [lidUp]);
+
   const close = async () => {
     setOpening(null);
     setLidUp(false);
     setWon(null);
+    setBurst(false);
     await load();
   };
 
@@ -106,11 +123,7 @@ export default function GiftBoxScreen() {
         }
       >
         <LinearGradient colors={["#16233D", "#0D1B33"]} style={s.hero}>
-          {GIFT_BOX_IMAGE ? (
-            <Image source={GIFT_BOX_IMAGE} style={s.heroImage} contentFit="contain" />
-          ) : (
-            <GiftBoxAnimation opening={false} size={120} />
-          )}
+          <Image source={GIFT_BOX_IMAGE} style={s.heroImage} contentFit="contain" />
           <Text style={s.heroTitle}>{t("giftBoxes")}</Text>
           <Text style={s.heroBody}>{t("giftBoxesIntro")}</Text>
         </LinearGradient>
@@ -182,28 +195,46 @@ export default function GiftBoxScreen() {
         )}
       </ScrollView>
 
-      {/* Reveal */}
+      {/* Reveal. The clip plays once and holds on the burst; the prize fades
+          in on that beat, so the box reads as handing it over. */}
       <Modal visible={opening !== null} transparent animationType="fade" onRequestClose={close}>
         <View style={s.modalBackdrop}>
-          <GiftBoxAnimation opening={lidUp} size={200}>
-            {wonCopy ? (
-              <View style={s.prizeCard}>
-                <LinearGradient
-                  colors={won ? REWARD_PRESENTATION[won.kind].gradient : ["#fff", "#fff"]}
-                  style={s.prizeIcon}
-                >
-                  <Ionicons
-                    name={won ? REWARD_PRESENTATION[won.kind].icon : "gift"}
-                    size={20}
-                    color={colors.textInverse}
-                  />
-                </LinearGradient>
-                <Text style={s.prizeTitle}>{wonCopy.title}</Text>
+          <View style={s.revealStage}>
+            {lidUp ? (
+              <Image
+                source={GIFT_BOX_REVEAL}
+                style={s.revealClip}
+                contentFit="contain"
+                // Each opening must start from the closed box, so the clip is
+                // remounted per reveal rather than resumed where it stopped.
+                key={won?.id ?? "reveal"}
+              />
+            ) : (
+              // Until the server has drawn a prize there is nothing to reveal,
+              // so the drawn box keeps rocking rather than starting the clip.
+              <GiftBoxAnimation opening={false} size={200} />
+            )}
+
+            {burst && wonCopy ? (
+              <View style={s.prizeOverlay} pointerEvents="none">
+                <View style={s.prizeCard}>
+                  <LinearGradient
+                    colors={won ? REWARD_PRESENTATION[won.kind].gradient : ["#fff", "#fff"]}
+                    style={s.prizeIcon}
+                  >
+                    <Ionicons
+                      name={won ? REWARD_PRESENTATION[won.kind].icon : "gift"}
+                      size={20}
+                      color={colors.textInverse}
+                    />
+                  </LinearGradient>
+                  <Text style={s.prizeTitle}>{wonCopy.title}</Text>
+                </View>
               </View>
             ) : null}
-          </GiftBoxAnimation>
+          </View>
 
-          {won ? (
+          {burst && won ? (
             <View style={s.revealFoot}>
               <Text style={s.revealDesc}>{wonCopy?.description}</Text>
               <Pressable style={s.revealButton} onPress={close}>
@@ -307,11 +338,16 @@ const s = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(8,17,34,0.94)",
+    backgroundColor: "rgba(20,26,42,0.97)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
+  revealStage: { alignItems: "center", justifyContent: "center" },
+  // Same navy the clip is rendered on, so its edge disappears into the
+  // backdrop instead of reading as a pasted rectangle.
+  revealClip: { width: 300, height: 300, borderRadius: 20 },
+  prizeOverlay: { position: "absolute", alignItems: "center", justifyContent: "center" },
   prizeCard: {
     alignItems: "center",
     gap: 8,

@@ -1,22 +1,25 @@
 import type { ImageSourcePropType } from "react-native";
 
 /**
- * The rendered gift-box still, if one has been added to the repo.
+ * The rendered gift box, generated in Higgsfield and committed here.
  *
- * Left null on purpose. The image is generated in Higgsfield and lives on
- * their CDN, which this project's build cannot reach, so the file has to be
- * downloaded and committed by hand. A `require` pointing at a file that is not
- * there is a build error, not a blank image — so the switch is explicit.
- *
- * To use it:
- *   1. Save the render to `assets/images/gift-box.png`
- *   2. Replace the line below with:
- *        export const GIFT_BOX_IMAGE: ImageSourcePropType | null =
- *          require("../assets/images/gift-box.png");
- *
- * Until then the gift screens draw the box with <GiftBoxAnimation />, which
- * needs no asset at all. The reveal itself always uses the drawn box: it has
- * to animate against the prize the server actually drew, which a fixed clip
- * cannot do.
+ * `GIFT_BOX_REVEAL` is an animated WebP rather than an mp4 on purpose:
+ * expo-image already renders animated WebP, so the reveal costs no new native
+ * dependency, and at 320px/15fps the whole clip is under 200 KB. It is
+ * encoded to play **once** and hold on the final burst — the prize is read
+ * against that held frame, so it must not loop back to a closed box.
  */
-export const GIFT_BOX_IMAGE: ImageSourcePropType | null = null;
+export const GIFT_BOX_IMAGE: ImageSourcePropType =
+  require("../assets/images/gift-box.png");
+
+export const GIFT_BOX_REVEAL: ImageSourcePropType =
+  require("../assets/images/gift-box-reveal.webp");
+
+/**
+ * When the lid is clear and the light has bloomed, in milliseconds.
+ *
+ * Measured off the clip: the burst lands about 2.6s in. The prize card fades
+ * in on that beat, so the reveal reads as the box handing it over rather than
+ * a caption appearing over a video.
+ */
+export const GIFT_BOX_REVEAL_MS = 2600;
