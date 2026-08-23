@@ -21,16 +21,43 @@ The only things still worth surfacing rather than doing silently:
 
 Everything else: decide and do it.
 
-## Verification bar before any push
+## Division of labour
 
-A change is not done until it has been **rendered and looked at**, not just
-typechecked. Several bugs in this project (blank MaterialCommunityIcons,
-the dropped Toplu card) compiled cleanly and were only visible in a render.
+**The user tests the app; the agent runs what the user cannot.** Set 2026-08-23.
 
-1. `npx tsc --noEmit` — must be clean
-2. Web export + screenshot the affected screen (recipe below)
-3. `cd backend && php artisan test` when backend logic changed
-4. Confirm `git status` is clean of demo artifacts before committing
+Spend effort on work that is genuinely out of the user's reach — backend
+logic, migrations, service and pricing rules, data shape, race conditions,
+schema archaeology, batch edits across many files, long-running commands —
+and on the cheap checks that catch whole classes of error at once.
+
+Leave to the user: tapping through screens, checking buttons work, layout and
+spacing judgement, "does this feel right", and end-to-end functional passes.
+Do not build render harnesses for these.
+
+### What to run before a push
+
+1. `npx tsc --noEmit` — always. Cheap, catches a lot.
+2. `cd backend && php artisan test` — whenever backend logic changed.
+3. `git status --short` — must be clean of demo artifacts (see the stub note).
+
+### When a render IS still worth it
+
+Only for changes whose correctness cannot be seen any other way, e.g. a new
+visual component with no reference, or a bug reported as "it looks wrong" with
+no stack trace. The screenshot recipe below stays for those cases. Note the
+trade-off being accepted: the render loop is what caught the `{}` notification
+inbox, the untranslated services grid and the Cyrillic-in-Times bug — all of
+which typechecked clean. Those now surface in the user's own testing instead.
+
+### Tools, MCPs and subagents
+
+Call only what the task needs. Do not spawn subagents unless asked or the work
+genuinely parallelises — each starts cold and re-derives context, which
+usually costs more than it saves. Do not call an MCP speculatively; preflight
+paid ones (`get_cost`) before spending.
+
+Model choice is the user's, via `/model` — the agent cannot downgrade itself
+mid-session.
 
 ### Screenshot recipe
 
