@@ -7,10 +7,12 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\Profile;
+use App\Services\CatalogService;
 use App\Services\OrderService;
 use App\Services\PricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class OrderController extends Controller
@@ -18,6 +20,7 @@ class OrderController extends Controller
     public function __construct(
         private readonly OrderService $orders,
         private readonly PricingService $pricing,
+        private readonly CatalogService $catalog,
     ) {}
 
     private function profile(Request $request): Profile
@@ -74,22 +77,43 @@ class OrderController extends Controller
         return (new OrderResource($model->load('items')))->response();
     }
 
-    /** Live estimate for the basket, without creating anything. */
+    /**
+     * Live estimate for the basket, without creating anything.
+     *
+     * Items are named, not priced. The endpoint used to take a price per line
+     * from the request and quote against it, which meant the quote could
+     * disagree with the order it turned into: the app carries its own copy of
+     * the catalogue for offline estimates, and if that copy drifts from the
+     * server's the customer is shown one total at checkout and charged
+     * another. Resolving here the same way order creation does keeps the two
+     * numbers the same by construction.
+     */
     public function quote(Request $request): JsonResponse
     {
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
-            'items.*.price' => ['required', 'numeric', 'min:0'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'delivery_tier' => ['required', 'string'],
+            'items.*.service_id' => ['required', 'string'],
+            'items.*.item_id' => ['required', 'string'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
+            'delivery_tier' => ['required', Rule::in(config('nata.delivery.tiers'))],
             'is_outside_city' => ['boolean'],
         ]);
 
+        $lines = array_map(function (array $item): array {
+            $resolved = $this->catalog->resolve($item['service_id'], $item['item_id']);
+
+            return [
+                'item_name' => $resolved['name'],
+                'price' => $resolved['price'],
+                'quantity' => (int) $item['quantity'],
+            ];
+        }, $data['items']);
+
         return response()->json($this->pricing->breakdown(
-            $data['items'],
+            $lines,
             $data['delivery_tier'],
             (bool) ($data['is_outside_city'] ?? false),
-        ));
+        ) + ['items' => $lines]);
     }
 
     // ---- courier endpoints -------------------------------------------------
