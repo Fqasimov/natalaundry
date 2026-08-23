@@ -14,14 +14,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('catalog', [CatalogController::class, 'index']);
 
 // Everything else runs against the caller's Supabase access token.
-Route::middleware('supabase')->group(function () {
+Route::middleware(['supabase', 'throttle:api'])->group(function () {
     Route::get('profile', [ProfileController::class, 'show']);
     Route::patch('profile', [ProfileController::class, 'update']);
 
     Route::get('orders', [OrderController::class, 'index']);
-    Route::post('orders', [OrderController::class, 'store']);
+    Route::post('orders', [OrderController::class, 'store'])->middleware('throttle:orders');
     Route::post('orders/quote', [OrderController::class, 'quote']);
-    Route::post('orders/bulk', [OrderController::class, 'storeBulk']);
+    Route::post('orders/bulk', [OrderController::class, 'storeBulk'])->middleware('throttle:orders');
     Route::get('orders/available', [OrderController::class, 'available']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
@@ -39,7 +39,7 @@ Route::middleware('supabase')->group(function () {
     Route::get('orders/{order}/timeline', [OrderLifecycleController::class, 'timeline']);
 
     // Live tracking: courier writes, customer reads.
-    Route::post('orders/{order}/location', [TrackingController::class, 'store']);
+    Route::post('orders/{order}/location', [TrackingController::class, 'store'])->middleware('throttle:tracking');
     Route::get('orders/{order}/location', [TrackingController::class, 'show']);
 
     // Admin website. The dispatch and facility controls live in a browser

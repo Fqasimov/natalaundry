@@ -15,4 +15,6 @@ Route::get('/', function () {
  * from /api/admin/*, which requires an admin Supabase token, so an anonymous
  * visitor gets a login form and nothing else.
  */
-Route::view('/admin', 'admin')->name('admin');
+Route::view('/admin', 'admin')
+    ->middleware(\App\Http\Middleware\AdminConsoleHeaders::class)
+    ->name('admin');

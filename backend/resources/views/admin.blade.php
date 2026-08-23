@@ -17,7 +17,7 @@
   is no second user store and no new password to manage. The token lives in
   sessionStorage, not localStorage: it should die with the tab.
 --}}
-<style>
+<style nonce="{{ $cspNonce }}">
   :root {
     --blue:#1E77E5; --blue-dark:#1560C4; --ink:#14181F; --muted:#7A828E;
     --bg:#FDFCEF; --surface:#fff; --border:#EAE8DA; --amber:#F2B71E;
@@ -116,7 +116,7 @@
   </div>
 </dialog>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 const API = @json(rtrim(config('app.url'), '/').'/api');
 const SUPABASE_URL = @json(config('services.supabase.url'));
 const SUPABASE_ANON = @json(config('services.supabase.anon_key'));
