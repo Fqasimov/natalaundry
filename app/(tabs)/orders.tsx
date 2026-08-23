@@ -1,17 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+} from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppIcon } from "@/components/AppIcon";
+import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
+import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
+import { useI18n } from "@/lib/language-context";
 import { fetchAvailableOrdersForCourier, fetchMyCourierOrders, fetchMyOrders } from "@/lib/orders";
 import type { Order } from "@/types/database";
 
 type CourierTab = "available" | "mine";
 
+/**
+ * Order history. Reached from the profile rather than the tab bar, which is
+ * why it is not one of the three tabs.
+ */
 export default function OrdersScreen() {
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { profile } = useProfile();
+  const { t } = useI18n();
   const isCourier = profile?.role === "courier";
 
   const [courierTab, setCourierTab] = useState<CourierTab>("available");
@@ -47,91 +66,122 @@ export default function OrdersScreen() {
     setRefreshing(false);
   };
 
-  if (loadError) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{loadError}</Text>
-      </View>
-    );
-  }
-
-  if (!orders) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
   return (
-    <View style={{ flex: 1, paddingTop: 60 }}>
-      <Text style={styles.header}>{isCourier ? "Jobs" : "Your orders"}</Text>
-
-      {isCourier && (
-        <View style={styles.segmented}>
-          <Pressable
-            style={[styles.segment, courierTab === "available" && styles.segmentActive]}
-            onPress={() => setCourierTab("available")}
-          >
-            <Text style={[styles.segmentText, courierTab === "available" && styles.segmentTextActive]}>
-              Available
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.segment, courierTab === "mine" && styles.segmentActive]}
-            onPress={() => setCourierTab("mine")}
-          >
-            <Text style={[styles.segmentText, courierTab === "mine" && styles.segmentTextActive]}>Mine</Text>
-          </Pressable>
-        </View>
-      )}
-
-      <FlatList
-        contentContainerStyle={styles.list}
-        data={orders}
-        keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={<Text style={styles.empty}>No orders yet</Text>}
-        renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => router.push(`/order/${item.id}`)}>
-            <View>
-              <Text style={styles.rowTitle}>Order #{item.order_no}</Text>
-              <Text style={styles.rowSubtitle}>{item.address ?? "No address"}</Text>
-            </View>
-            <StatusBadge status={item.status} />
-          </Pressable>
-        )}
+    <View style={[s.root, { paddingTop: insets.top + 4 }]}>
+      <ScreenHeader
+        title={isCourier ? t("courierJobs") : t("pastOrders")}
+        backFallback="/(tabs)/profile"
       />
+
+      {isCourier ? (
+        <View style={s.segmented}>
+          {(["available", "mine"] as CourierTab[]).map((key) => (
+            <Pressable
+              key={key}
+              style={[s.segment, courierTab === key && s.segmentActive]}
+              onPress={() => setCourierTab(key)}
+            >
+              <Text style={[s.segmentLabel, courierTab === key && s.segmentLabelActive]}>
+                {key === "available" ? t("courierAvailable") : t("courierActive")}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {loadError ? (
+        <Text style={s.error}>{loadError}</Text>
+      ) : !orders ? (
+        <View style={s.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 32 }]}
+          data={orders}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <AppIcon name="mci:hanger" size={30} color={colors.textSecondary} />
+              <Text style={s.emptyLabel}>{t("noOrders")}</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Pressable style={s.card} onPress={() => router.push(`/order/${item.id}`)}>
+              <View style={s.cardTop}>
+                <Text style={s.orderNo}>{t("orderNo", { no: item.order_no ?? "—" })}</Text>
+                <StatusBadge status={item.status} />
+              </View>
+              <Text style={s.address} numberOfLines={2}>
+                {item.address ?? "—"}
+              </Text>
+              <View style={s.cardBottom}>
+                <Text style={s.slot} numberOfLines={1}>
+                  {item.collection_time}
+                </Text>
+                <Text style={s.total}>{money(item.total)}</Text>
+              </View>
+            </Pressable>
+          )}
+        />
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 22, paddingHorizontal: 16, marginBottom: 12 },
+  error: {
+    ...type.caption,
+    margin: 20,
+    color: colors.danger,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
   segmented: {
     flexDirection: "row",
-    marginHorizontal: 16,
-    marginBottom: 12,
-    backgroundColor: "#f2f2f2",
-    borderRadius: 10,
-    padding: 3,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  segment: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
-  segmentActive: { backgroundColor: "#fff" },
-  segmentText: { fontFamily: "PlusJakartaSans_500Medium", color: "#666" },
-  segmentTextActive: { color: "#111" },
-  list: { paddingHorizontal: 16, paddingBottom: 40 },
-  empty: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", textAlign: "center", marginTop: 40 },
-  error: { fontFamily: "PlusJakartaSans_400Regular", color: "#c0392b" },
-  row: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    flexDirection: "row",
-    justifyContent: "space-between",
+  segment: {
+    flex: 1,
     alignItems: "center",
+    borderRadius: radius.pill,
+    paddingVertical: 9,
+    backgroundColor: colors.surfaceAlt,
   },
-  rowTitle: { fontFamily: "PlusJakartaSans_500Medium" },
-  rowSubtitle: { fontFamily: "PlusJakartaSans_400Regular", color: "#666", fontSize: 12, marginTop: 2 },
+  segmentActive: { backgroundColor: colors.primary },
+  segmentLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textSecondary },
+  segmentLabelActive: { color: colors.textInverse },
+
+  list: { paddingHorizontal: 20, gap: 12 },
+  empty: { alignItems: "center", gap: 10, marginTop: 56 },
+  emptyLabel: { ...type.body, color: colors.textSecondary },
+
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 6,
+  },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  orderNo: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
+  address: { ...type.body, color: colors.textSecondary },
+  cardBottom: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  slot: { ...type.caption, flex: 1, color: colors.textSecondary },
+  total: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
 });

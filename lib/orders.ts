@@ -9,10 +9,22 @@ import type { Order, OrderItem, OrderStatus } from "@/types/database";
 // `service_prices` real columns are still unconfirmed (see lib/catalog.ts) —
 // booking currently uses the static catalog instead of that table.
 
+/**
+ * The signed-in customer's own orders.
+ *
+ * Filtered by user_id here as well as by RLS. Relying on the policy alone
+ * meant that if it were ever missing or written wrong, this screen would list
+ * every order in the table — with each customer's address and phone on it.
+ */
 export async function fetchMyOrders() {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) return [] as Order[];
+
   const { data, error } = await supabase
     .from("orders")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Order[];

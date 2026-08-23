@@ -1,40 +1,46 @@
 import { View, Text, StyleSheet } from "react-native";
+import { colors, font, radius } from "@/theme/tokens";
+import { useI18n } from "@/lib/language-context";
 import type { OrderStatus } from "@/types/database";
 
-const LABELS: Record<OrderStatus, string> = {
-  pending: "Pending",
-  collecting: "Collecting",
-  cleaning: "Cleaning",
-  delivering: "Delivering",
-  completed: "Completed",
-  cancelled: "Cancelled",
+// The coarse six-value `orders.status`. Copy is translated like everything
+// else the customer reads; the nine lifecycle states have their own labels.
+const LABEL_KEY: Record<OrderStatus, string> = {
+  pending: "statusPending",
+  collecting: "statusCollecting",
+  cleaning: "statusCleaning",
+  delivering: "statusDelivering",
+  completed: "statusCompleted",
+  cancelled: "statusCancelled",
 };
 
-const COLORS: Record<OrderStatus, string> = {
-  pending: "#b7791f",
-  collecting: "#2563eb",
-  cleaning: "#7c3aed",
-  delivering: "#0891b2",
-  completed: "#15803d",
-  cancelled: "#c0392b",
+const TINT: Record<OrderStatus, string> = {
+  pending: colors.amber,
+  collecting: colors.primary,
+  cleaning: colors.primary,
+  delivering: colors.primary,
+  completed: colors.success,
+  cancelled: colors.danger,
 };
 
 export function StatusBadge({ status }: { status: OrderStatus }) {
-  const color = COLORS[status] ?? "#666";
+  const { t } = useI18n();
+  const tint = TINT[status] ?? colors.textSecondary;
+
   return (
-    <View style={[styles.badge, { backgroundColor: `${color}1a`, borderColor: color }]}>
-      <Text style={[styles.text, { color }]}>{LABELS[status] ?? status}</Text>
+    <View style={[styles.badge, { backgroundColor: `${tint}1A` }]}>
+      <Text style={[styles.text, { color: tint }]}>
+        {t((LABEL_KEY[status] ?? "statusPending") as never)}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    borderWidth: 1,
-    borderRadius: 100,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: "flex-start",
+    borderRadius: radius.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
   },
-  text: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12 },
+  text: { fontFamily: font.semibold, fontSize: 12 },
 });
