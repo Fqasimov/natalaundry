@@ -57,13 +57,10 @@ export default function SummaryScreen() {
     setSubmitting(true);
     setError(null);
     try {
+      // No money is sent: the server prices the basket itself, so the
+      // breakdown above is only what the customer was shown.
       const order = await createOrder({
-        userId: session.user.id,
         lines,
-        subtotal: breakdown.subtotal,
-        discount: breakdown.discount,
-        deliveryFee: breakdown.deliveryFee,
-        total: breakdown.total,
         tier: draft.tier,
         collectionTime: `${draft.pickupDay}, ${draft.pickupSlot}`,
         deliveryTime: `${draft.deliveryDay}, ${draft.deliverySlot}`,
@@ -73,6 +70,7 @@ export default function SummaryScreen() {
         notes: draft.courierNote || null,
         isOutsideCity: draft.isOutsideCity,
         photos: draft.photos,
+        promoCode: draft.promoCode || null,
       });
       reset();
       router.replace(`/order/${order.id}`);

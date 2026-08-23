@@ -1,3 +1,4 @@
+import { apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
@@ -69,12 +70,7 @@ export async function fetchMyCourierOrders(courierId: string) {
 }
 
 type NewOrderInput = {
-  userId: string;
   lines: { serviceId: string; itemId: string; name: string; price: number; quantity: number }[];
-  subtotal: number;
-  discount: number;
-  deliveryFee: number;
-  total: number;
   tier: string;
   collectionTime: string;
   deliveryTime: string;
@@ -84,64 +80,46 @@ type NewOrderInput = {
   notes: string | null;
   isOutsideCity: boolean;
   photos: string[];
+  promoCode: string | null;
 };
 
 /**
- * Writes the order plus its line items. Column names match the confirmed
- * schema; `collection_time` / `delivery_time` are free-text slot labels in
- * the database (e.g. "Sabah, 18:00 - 20:00"), which is how the shipped app
- * stores them.
+ * Creates an order through the API rather than by writing the table.
  *
- * The server (Laravel) recomputes pricing on its own before accepting an
- * order — the figures sent here are what the customer was shown, not the
- * authority.
+ * Only the item ids and quantities are sent. The subtotal, the delivery fee,
+ * any promo discount and the total are all decided by the server from its own
+ * catalogue — the figures on the summary screen are what the customer was
+ * shown, never the authority. Writing `orders` directly from here would mean
+ * accepting whatever total a modified client chose to send, and would skip the
+ * automatic first-order discount, which is applied server-side.
+ *
+ * The owner comes from the access token, so an order cannot be filed against
+ * someone else's account either.
  */
 export async function createOrder(input: NewOrderInput) {
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: input.userId,
-      status: "pending" satisfies OrderStatus,
-      delivery_tier: input.tier,
-      service_type: input.lines[0]?.serviceId ?? "dry_cleaning",
-      subtotal: input.subtotal,
-      discount: input.discount,
-      delivery_fee: input.deliveryFee,
-      total: input.total,
-      collection_time: input.collectionTime,
-      delivery_time: input.deliveryTime,
-      address: input.address,
-      address_lat: input.addressLat,
-      address_lng: input.addressLng,
-      notes: input.notes,
-      is_outside_city: input.isOutsideCity,
-      item_photos: input.photos,
-    })
-    .select()
-    .single();
-  if (orderError) throw orderError;
+  const { data } = await apiPost<{ data: Order }>("orders", {
+    items: input.lines.map((line) => ({
+      service_id: line.serviceId,
+      item_id: line.itemId,
+      quantity: line.quantity,
+    })),
+    delivery_tier: input.tier,
+    collection_time: input.collectionTime,
+    delivery_time: input.deliveryTime,
+    address: input.address,
+    address_lat: input.addressLat,
+    address_lng: input.addressLng,
+    notes: input.notes,
+    is_outside_city: input.isOutsideCity,
+    item_photos: input.photos,
+    promo_code: input.promoCode,
+  });
 
-  if (input.lines.length > 0) {
-    const { error: itemsError } = await supabase.from("order_items").insert(
-      input.lines.map((line) => ({
-        order_id: order.id,
-        service_id: line.serviceId,
-        item_id: line.itemId,
-        item_name: line.name,
-        price: line.price,
-        quantity: line.quantity,
-      }))
-    );
-    if (itemsError) throw itemsError;
-  }
-
-  return order as Order;
+  return data;
 }
 
 
 type NewTopluOrderInput = {
-  userId: string;
-  deposit: number;
   collectionTime: string;
   deliveryTime: string;
   address: string;
@@ -152,39 +130,22 @@ type NewTopluOrderInput = {
 };
 
 /**
- * Creates a "toplu" (bulk) order — no line items, because nothing has been
- * counted yet. `deposit_amount` holds what was paid up front and `total`
- * mirrors it, since that is genuinely all the customer owes at this point.
- * `counted_total` stays null until a courier records the count.
+ * Creates a "toplu" (bulk) order. The deposit is not sent: it is a published
+ * price, so the server sets it, exactly as it sets the total for a normal
+ * order. `counted_total` stays null until a courier records the count.
  */
 export async function createTopluOrder(input: NewTopluOrderInput) {
-  const { data: order, error } = await supabase
-    .from("orders")
-    .insert({
-      user_id: input.userId,
-      status: "pending" satisfies OrderStatus,
-      service_type: "toplu",
-      delivery_tier: "standard",
-      subtotal: 0,
-      discount: 0,
-      delivery_fee: 0,
-      total: input.deposit,
-      deposit_amount: input.deposit,
-      collection_time: input.collectionTime,
-      delivery_time: input.deliveryTime,
-      address: input.address,
-      address_lat: input.addressLat,
-      address_lng: input.addressLng,
-      notes: input.notes,
-      is_outside_city: input.isOutsideCity,
-      item_photos: [],
-      payment_method: "deposit",
-      payment_status: "deposit_paid",
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return order as Order;
+  const { data } = await apiPost<{ data: Order }>("orders/bulk", {
+    collection_time: input.collectionTime,
+    delivery_time: input.deliveryTime,
+    address: input.address,
+    address_lat: input.addressLat,
+    address_lng: input.addressLng,
+    notes: input.notes,
+    is_outside_city: input.isOutsideCity,
+  });
+
+  return data;
 }
 
 /**

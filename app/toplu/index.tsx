@@ -63,9 +63,8 @@ export default function TopluScreen() {
     setSubmitting(true);
     setError(null);
     try {
+      // The deposit is set by the server; TOPLU_DEPOSIT above is display copy.
       const order = await createTopluOrder({
-        userId: session.user.id,
-        deposit: TOPLU_DEPOSIT,
         collectionTime: pickup,
         // Bulk loads come back on the standard turnaround; the exact return
         // slot is agreed once the courier has counted.
