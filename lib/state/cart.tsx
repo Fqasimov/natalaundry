@@ -30,6 +30,8 @@ export type CheckoutDraft = {
   address: string;
   isOutsideCity: boolean;
   promoCode: string;
+  /** A won gift-box prize the customer chose to spend on this order. */
+  rewardId: string | null;
   discount: number;
   photos: string[];
 };
@@ -51,6 +53,7 @@ const initialDraft: CheckoutDraft = {
   address: "",
   isOutsideCity: false,
   promoCode: "",
+  rewardId: null,
   discount: 0,
   photos: [],
 };

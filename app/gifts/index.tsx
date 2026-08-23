@@ -1,208 +1,211 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, radius } from "@/theme/tokens";
+import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
-import {
-  BOX_DEFINITIONS,
-  REWARD_DEFINITIONS,
-  REWARD_TTL_DAYS,
-  daysLeft,
-  type ActiveReward,
-  type BoxDefinition,
-  type RewardKind,
-} from "@/lib/rewards";
+import { GiftBoxAnimation } from "@/components/GiftBoxAnimation";
+import { REWARD_PRESENTATION, REWARD_TTL_DAYS } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
-import { Pill, ScreenHeader } from "@/components/ui";
+import {
+  fetchGiftBoxes,
+  openGiftBox,
+  type ActiveReward,
+  type GiftBoxState,
+  type UnopenedBox,
+} from "@/lib/gift-boxes";
+import { ScreenHeader } from "@/components/ui";
 
-// "Hədiyyə Qutusu" — dark hero, the customer's unspent rewards, then the
-// boxes they can open. Opening runs the tap-to-reveal flow from the video.
-//
-// Rewards are seeded locally until the API endpoint exists (see lib/rewards.ts
-// for why the backing tables are still unconfirmed).
-const SEED_REWARDS: ActiveReward[] = (
-  [
-    "balance_bonus",
-    "free_express_delivery",
-    "free_service",
-    "eco_points",
-    "eco_care_package",
-    "vip_care_package",
-  ] as RewardKind[]
-).map((kind, index) => ({
-  id: `seed-${index}`,
-  kind,
-  expiresAt: new Date(Date.now() + REWARD_TTL_DAYS * 86_400_000).toISOString(),
-}));
-
+/**
+ * "Hədiyyə Qutusu" — the boxes a customer's finalised orders have earned, and
+ * the prizes they have already won and not yet spent.
+ *
+ * There is nothing to open until an order completes: a box *is* an order.
+ */
 export default function GiftBoxScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
-  const gift = useRewardCopy();
-  const [rewards, setRewards] = useState<ActiveReward[]>(SEED_REWARDS);
-  const [openingBox, setOpeningBox] = useState<BoxDefinition | null>(null);
-  const [revealed, setRevealed] = useState<RewardKind | null>(null);
-  const [claimed, setClaimed] = useState(false);
+  const copy = useRewardCopy();
 
-  const openBox = (box: BoxDefinition) => {
-    setOpeningBox(box);
-    setRevealed(null);
-    setClaimed(false);
-  };
+  const [state, setState] = useState<GiftBoxState | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [opening, setOpening] = useState<UnopenedBox | null>(null);
+  const [lidUp, setLidUp] = useState(false);
+  const [won, setWon] = useState<ActiveReward | null>(null);
 
-  const reveal = () => {
-    // The API decides the prize; this local pick only drives the animation
-    // until that endpoint is wired up.
-    const pool = Object.keys(REWARD_DEFINITIONS) as RewardKind[];
-    setRevealed(pool[Math.floor(Math.random() * pool.length)]);
-  };
-
-  const claim = () => {
-    if (revealed) {
-      setRewards((prev) => [
-        {
-          id: `won-${Date.now()}`,
-          kind: revealed,
-          expiresAt: new Date(Date.now() + REWARD_TTL_DAYS * 86_400_000).toISOString(),
-        },
-        ...prev,
-      ]);
+  const load = useCallback(async () => {
+    try {
+      setState(await fetchGiftBoxes());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
-    setClaimed(true);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
   };
 
-  const closeAll = () => {
-    setOpeningBox(null);
-    setRevealed(null);
-    setClaimed(false);
+  /**
+   * The draw happens server-side. The request goes out first and the lid only
+   * lifts once the prize is in hand, so the reveal can never show a prize the
+   * server then refuses to grant.
+   */
+  const open = async (box: UnopenedBox) => {
+    setOpening(box);
+    setLidUp(false);
+    setWon(null);
+    try {
+      const reward = await openGiftBox(box.order_id);
+      setWon(reward);
+      setLidUp(true);
+    } catch (e) {
+      setOpening(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
+
+  const close = async () => {
+    setOpening(null);
+    setLidUp(false);
+    setWon(null);
+    await load();
+  };
+
+  const boxes = state?.boxes ?? [];
+  const rewards = state?.active_rewards ?? [];
+  const wonCopy = won ? copy.describe(won.kind, won.value, won) : null;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <ScreenHeader title={t("giftBox")} />
+    <View style={[s.root, { paddingTop: insets.top + 4 }]}>
+      <ScreenHeader title={t("giftBox")} backFallback="/(tabs)" />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <View style={styles.heroIconWrap}>
-            <Ionicons name="gift" size={40} color="#F6C445" />
-          </View>
-          <Text style={styles.heroTitle}>{t("giftBoxes")}</Text>
-          <Text style={styles.heroBody}>{t("giftBoxesIntro")}</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <LinearGradient colors={["#16233D", "#0D1B33"]} style={s.hero}>
+          <GiftBoxAnimation opening={false} size={120} />
+          <Text style={s.heroTitle}>{t("giftBoxes")}</Text>
+          <Text style={s.heroBody}>{t("giftBoxesIntro")}</Text>
+        </LinearGradient>
 
-        <Text style={styles.sectionLabel}>
-          {t("activeRewards")} ({rewards.length})
-        </Text>
+        {error ? <Text style={s.error}>{error}</Text> : null}
 
-        {rewards.map((reward) => {
-          const def = REWARD_DEFINITIONS[reward.kind];
-          const remaining = daysLeft(reward.expiresAt);
-          return (
-            <View key={reward.id} style={styles.rewardCard}>
-              <LinearGradient colors={def.gradient} style={styles.rewardIcon}>
-                <Ionicons name={def.icon} size={22} color={colors.textInverse} />
-              </LinearGradient>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rewardTitle}>{gift.rewardTitle(reward.kind, def.title)}</Text>
-                <Text style={styles.rewardDesc} numberOfLines={2}>
-                  {gift.rewardDescription(reward.kind, def.description)}
-                </Text>
-                <View style={styles.expiryRow}>
-                  <Ionicons name="hourglass-outline" size={12} color={colors.danger} />
-                  <Text style={styles.expiryLabel}>
-                    {remaining} {t("daysLeft")} ({t("oneWeek")})
-                  </Text>
-                </View>
+        {!state ? (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+        ) : (
+          <>
+            <Text style={s.section}>{t("availableBoxes")}</Text>
+            {boxes.length === 0 ? (
+              <View style={s.emptyCard}>
+                <Ionicons name="cube-outline" size={22} color={colors.textSecondary} />
+                <Text style={s.emptyLabel}>{t("giftBoxNone")}</Text>
               </View>
-              <Pressable style={styles.applyButton}>
-                <Text style={styles.applyLabel}>{t("apply")}</Text>
-              </Pressable>
-            </View>
-          );
-        })}
+            ) : (
+              boxes.map((box) => (
+                <Pressable key={box.order_id} style={s.boxCard} onPress={() => open(box)}>
+                  <LinearGradient colors={["#3184EC", "#1A6AD4"]} style={s.boxIcon}>
+                    <Ionicons name="gift" size={24} color={colors.textInverse} />
+                  </LinearGradient>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.boxTitle}>{t("giftBoxReady")}</Text>
+                    <Text style={s.boxSub}>
+                      {t("giftBoxFromOrder", { no: box.order_no ?? "—" })} · {money(box.total)}
+                    </Text>
+                  </View>
+                  <View style={s.openPill}>
+                    <Text style={s.openLabel}>{t("giftBoxOpen")}</Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
 
-        <Text style={styles.sectionLabel}>{t("availableBoxes")}</Text>
+            <Text style={s.section}>
+              {t("activeRewards")} ({rewards.length})
+            </Text>
+            {rewards.length === 0 ? (
+              <View style={s.emptyCard}>
+                <Ionicons name="pricetags-outline" size={22} color={colors.textSecondary} />
+                <Text style={s.emptyLabel}>{t("rewardNone")}</Text>
+              </View>
+            ) : (
+              rewards.map((reward) => {
+                const look = REWARD_PRESENTATION[reward.kind];
+                const text = copy.describe(reward.kind, reward.value, reward);
+                return (
+                  <View key={reward.id} style={s.rewardCard}>
+                    <LinearGradient colors={look.gradient} style={s.rewardIcon}>
+                      <Ionicons name={look.icon} size={20} color={colors.textInverse} />
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.rewardTitle}>{text.title}</Text>
+                      <Text style={s.rewardDesc} numberOfLines={2}>
+                        {text.description}
+                      </Text>
+                      <Text style={s.expiry}>
+                        {t("rewardExpiresIn", { days: reward.days_left })}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
 
-        {BOX_DEFINITIONS.map((box) => (
-          <Pressable key={box.tier} style={styles.boxCard} onPress={() => openBox(box)}>
-            <LinearGradient colors={box.gradient} style={styles.boxIcon}>
-              <Ionicons name={box.icon} size={26} color={colors.textInverse} />
-            </LinearGradient>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.boxTitle}>{gift.boxTitle(box.tier, box.title)}</Text>
-              <Text style={styles.boxDesc}>{gift.boxDescription(box.tier, box.description)}</Text>
-              {box.tier === "daily_bronze" ? (
-                <View style={styles.readyRow}>
-                  <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-                  <Text style={styles.readyLabel}>{t("ready")}</Text>
-                </View>
-              ) : null}
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 8 }}>
-              <Pill label={gift.boxBadge(box.tier, box.badge)} tone={box.badgeTone} />
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </View>
-          </Pressable>
-        ))}
+            <Text style={s.footnote}>{t("rewardExpiresIn", { days: REWARD_TTL_DAYS })}</Text>
+          </>
+        )}
       </ScrollView>
 
-      <Modal visible={!!openingBox} transparent animationType="fade" onRequestClose={closeAll}>
-        <View style={styles.openBackdrop}>
-          {!revealed ? (
-            <Pressable style={styles.tapArea} onPress={reveal}>
-              <LinearGradient
-                colors={openingBox?.gradient ?? ["#FFD255", "#F0A81E"]}
-                style={styles.chest}
-              >
-                <Ionicons name="cube" size={64} color={colors.textInverse} />
-              </LinearGradient>
-              <Text style={styles.tapLabel}>👆 {t("tapToOpen")}</Text>
-            </Pressable>
-          ) : claimed ? (
-            <View style={styles.claimCard}>
-              <Ionicons name="checkmark-circle" size={44} color={colors.success} />
-              <Text style={styles.claimTitle}>{t("congrats")}</Text>
-              <Text style={styles.claimBody}>
-                {gift.rewardTitle(revealed, REWARD_DEFINITIONS[revealed].title)}{" "}
-                {t("addedToAccount")}
-              </Text>
-              <Pressable style={styles.okButton} onPress={closeAll}>
-                <Text style={styles.okLabel}>{t("ok")}</Text>
+      {/* Reveal */}
+      <Modal visible={opening !== null} transparent animationType="fade" onRequestClose={close}>
+        <View style={s.modalBackdrop}>
+          <GiftBoxAnimation opening={lidUp} size={200}>
+            {wonCopy ? (
+              <View style={s.prizeCard}>
+                <LinearGradient
+                  colors={won ? REWARD_PRESENTATION[won.kind].gradient : ["#fff", "#fff"]}
+                  style={s.prizeIcon}
+                >
+                  <Ionicons
+                    name={won ? REWARD_PRESENTATION[won.kind].icon : "gift"}
+                    size={20}
+                    color={colors.textInverse}
+                  />
+                </LinearGradient>
+                <Text style={s.prizeTitle}>{wonCopy.title}</Text>
+              </View>
+            ) : null}
+          </GiftBoxAnimation>
+
+          {won ? (
+            <View style={s.revealFoot}>
+              <Text style={s.revealDesc}>{wonCopy?.description}</Text>
+              <Pressable style={s.revealButton} onPress={close}>
+                <Text style={s.revealButtonLabel}>{t("addedToAccount")}</Text>
               </Pressable>
             </View>
           ) : (
-            <LinearGradient
-              colors={REWARD_DEFINITIONS[revealed].gradient}
-              style={styles.revealCard}
-            >
-              <View style={styles.revealBadge}>
-                <Text style={styles.revealBadgeLabel}>
-                  {REWARD_DEFINITIONS[revealed].kind === "discount_coupon"
-                    ? "ENDİRİM KUPONU"
-                    : "PULSUZ XİDMƏT"}
-                </Text>
-              </View>
-              <Ionicons
-                name={REWARD_DEFINITIONS[revealed].icon}
-                size={52}
-                color={colors.textInverse}
-              />
-              <Text style={styles.revealTitle}>
-                {gift.rewardTitle(revealed, REWARD_DEFINITIONS[revealed].title)}
-              </Text>
-              <Text style={styles.revealDesc}>
-                {gift.rewardDescription(revealed, REWARD_DEFINITIONS[revealed].description)}
-              </Text>
-              <View style={styles.ttlPill}>
-                <Ionicons name="time-outline" size={13} color={colors.textInverse} />
-                <Text style={styles.ttlLabel}>{t("useWithinWeek")}</Text>
-              </View>
-              <Pressable style={styles.claimButton} onPress={claim}>
-                <Text style={styles.claimButtonLabel}>{t("claimReward")} ✓</Text>
-              </Pressable>
-            </LinearGradient>
+            <Text style={s.revealDesc}>{t("giftBoxOpening")}</Text>
           )}
         </View>
       </Modal>
@@ -210,63 +213,49 @@ export default function GiftBoxScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  hero: { backgroundColor: colors.ink, borderRadius: radius.xl, padding: 24, alignItems: "center" },
-  heroIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
+  body: { paddingHorizontal: 20, gap: 12 },
+  error: {
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    color: colors.danger,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
-  heroTitle: {
-    fontFamily: font.extrabold,
-    fontSize: 22,
-    letterSpacing: -0.3,
-    color: colors.textInverse,
-    marginTop: 14,
-  },
+
+  hero: { borderRadius: radius.lg, alignItems: "center", paddingVertical: 22, gap: 6 },
+  heroTitle: { fontFamily: font.bold, fontSize: 20, color: colors.textInverse },
   heroBody: {
     fontFamily: font.regular,
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "rgba(255,255,255,0.72)",
     textAlign: "center",
-    marginTop: 8,
+    paddingHorizontal: 28,
   },
-  sectionLabel: {
+
+  section: {
     fontFamily: font.semibold,
-    fontSize: 12.5,
-    letterSpacing: 0.8,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
     color: colors.textSecondary,
-    marginTop: 24,
-    marginBottom: 12,
+    marginTop: 10,
   },
-  rewardCard: {
+
+  emptyCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFFDF2",
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: "#F0E6C0",
-    padding: 12,
-    marginBottom: 10,
+    padding: 16,
   },
-  rewardIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  rewardTitle: { fontFamily: font.bold, fontSize: 15, color: colors.textPrimary },
-  rewardDesc: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
-  expiryRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 5 },
-  expiryLabel: { fontFamily: font.medium, fontSize: 11.5, color: colors.danger },
-  applyButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-  },
-  applyLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
+  emptyLabel: { flex: 1, fontFamily: font.regular, fontSize: 13.5, color: colors.textSecondary },
+
   boxCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -274,83 +263,77 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
+    borderColor: colors.primary,
+    padding: 14,
+  },
+  boxIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  boxTitle: { fontFamily: font.bold, fontSize: 15, color: colors.textPrimary },
+  boxSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
+  openPill: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  openLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
+
+  rewardCard: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
-    marginBottom: 10,
   },
-  boxIcon: { width: 54, height: 54, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  boxTitle: { fontFamily: font.bold, fontSize: 15.5, color: colors.textPrimary },
-  boxDesc: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
-  readyRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 5 },
-  readyLabel: { fontFamily: font.semibold, fontSize: 12, color: colors.success },
-  openBackdrop: {
+  rewardIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  rewardTitle: { fontFamily: font.semibold, fontSize: 14.5, color: colors.textPrimary },
+  rewardDesc: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
+  expiry: { fontFamily: font.medium, fontSize: 11.5, color: colors.danger, marginTop: 5 },
+  footnote: {
+    fontFamily: font.regular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(8,10,14,0.92)",
+    backgroundColor: "rgba(8,17,34,0.94)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
-  tapArea: { alignItems: "center", gap: 26 },
-  chest: { width: 150, height: 150, borderRadius: 28, alignItems: "center", justifyContent: "center" },
-  tapLabel: { fontFamily: font.bold, fontSize: 17, color: "#FFD255", textAlign: "center" },
-  revealCard: { width: "100%", borderRadius: radius.xl, padding: 26, alignItems: "center", gap: 10 },
-  revealBadge: {
-    backgroundColor: "rgba(255,255,255,0.22)",
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 6,
+  prizeCard: {
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    maxWidth: 260,
   },
-  revealBadgeLabel: { fontFamily: font.bold, fontSize: 11, color: colors.textInverse, letterSpacing: 0.8 },
-  revealTitle: { fontFamily: font.bold, fontSize: 23, color: colors.textInverse, textAlign: "center" },
+  prizeIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  prizeTitle: {
+    fontFamily: font.bold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  revealFoot: { alignItems: "center", gap: 14, marginTop: 10 },
   revealDesc: {
     fontFamily: font.regular,
-    fontSize: 13.5,
-    color: "rgba(255,255,255,0.9)",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    lineHeight: 19,
+    maxWidth: 280,
   },
-  ttlPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(0,0,0,0.22)",
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginTop: 6,
-  },
-  ttlLabel: { fontFamily: font.semibold, fontSize: 11, color: colors.textInverse, letterSpacing: 0.5 },
-  claimButton: {
-    backgroundColor: colors.accent,
+  revealButton: {
+    backgroundColor: colors.primary,
     borderRadius: radius.pill,
     paddingHorizontal: 30,
-    paddingVertical: 15,
-    marginTop: 14,
+    paddingVertical: 14,
   },
-  claimButtonLabel: { fontFamily: font.bold, fontSize: 15, color: colors.textInverse },
-  claimCard: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: 26,
-    alignItems: "center",
-    gap: 10,
-  },
-  claimTitle: { fontFamily: font.bold, fontSize: 20, color: colors.textPrimary },
-  claimBody: {
-    fontFamily: font.regular,
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  okButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingHorizontal: 44,
-    paddingVertical: 13,
-    marginTop: 10,
-  },
-  okLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
+  revealButtonLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
 });

@@ -48,37 +48,26 @@ class GiftBoxServiceTest extends TestCase
         ]);
     }
 
-    /**
-     * One prize per opening, checked from a stale "available" verdict — the
-     * state a second request holds when both reach the gate together.
-     *
-     * This does not prove the concurrency fix: the suite is single-process
-     * against SQLite, so it cannot make two openings overlap, and this passes
-     * against the check-then-write version too. What stops the real race is
-     * the eligibility check running inside the transaction against a locked
-     * profile row; this pins the sequential half of that contract.
-     */
-    public function test_the_daily_box_cannot_be_opened_twice(): void
+    /** A finalised order — the only thing that grants a box. */
+    private function completedOrder(Profile $customer): Order
     {
-        $this->reward('eco_care_package', [], GiftBoxService::TIER_DAILY);
-        $customer = $this->customer();
-
-        // Both requests reach the gate before either has written anything.
-        $first = $this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY);
-        $second = $this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY);
-        $this->assertTrue($first['available']);
-        $this->assertTrue($second['available']);
-
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
-
-        $this->expectException(RuntimeException::class);
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+        return Order::forceCreate([
+            'id' => (string) Str::uuid(),
+            'user_id' => $customer->id,
+            'status' => 'completed',
+            'delivery_tier' => 'standard',
+            'subtotal' => 20, 'discount' => 0, 'delivery_fee' => 5, 'total' => 25,
+            'collection_time' => 'Bu gün, 18:00 - 20:00',
+            'delivery_time' => 'Sabah, 12:00 - 14:00',
+            'delivered_at' => now(),
+            'created_at' => now(),
+        ]);
     }
 
     /** One completed order grants one prize, not one per request. */
-    public function test_a_gold_box_cannot_be_opened_twice_for_one_order(): void
+    public function test_a_box_cannot_be_opened_twice_for_one_order(): void
     {
-        $this->reward('eco_care_package', [], GiftBoxService::TIER_GOLD);
+        $this->reward('eco_care_package', [], GiftBoxService::TIER_ORDER);
         $customer = $this->customer();
         $order = Order::forceCreate([
             'id' => (string) Str::uuid(),
@@ -93,73 +82,19 @@ class GiftBoxServiceTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_GOLD, $order->id);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $order->id);
 
         $this->expectException(RuntimeException::class);
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_GOLD, $order->id);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $order->id);
     }
 
-    public function test_the_daily_box_can_be_opened_once_then_enters_cooldown(): void
+
+
+
+
+    public function test_a_box_needs_a_completed_order_and_opens_once_per_order(): void
     {
-        $this->reward('eco_care_package', [], GiftBoxService::TIER_DAILY);
-        $customer = $this->customer();
-
-        $this->assertTrue($this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY)['available']);
-
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
-
-        $after = $this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY);
-        $this->assertFalse($after['available']);
-        $this->assertSame('cooldown', $after['reason']);
-        $this->assertNotNull($after['next_available_at']);
-
-        $this->expectException(RuntimeException::class);
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
-    }
-
-    public function test_the_daily_box_reopens_after_the_cooldown(): void
-    {
-        $this->reward('eco_care_package', [], GiftBoxService::TIER_DAILY);
-        $customer = $this->customer();
-
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
-
-        // Backdate the opening past the cooldown window.
-        GiftBoxOpening::query()->update(['opened_at' => now()->subHours(25)]);
-
-        $this->assertTrue($this->giftBoxes->availability($customer, GiftBoxService::TIER_DAILY)['available']);
-    }
-
-    public function test_the_vip_box_requires_an_active_subscription(): void
-    {
-        $this->reward('vip_care_package', [], GiftBoxService::TIER_VIP);
-
-        $plain = $this->customer();
-        $this->assertSame(
-            'subscription_required',
-            $this->giftBoxes->availability($plain, GiftBoxService::TIER_VIP)['reason'],
-        );
-
-        $subscriber = $this->customer([
-            'is_subscribed' => true,
-            'subscription_expires_at' => now()->addMonth(),
-        ]);
-        $this->assertTrue($this->giftBoxes->availability($subscriber, GiftBoxService::TIER_VIP)['available']);
-    }
-
-    public function test_an_expired_subscription_does_not_unlock_the_vip_box(): void
-    {
-        $lapsed = $this->customer([
-            'is_subscribed' => true,
-            'subscription_expires_at' => now()->subDay(),
-        ]);
-
-        $this->assertFalse($this->giftBoxes->availability($lapsed, GiftBoxService::TIER_VIP)['available']);
-    }
-
-    public function test_the_gold_box_needs_a_completed_order_and_opens_once_per_order(): void
-    {
-        $this->reward('free_express_delivery', [], GiftBoxService::TIER_GOLD);
+        $this->reward('free_express_delivery', [], GiftBoxService::TIER_ORDER);
         $customer = $this->customer();
 
         $order = Order::create([
@@ -173,28 +108,28 @@ class GiftBoxServiceTest extends TestCase
 
         $this->assertSame(
             'order_not_completed',
-            $this->giftBoxes->availability($customer, GiftBoxService::TIER_GOLD, $order->id)['reason'],
+            $this->giftBoxes->availability($customer, GiftBoxService::TIER_ORDER, $order->id)['reason'],
         );
 
         $order->update(['status' => 'completed']);
         $this->assertTrue(
-            $this->giftBoxes->availability($customer, GiftBoxService::TIER_GOLD, $order->id)['available'],
+            $this->giftBoxes->availability($customer, GiftBoxService::TIER_ORDER, $order->id)['available'],
         );
 
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_GOLD, $order->id);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $order->id);
 
         $this->assertSame(
             'already_opened',
-            $this->giftBoxes->availability($customer, GiftBoxService::TIER_GOLD, $order->id)['reason'],
+            $this->giftBoxes->availability($customer, GiftBoxService::TIER_ORDER, $order->id)['reason'],
         );
     }
 
     public function test_a_balance_reward_credits_the_wallet_immediately(): void
     {
-        $this->reward('balance_bonus', ['amount' => 4], GiftBoxService::TIER_DAILY, '4 AZN Balans Bonusu');
+        $this->reward('balance_bonus', ['amount' => 4], GiftBoxService::TIER_ORDER, '4 AZN Balans Bonusu');
         $customer = $this->customer(['wallet_balance' => 10]);
 
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $this->completedOrder($customer)->id);
 
         $this->assertSame('14.00', (string) $customer->fresh()->wallet_balance);
         $this->assertDatabaseHas('wallet_transactions', ['user_id' => $customer->id, 'kind' => 'reward']);
@@ -202,20 +137,20 @@ class GiftBoxServiceTest extends TestCase
 
     public function test_an_eco_points_reward_adds_points(): void
     {
-        $this->reward('eco_points', ['points' => 100], GiftBoxService::TIER_DAILY);
+        $this->reward('eco_points', ['points' => 100], GiftBoxService::TIER_ORDER);
         $customer = $this->customer(['points' => 100]);
 
-        $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $this->completedOrder($customer)->id);
 
         $this->assertSame(200, $customer->fresh()->points);
     }
 
     public function test_rewards_expire_after_the_configured_window(): void
     {
-        $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_DAILY);
+        $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_ORDER);
         $customer = $this->customer();
 
-        $userReward = $this->giftBoxes->open($customer, GiftBoxService::TIER_DAILY);
+        $userReward = $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $this->completedOrder($customer)->id);
 
         $this->assertEqualsWithDelta(
             (int) config('nata.rewards.ttl_days'),
@@ -227,7 +162,7 @@ class GiftBoxServiceTest extends TestCase
 
     public function test_an_expired_reward_is_worth_nothing(): void
     {
-        $reward = $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_DAILY);
+        $reward = $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_ORDER);
         $customer = $this->customer();
 
         $expired = UserReward::create([
@@ -244,7 +179,7 @@ class GiftBoxServiceTest extends TestCase
 
     public function test_a_percentage_coupon_is_worth_its_share_of_the_subtotal(): void
     {
-        $reward = $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_DAILY);
+        $reward = $this->reward('discount_coupon', ['percent' => 20], GiftBoxService::TIER_ORDER);
         $customer = $this->customer();
 
         $userReward = UserReward::create([
@@ -257,9 +192,30 @@ class GiftBoxServiceTest extends TestCase
         $this->assertSame(7.40, $this->giftBoxes->discountValue($userReward->load('reward'), 37));
     }
 
-    public function test_opening_a_tier_with_no_configured_rewards_fails_loudly(): void
+    public function test_opening_with_no_configured_rewards_fails_loudly(): void
     {
+        $customer = $this->customer();
+
         $this->expectException(RuntimeException::class);
-        $this->giftBoxes->open($this->customer(), GiftBoxService::TIER_DAILY);
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $this->completedOrder($customer)->id);
+    }
+
+    /** There is no standing box: without a finalised order there is nothing to open. */
+    public function test_there_is_no_box_without_a_finalised_order(): void
+    {
+        $this->reward('eco_points', ['points' => 50], GiftBoxService::TIER_ORDER);
+        $customer = $this->customer();
+
+        $this->assertSame(
+            'order_required',
+            $this->giftBoxes->availability($customer, GiftBoxService::TIER_ORDER)['reason'],
+        );
+        $this->assertCount(0, $this->giftBoxes->unopenedBoxes($customer));
+
+        $order = $this->completedOrder($customer);
+        $this->assertCount(1, $this->giftBoxes->unopenedBoxes($customer));
+
+        $this->giftBoxes->open($customer, GiftBoxService::TIER_ORDER, $order->id);
+        $this->assertCount(0, $this->giftBoxes->unopenedBoxes($customer));
     }
 }

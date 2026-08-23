@@ -7,7 +7,6 @@ use App\Models\Profile;
 use App\Services\GiftBoxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class GiftBoxController extends Controller
@@ -24,11 +23,14 @@ class GiftBoxController extends Controller
     {
         $profile = $this->profile($request);
 
-        $tiers = [GiftBoxService::TIER_DAILY, GiftBoxService::TIER_GOLD, GiftBoxService::TIER_VIP];
-        $boxes = [];
-        foreach ($tiers as $tier) {
-            $boxes[$tier] = $this->giftBoxes->availability($profile, $tier);
-        }
+        // One box per finalised order, so the screen lists the orders that
+        // still have an unopened one rather than a fixed set of tiers.
+        $boxes = $this->giftBoxes->unopenedBoxes($profile)->map(fn ($order) => [
+            'order_id' => $order->id,
+            'order_no' => $order->order_no,
+            'total' => (float) $order->total,
+            'completed_at' => $order->delivered_at?->toIso8601String(),
+        ]);
 
         return response()->json([
             'active_rewards' => $this->giftBoxes->activeRewards($profile)->map(fn ($userReward) => [
@@ -48,20 +50,17 @@ class GiftBoxController extends Controller
 
     public function open(Request $request): JsonResponse
     {
+        // A box exists because an order was completed, so the order is what
+        // identifies it. There is no tier to choose any more.
         $data = $request->validate([
-            'tier' => ['required', Rule::in([
-                GiftBoxService::TIER_DAILY,
-                GiftBoxService::TIER_GOLD,
-                GiftBoxService::TIER_VIP,
-            ])],
-            'order_id' => ['nullable', 'uuid'],
+            'order_id' => ['required', 'uuid'],
         ]);
 
         try {
             $userReward = $this->giftBoxes->open(
                 $this->profile($request),
-                $data['tier'],
-                $data['order_id'] ?? null,
+                GiftBoxService::TIER_ORDER,
+                $data['order_id'],
             );
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

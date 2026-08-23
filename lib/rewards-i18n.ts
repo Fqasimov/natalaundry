@@ -1,102 +1,97 @@
 import { useMemo } from "react";
-import type { BoxTier, RewardKind } from "@/lib/rewards";
+import type { RewardKind } from "@/lib/rewards";
+import type { RewardValue } from "@/lib/gift-boxes";
+import type { ServiceKey } from "@/theme/tokens";
+import { serviceTheme } from "@/theme/tokens";
+import { findItem, findService } from "@/lib/catalog";
+import { itemName, serviceName } from "@/lib/catalog-i18n";
 import { useI18n } from "@/lib/language-context";
 
 /**
- * Translations for the gift box rewards.
+ * Prize copy, composed rather than translated row by row.
  *
- * Same arrangement as the catalogue: lib/rewards.ts stays Azerbaijani, since
- * it is transcribed from the shipped app and is the source of truth for what
- * each reward is worth, and these are the RU and EN renderings keyed by the
- * same reward kinds and box tiers. A kind with no entry falls back to the
- * Azerbaijani text rather than to a blank card.
+ * There are fifty prizes in the pool, but only a handful of shapes: an amount
+ * of balance, a number of points, a percentage, one free item, or a named
+ * package. So the server stores the numbers and the app renders them through
+ * a template per kind — fifty prizes cost eight translations instead of a
+ * hundred and fifty, and a prize added to the pool tomorrow is already
+ * translated.
+ *
+ * Service and item names come from the catalogue translations, so a free
+ * "Palto" reads "Пальто" in Russian without a second table of names.
  */
-type Copy = { title: string; description: string };
-type Localised = { ru: Copy; en: Copy };
-
-export const REWARD_COPY: Record<RewardKind, Localised> = {
-  balance_bonus: {
-    ru: { title: "Бонус 4 AZN", description: "Автоматически вычитается из суммы заказа" },
-    en: { title: "4 AZN balance bonus", description: "Taken off your order total automatically" },
-  },
-  free_express_delivery: {
-    ru: { title: "Бесплатная экспресс-доставка", description: "Доставка следующего заказа — 0 ₼" },
-    en: { title: "Free express delivery", description: "Delivery on your next order costs ₼0" },
-  },
-  free_service: {
-    ru: {
-      title: "Бесплатная чистка костюма",
-      description: "Один костюм-двойка в химчистку бесплатно",
-    },
-    en: {
-      title: "Free suit cleaning",
-      description: "One two-piece suit dry cleaned at no charge",
-    },
-  },
-  eco_points: {
-    ru: { title: "100 эко-баллов в подарок", description: "100 зелёных баллов зачислены на счёт" },
-    en: { title: "100 eco points", description: "100 green points added to your balance" },
-  },
-  eco_care_package: {
-    ru: {
-      title: "Дополнительный эко-уход",
-      description: "Антибактериальная деликатная обработка в подарок",
-    },
-    en: {
-      title: "Extra eco-care package",
-      description: "Antibacterial delicate care, on the house",
-    },
-  },
-  vip_care_package: {
-    ru: { title: "VIP-набор ухода", description: "Особая защитная обработка для вашей одежды" },
-    en: { title: "VIP care package", description: "Special protective care for your garments" },
-  },
-  discount_coupon: {
-    ru: { title: "Купон на 20%", description: "Скидка 20% на услуги химчистки" },
-    en: { title: "20% discount coupon", description: "20% off dry cleaning" },
-  },
-};
-
-export const BOX_COPY: Record<BoxTier, Localised & { badge: { ru: string; en: string } }> = {
-  daily_bronze: {
-    ru: { title: "Ежедневная бронзовая коробка", description: "Открывайте бесплатно раз в день!" },
-    en: { title: "Daily bronze box", description: "Open one free every day!" },
-    badge: { ru: "БЕСПЛАТНО", en: "FREE" },
-  },
-  gold: {
-    ru: { title: "Золотая подарочная коробка", description: "Коробка после каждого заказа!" },
-    en: { title: "Gold gift box", description: "A box after every order!" },
-    badge: { ru: "ЗОЛОТО", en: "GOLD" },
-  },
-  legendary_vip: {
-    ru: {
-      title: "Легендарная VIP-коробка",
-      description: "Для пользователей Nata Plus и Gold VIP.",
-    },
-    en: { title: "Legendary VIP box", description: "For Nata Plus and Gold VIP members." },
-    badge: { ru: "ЛЕГЕНДАРНАЯ", en: "LEGENDARY" },
-  },
-};
-
-/** Gift copy in the reader's language, falling back to the Azerbaijani text. */
 export function useRewardCopy() {
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
 
   return useMemo(() => {
-    const pick = <T,>(value: T | undefined, fallback: T) =>
-      lang === "az" || value === undefined ? fallback : value;
-
-    return {
-      rewardTitle: (kind: RewardKind, az: string) =>
-        pick(lang === "az" ? undefined : REWARD_COPY[kind]?.[lang]?.title, az),
-      rewardDescription: (kind: RewardKind, az: string) =>
-        pick(lang === "az" ? undefined : REWARD_COPY[kind]?.[lang]?.description, az),
-      boxTitle: (tier: BoxTier, az: string) =>
-        pick(lang === "az" ? undefined : BOX_COPY[tier]?.[lang]?.title, az),
-      boxDescription: (tier: BoxTier, az: string) =>
-        pick(lang === "az" ? undefined : BOX_COPY[tier]?.[lang]?.description, az),
-      boxBadge: (tier: BoxTier, az: string) =>
-        pick(lang === "az" ? undefined : BOX_COPY[tier]?.badge?.[lang], az),
+    const serviceLabel = (id?: string): string => {
+      if (!id) return "";
+      const service = findService(id as ServiceKey);
+      const az = service?.name ?? serviceTheme[id as ServiceKey]?.label ?? id;
+      return serviceName(id as ServiceKey, az, lang);
     };
-  }, [lang]);
+
+    const itemLabel = (serviceId?: string, itemId?: string): string => {
+      if (!itemId) return "";
+      const found = serviceId ? findItem(serviceId, itemId) : null;
+      return itemName(itemId, found?.item.name ?? itemId, lang);
+    };
+
+    /** Title and description for a prize, from its kind and stored value. */
+    const describe = (
+      kind: RewardKind,
+      value: RewardValue | null | undefined,
+      fallback?: { title?: string; description?: string },
+    ): { title: string; description: string } => {
+      const v = value ?? {};
+
+      switch (kind) {
+        case "balance_bonus":
+          return {
+            title: t("prizeBalance", { amount: v.amount ?? 0 }),
+            description: t("prizeBalanceDesc"),
+          };
+        case "eco_points":
+          return {
+            title: t("prizePoints", { points: v.points ?? 0 }),
+            description: t("prizePointsDesc"),
+          };
+        case "discount_coupon": {
+          const service = serviceLabel(v.service_id);
+          if (service) {
+            return {
+              title: t("prizePercentService", { percent: v.percent ?? 0, service }),
+              description: t("prizePercentServiceDesc", { service }),
+            };
+          }
+          return {
+            title: t("prizePercent", { percent: v.percent ?? 0 }),
+            description: t("prizePercentDesc"),
+          };
+        }
+        case "free_service": {
+          const item = itemLabel(v.service_id, v.item_id);
+          return {
+            title: t("prizeFreeItem", { item }),
+            description: t("prizeFreeItemDesc", { item }),
+          };
+        }
+        case "free_express_delivery":
+          return { title: t("prizeFreeDelivery"), description: t("prizeFreeDeliveryDesc") };
+        case "eco_care_package":
+          return { title: t("prizeEcoCare"), description: t("prizeEcoCareDesc") };
+        case "vip_care_package":
+          return { title: t("prizeVipCare"), description: t("prizeVipCareDesc") };
+        default:
+          // An unrecognised kind still shows the server's own Azerbaijani text
+          // rather than an empty card.
+          return {
+            title: fallback?.title ?? "",
+            description: fallback?.description ?? "",
+          };
+      }
+    };
+
+    return { describe };
+  }, [t, lang]);
 }

@@ -18,3 +18,8 @@ android/
 
 expo-env.d.ts
 # @end expo-cli
+# Agent tooling installed by `npx skills add` — developer machinery, not app
+# source. Anyone who wants the Higgsfield skills can re-run that command.
+.agents/
+.claude/
+skills-lock.json

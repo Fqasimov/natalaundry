@@ -22,122 +22,36 @@ export type RewardKind =
   | "vip_care_package"
   | "discount_coupon";
 
-export type BoxTier = "daily_bronze" | "gold" | "legendary_vip";
+/**
+ * One tier: the box a finalised order earns.
+ *
+ * The daily box handed out balance for no purchase and the VIP box gated
+ * prizes behind a subscription that is not live, so both are gone.
+ */
+export type BoxTier = "order";
 
-export type RewardDefinition = {
-  kind: RewardKind;
-  title: string;
-  description: string;
-  icon: IoniconName;
-  gradient: [string, string];
-  /** Payload interpreted by the API when the reward is applied to an order. */
-  value?: { amount?: number; percent?: number; serviceId?: string; points?: number };
-};
-
-// The six rewards the video shows in "QAZANDIĞINIZ AKTİV MÜKAFATLAR", plus
-// the discount coupon revealed by the box-opening animation.
-export const REWARD_DEFINITIONS: Record<RewardKind, RewardDefinition> = {
-  balance_bonus: {
-    kind: "balance_bonus",
-    title: "4 AZN Balans Bonusu",
-    description: "Sifariş cəminizdən avtomatik çıxılır",
-    icon: "wallet",
-    gradient: ["#FFC93C", "#F5A623"],
-    value: { amount: 4 },
-  },
-  free_express_delivery: {
-    kind: "free_express_delivery",
-    title: "Pulsuz Ekspress Çatdırılma",
-    description: "Növbəti sifarişinizdə çatdırılma haqqı 0 ₼-dir",
-    icon: "car",
-    gradient: ["#FFA654", "#F2762A"],
-  },
-  free_service: {
-    kind: "free_service",
-    title: "Pulsuz Kostyum Təmizləmə",
-    description: "1 ədəd 2-li kostyum tam ödənişsiz quru təmizlənir",
-    icon: "briefcase",
-    gradient: ["#FF8A48", "#E5561B"],
-    value: { serviceId: "dry_cleaning" },
-  },
-  eco_points: {
-    kind: "eco_points",
-    title: "100 Eko Xal Hədiyyə",
-    description: "100 yaşıl xal balansınıza yükləndi",
-    icon: "star",
-    gradient: ["#FFB23F", "#F07C1E"],
-    value: { points: 100 },
-  },
-  eco_care_package: {
-    kind: "eco_care_package",
-    title: "Ekstra Eko-Baxış Paketi",
-    description: "Antibakterial zərif baxış xidməti hədiyyə olunur",
-    icon: "leaf",
-    gradient: ["#3FA45B", "#1F7A3C"],
-  },
-  vip_care_package: {
-    kind: "vip_care_package",
-    title: "VIP Qulluq Hədiyyə Paketi",
-    description: "Paltarlarınız üçün xüsusi qoruyucu qulluq",
-    icon: "sparkles",
-    gradient: ["#A24BD6", "#6E1FA8"],
-  },
-  discount_coupon: {
-    kind: "discount_coupon",
-    title: "20% Endirim Kuponu",
-    description: "Quru təmizləmə xidmətinə 20% xüsusi endirim",
-    icon: "pricetag",
-    gradient: ["#FF7A4D", "#E5342B"],
-    value: { percent: 20, serviceId: "dry_cleaning" },
-  },
-};
-
-export type BoxDefinition = {
-  tier: BoxTier;
-  title: string;
-  description: string;
-  badge: string;
-  badgeTone: "info" | "primary" | "muted";
+/**
+ * How a prize *looks*. What it says comes from the server row rendered through
+ * lib/rewards-i18n — there are fifty prizes but only these few shapes, so the
+ * icon and colour are all the app needs to hold locally.
+ */
+export type RewardPresentation = {
   icon: IoniconName;
   gradient: [string, string];
 };
 
-export const BOX_DEFINITIONS: BoxDefinition[] = [
-  {
-    tier: "daily_bronze",
-    title: "Gündəlik Bürünc Qutu",
-    description: "Hər gün pulsuz 1 dəfə açın!",
-    badge: "PULSUZ",
-    badgeTone: "primary",
-    icon: "cube",
-    gradient: ["#FFD255", "#F0A81E"],
-  },
-  {
-    tier: "gold",
-    title: "Qızıl Hədiyyə Qutusu",
-    description: "Hər sifarişdən sonra verilən qutu!",
-    badge: "QIZIL",
-    badgeTone: "primary",
-    icon: "gift",
-    gradient: ["#FF9A3C", "#E5561B"],
-  },
-  {
-    tier: "legendary_vip",
-    title: "Əfsanəvi VIP Qutusu",
-    description: "Nata Plus və Gold VIP istifadəçilər üçün.",
-    badge: "ƏFSANƏVİ",
-    badgeTone: "muted",
-    icon: "diamond",
-    gradient: ["#A24BD6", "#5E1694"],
-  },
-];
-
-/** A reward the customer has won and not yet spent. */
-export type ActiveReward = {
-  id: string;
-  kind: RewardKind;
-  expiresAt: string;
+export const REWARD_PRESENTATION: Record<RewardKind, RewardPresentation> = {
+  balance_bonus: { icon: "wallet", gradient: ["#FFC93C", "#F5A623"] },
+  free_express_delivery: { icon: "car", gradient: ["#FFA654", "#F2762A"] },
+  free_service: { icon: "sparkles-outline", gradient: ["#FF8A48", "#E5561B"] },
+  eco_points: { icon: "star", gradient: ["#FFB23F", "#F07C1E"] },
+  eco_care_package: { icon: "leaf", gradient: ["#3FA45B", "#1F7A3C"] },
+  vip_care_package: { icon: "sparkles", gradient: ["#A24BD6", "#6E1FA8"] },
+  discount_coupon: { icon: "pricetag", gradient: ["#FF7A4D", "#E5342B"] },
 };
+
+/** The one box. Its copy lives in lib/i18n like the rest of the interface. */
+export const BOX_TIER: BoxTier = "order";
 
 export function daysLeft(expiresAt: string) {
   const ms = new Date(expiresAt).getTime() - Date.now();

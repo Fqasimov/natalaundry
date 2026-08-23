@@ -93,6 +93,7 @@ type NewOrderInput = {
   isOutsideCity: boolean;
   photos: string[];
   promoCode: string | null;
+  rewardId: string | null;
 };
 
 /**
@@ -125,6 +126,9 @@ export async function createOrder(input: NewOrderInput) {
     is_outside_city: input.isOutsideCity,
     item_photos: input.photos,
     promo_code: input.promoCode,
+    // The prize the customer chose to spend. The server checks it is theirs,
+    // unspent and unexpired, and prices it — the app only names it.
+    user_reward_id: input.rewardId,
   });
 
   return data;

@@ -13,10 +13,12 @@ use RuntimeException;
 /**
  * "Hədiyyə Qutusu" — the gift box feature.
  *
- * Three tiers, each with its own unlock rule:
- *  - daily_bronze   free, once every 24h
- *  - gold           granted once per completed order
- *  - legendary_vip  Nata Plus / VIP subscribers only
+ * One box, fifty prizes, earned by finalising an order. There used to be
+ * three tiers (a free daily one, one per order, and a subscriber-only one);
+ * the daily box handed out balance for no purchase and the VIP box gated
+ * prizes behind a subscription that is not live, so both are gone. A box now
+ * exists only because an order was completed, and each order grants exactly
+ * one.
  *
  * The prize is drawn server-side by weight; the client only plays the
  * animation. Rewards expire 7 days after being won, matching the
@@ -24,56 +26,24 @@ use RuntimeException;
  */
 class GiftBoxService
 {
-    public const TIER_DAILY = 'daily_bronze';
-
-    public const TIER_GOLD = 'gold';
-
-    public const TIER_VIP = 'legendary_vip';
+    /** The only tier. One box per completed order. */
+    public const TIER_ORDER = 'order';
 
     /**
-     * Why a tier can or can't be opened right now.
+     * Why this order's box can or can't be opened right now.
      *
      * @return array{available: bool, reason: ?string, next_available_at: ?string}
      */
-    public function availability(Profile $profile, string $tier, ?string $orderId = null): array
+    public function availability(Profile $profile, string $tier = self::TIER_ORDER, ?string $orderId = null): array
     {
-        return match ($tier) {
-            self::TIER_DAILY => $this->dailyAvailability($profile),
-            self::TIER_GOLD => $this->goldAvailability($profile, $orderId),
-            self::TIER_VIP => $profile->hasActiveSubscription()
-                ? ['available' => true, 'reason' => null, 'next_available_at' => null]
-                : ['available' => false, 'reason' => 'subscription_required', 'next_available_at' => null],
-            default => throw new RuntimeException("Unknown gift box tier [{$tier}]."),
-        };
-    }
-
-    private function dailyAvailability(Profile $profile): array
-    {
-        $cooldownHours = (int) config('nata.rewards.daily_box_cooldown_hours');
-
-        $last = GiftBoxOpening::query()
-            ->where('user_id', $profile->id)
-            ->where('box_tier', self::TIER_DAILY)
-            ->latest('opened_at')
-            ->first();
-
-        if (! $last) {
-            return ['available' => true, 'reason' => null, 'next_available_at' => null];
+        if ($tier !== self::TIER_ORDER) {
+            throw new RuntimeException("Unknown gift box tier [{$tier}].");
         }
 
-        $next = $last->opened_at->copy()->addHours($cooldownHours);
-        if ($next->isFuture()) {
-            return [
-                'available' => false,
-                'reason' => 'cooldown',
-                'next_available_at' => $next->toIso8601String(),
-            ];
-        }
-
-        return ['available' => true, 'reason' => null, 'next_available_at' => null];
+        return $this->orderAvailability($profile, $orderId);
     }
 
-    private function goldAvailability(Profile $profile, ?string $orderId): array
+    private function orderAvailability(Profile $profile, ?string $orderId): array
     {
         if (! $orderId) {
             return ['available' => false, 'reason' => 'order_required', 'next_available_at' => null];
@@ -94,13 +64,36 @@ class GiftBoxService
 
         $alreadyOpened = GiftBoxOpening::query()
             ->where('user_id', $profile->id)
-            ->where('box_tier', self::TIER_GOLD)
+            ->where('box_tier', self::TIER_ORDER)
             ->where('order_id', $orderId)
             ->exists();
 
         return $alreadyOpened
             ? ['available' => false, 'reason' => 'already_opened', 'next_available_at' => null]
             : ['available' => true, 'reason' => null, 'next_available_at' => null];
+    }
+
+    /**
+     * The customer's finalised orders whose box is still unopened.
+     *
+     * This is what makes the box "available only after finalising an order":
+     * there is no standing box to open, only the ones an order earned.
+     *
+     * @return \Illuminate\Support\Collection<int, Order>
+     */
+    public function unopenedBoxes(Profile $profile)
+    {
+        $opened = GiftBoxOpening::query()
+            ->where('user_id', $profile->id)
+            ->where('box_tier', self::TIER_ORDER)
+            ->pluck('order_id');
+
+        return Order::query()
+            ->where('user_id', $profile->id)
+            ->where('status', 'completed')
+            ->whereNotIn('id', $opened)
+            ->orderByDesc('delivered_at')
+            ->get();
     }
 
     /**

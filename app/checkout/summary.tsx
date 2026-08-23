@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch, TextInput, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -6,7 +6,11 @@ import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCart } from "@/lib/state/cart";
+import { fetchGiftBoxes, type ActiveReward } from "@/lib/gift-boxes";
+import { REWARD_PRESENTATION } from "@/lib/rewards";
+import { useRewardCopy } from "@/lib/rewards-i18n";
 import { useAuth } from "@/lib/auth-context";
 import { OUTSIDE_CITY_FEE, REQUIRED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
@@ -21,6 +25,17 @@ export default function SummaryScreen() {
   const { lines, draft, patchDraft, setQty, breakdown, reset } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [promoDraft, setPromoDraft] = useState(draft.promoCode);
+  const [rewards, setRewards] = useState<ActiveReward[]>([]);
+  const rewardCopy = useRewardCopy();
+
+  useEffect(() => {
+    // A failure here is not worth blocking checkout over — the customer just
+    // does not see the gift picker.
+    fetchGiftBoxes()
+      .then((state) => setRewards(state.active_rewards))
+      .catch(() => setRewards([]));
+  }, []);
+
   const [error, setError] = useState<string | null>(null);
 
   const photosOk = draft.photos.length >= REQUIRED_PHOTOS;
@@ -71,6 +86,7 @@ export default function SummaryScreen() {
         isOutsideCity: draft.isOutsideCity,
         photos: draft.photos,
         promoCode: draft.promoCode || null,
+        rewardId: draft.rewardId,
       });
       reset();
       router.replace(`/order/${order.id}`);
@@ -116,6 +132,44 @@ export default function SummaryScreen() {
             <Text style={styles.promoButtonLabel}>{t("apply")}</Text>
           </Pressable>
         </View>
+
+        {/* Gift box prizes the customer has won and not yet spent. The
+            discount itself is priced by the server — picking one here only
+            names it on the order. */}
+        {rewards.length > 0 ? (
+          <>
+            <Text style={styles.section}>{t("rewardChoose")}</Text>
+            <View style={styles.rewardList}>
+              {rewards.map((reward) => {
+                const look = REWARD_PRESENTATION[reward.kind];
+                const text = rewardCopy.describe(reward.kind, reward.value, reward);
+                const chosen = draft.rewardId === reward.id;
+                return (
+                  <Pressable
+                    key={reward.id}
+                    style={[styles.rewardRow, chosen && styles.rewardRowChosen]}
+                    onPress={() =>
+                      patchDraft({ rewardId: chosen ? null : reward.id })
+                    }
+                  >
+                    <LinearGradient colors={look.gradient} style={styles.rewardIcon}>
+                      <Ionicons name={look.icon} size={17} color={colors.textInverse} />
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rewardTitle}>{text.title}</Text>
+                      <Text style={styles.rewardMeta}>
+                        {t("rewardExpiresIn", { days: reward.days_left })}
+                      </Text>
+                    </View>
+                    <Text style={[styles.rewardAction, chosen && styles.rewardActionOn]}>
+                      {chosen ? t("rewardApplied") : t("rewardApply")}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
 
         <Text style={styles.section}>{t("deliveryAddress")}</Text>
         <TextInput
@@ -240,6 +294,30 @@ const styles = StyleSheet.create({
   itemName: { fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
   itemUnit: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
   lineTotal: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary, minWidth: 62, textAlign: "right" },
+  rewardList: { gap: 8 },
+  rewardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  rewardRowChosen: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  rewardIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rewardTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
+  rewardMeta: { fontFamily: font.regular, fontSize: 11.5, color: colors.textSecondary, marginTop: 2 },
+  rewardAction: { fontFamily: font.semibold, fontSize: 12.5, color: colors.textSecondary },
+  rewardActionOn: { color: colors.primary },
   promoRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   promoInput: {
     flex: 1,
