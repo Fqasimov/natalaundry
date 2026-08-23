@@ -9,14 +9,17 @@ import {
   Alert,
   TextInput,
 } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
-import { colors, money } from "@/theme/tokens";
+import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { isToplu, settleToplu } from "@/lib/toplu";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
+import { LIFECYCLE_LABEL, isTracking, type LifecycleState } from "@/lib/lifecycle";
 import {
   advanceOrderStatus,
   cancelOrder,
@@ -27,8 +30,13 @@ import {
 } from "@/lib/orders";
 import type { Order, OrderItem } from "@/types/database";
 
+/**
+ * A single order, from whichever side the reader is on: the customer who
+ * placed it, or the courier carrying it.
+ */
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { profile } = useProfile();
   const { t } = useI18n();
@@ -72,253 +80,329 @@ export default function OrderDetailScreen() {
 
   if (error && !order) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
+      <View style={s.center}>
+        <Text style={s.error}>{error}</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
+      <View style={s.center}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
   const bulk = isToplu(order);
   const settlement = settleToplu(order);
+  const state = order.lifecycle_state as LifecycleState | null;
+  const paid = order.payment_status === "paid";
+
+  const Row = ({ label, value, strong }: { label: string; value: string; strong?: boolean }) => (
+    <View style={s.row}>
+      <Text style={[s.rowLabel, strong && s.rowStrong]}>{label}</Text>
+      <Text style={[s.rowValue, strong && s.rowStrong]}>{value}</Text>
+    </View>
+  );
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: true, title: `Order #${order.order_no}` }} />
-      <ScrollView contentContainerStyle={styles.container}>
-        <StatusBadge status={order.status} />
+    <View style={[s.root, { paddingTop: insets.top + 4 }]}>
+      <ScreenHeader title={t("orderNo", { no: order.order_no ?? "—" })} backFallback="/(tabs)" />
 
-        <Text style={styles.section}>Pickup / delivery</Text>
-        <Text style={styles.value}>{order.collection_time}</Text>
-        <Text style={styles.value}>{order.delivery_time}</Text>
-
-        <Text style={styles.section}>Address</Text>
-        <Text style={styles.value}>{order.address ?? "—"}</Text>
-
-        {order.notes ? (
-          <>
-            <Text style={styles.section}>Notes</Text>
-            <Text style={styles.value}>{order.notes}</Text>
-          </>
-        ) : null}
-
-        <Text style={styles.section}>Items</Text>
-        {items.length === 0 ? (
-          <Text style={styles.value}>No items recorded</Text>
-        ) : (
-          items.map((item) => (
-            <View key={item.id} style={styles.itemRow}>
-              <Text style={styles.value}>
-                {item.item_name} × {item.quantity}
-              </Text>
-              <Text style={styles.value}>{(item.quantity * item.price).toFixed(2)}</Text>
-            </View>
-          ))
-        )}
-
-        {bulk ? null : (
-          <View style={styles.itemRow}>
-            <Text style={styles.value}>Subtotal</Text>
-            <Text style={styles.value}>{order.subtotal.toFixed(2)}</Text>
+      <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}>
+        <View style={s.statusCard}>
+          <View style={s.statusTop}>
+            <Text style={s.statusLabel}>
+              {state ? t(LIFECYCLE_LABEL[state] ?? "stateOrderPlaced") : ""}
+            </Text>
+            <StatusBadge status={order.status} />
           </View>
-        )}
-        {order.discount > 0 && (
-          <View style={styles.itemRow}>
-            <Text style={styles.value}>Discount</Text>
-            <Text style={styles.value}>-{order.discount.toFixed(2)}</Text>
-          </View>
-        )}
-        {order.delivery_fee > 0 && (
-          <View style={styles.itemRow}>
-            <Text style={styles.value}>Delivery fee</Text>
-            <Text style={styles.value}>{order.delivery_fee.toFixed(2)}</Text>
-          </View>
-        )}
-        {bulk ? (
-          <View style={styles.bulkBox}>
-            <View style={styles.itemRow}>
-              <Text style={styles.value}>{t("topluDepositPaid")}</Text>
-              <Text style={styles.value}>{money(settlement.deposit)}</Text>
-            </View>
+          {isOwner && isTracking(state) ? (
+            <Pressable style={s.trackLink} onPress={() => router.push(`/track/${order.id}`)}>
+              <Ionicons name="navigate" size={15} color={colors.primary} />
+              <Text style={s.trackLabel}>{t("trackOrder")}</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
-            {settlement.counted ? (
-              <>
-                <View style={styles.itemRow}>
-                  <Text style={styles.value}>{t("topluCountedTotal")}</Text>
-                  <Text style={styles.value}>{money(settlement.countedTotal ?? 0)}</Text>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>{t("pickupTime")}</Text>
+          <Text style={s.cardBody}>{order.collection_time}</Text>
+          <View style={s.divider} />
+          <Text style={s.cardTitle}>{t("deliveryTime")}</Text>
+          <Text style={s.cardBody}>{order.delivery_time}</Text>
+          <View style={s.divider} />
+          <Text style={s.cardTitle}>{t("orderAddress")}</Text>
+          <Text style={s.cardBody}>{order.address ?? "—"}</Text>
+          {order.notes ? (
+            <>
+              <View style={s.divider} />
+              <Text style={s.cardTitle}>{t("orderNotes")}</Text>
+              <Text style={s.cardBody}>{order.notes}</Text>
+            </>
+          ) : null}
+        </View>
+
+        <View style={s.card}>
+          <Text style={s.cardTitle}>{t("items")}</Text>
+          {items.length === 0 ? (
+            <Text style={s.muted}>{t("orderNoItems")}</Text>
+          ) : (
+            items.map((item) => (
+              <Row
+                key={item.id}
+                label={`${item.item_name} × ${item.quantity}`}
+                value={money(item.quantity * item.price)}
+              />
+            ))
+          )}
+
+          {bulk ? null : (
+            <>
+              <View style={s.divider} />
+              <Row label={t("subtotal")} value={money(order.subtotal)} />
+              {order.discount > 0 ? (
+                <Row label={t("discount")} value={`-${money(order.discount)}`} />
+              ) : null}
+              {order.delivery_fee > 0 ? (
+                <Row label={t("deliveryFee")} value={money(order.delivery_fee)} />
+              ) : null}
+              <View style={s.divider} />
+              <Row label={t("total")} value={money(order.total)} strong />
+            </>
+          )}
+
+          {bulk ? (
+            <>
+              <View style={s.divider} />
+              <Row label={t("topluDepositPaid")} value={money(settlement.deposit)} />
+              {settlement.counted ? (
+                <>
+                  <Row
+                    label={t("topluCountedTotal")}
+                    value={money(settlement.countedTotal ?? 0)}
+                  />
+                  <View style={s.divider} />
+                  <View style={s.row}>
+                    <Text style={[s.rowLabel, s.rowStrong]}>
+                      {settlement.refund > 0 ? t("topluRefund") : t("topluBalanceDue")}
+                    </Text>
+                    <Text
+                      style={[
+                        s.rowValue,
+                        s.rowStrong,
+                        settlement.refund > 0 && { color: colors.success },
+                      ]}
+                    >
+                      {money(settlement.refund > 0 ? settlement.refund : settlement.balanceDue)}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={s.awaitingRow}>
+                  <Ionicons name="hourglass-outline" size={15} color={colors.textSecondary} />
+                  <Text style={s.awaitingLabel}>{t("topluNotCountedYet")}</Text>
                 </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>
-                    {settlement.refund > 0 ? t("topluRefund") : t("topluBalanceDue")}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.totalLabel,
-                      { color: settlement.refund > 0 ? colors.success : colors.textPrimary },
-                    ]}
-                  >
-                    {money(settlement.refund > 0 ? settlement.refund : settlement.balanceDue)}
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.awaitingRow}>
-                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.awaitingLabel}>{t("topluNotCountedYet")}</Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalLabel}>{order.total.toFixed(2)}</Text>
-          </View>
-        )}
-        <Text style={styles.paymentNote}>
-          {order.payment_method ?? "Payment method not set"} · {order.payment_status ?? "pending"}
-        </Text>
+              )}
+            </>
+          ) : null}
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {/* Payment is one plain line. The raw column values used to be
+              printed here, so an order with nothing set read "Payment method
+              not set · pending" at the customer. */}
+          <View style={s.divider} />
+          <View style={s.paymentRow}>
+            <Ionicons
+              name={paid ? "checkmark-circle" : "cash-outline"}
+              size={15}
+              color={paid ? colors.success : colors.textSecondary}
+            />
+            <Text style={[s.paymentLabel, paid && { color: colors.success }]}>
+              {paid ? t("orderPaid") : t("orderPaymentCash")}
+            </Text>
+          </View>
+        </View>
 
-        {/* Customer actions */}
-        {isOwner && order.status === "pending" && (
+        {error ? <Text style={s.error}>{error}</Text> : null}
+
+        {isOwner && order.status === "pending" ? (
           <Pressable
-            style={styles.dangerButton}
+            style={[s.dangerButton, busy && s.disabled]}
             disabled={busy}
             onPress={() =>
-              Alert.alert("Cancel order?", undefined, [
-                { text: "Keep it", style: "cancel" },
-                { text: "Cancel order", style: "destructive", onPress: () => withBusy(() => cancelOrder(order.id)) },
+              Alert.alert(t("orderCancelConfirm"), undefined, [
+                { text: t("orderCancelKeep"), style: "cancel" },
+                {
+                  text: t("orderCancel"),
+                  style: "destructive",
+                  onPress: () => withBusy(() => cancelOrder(order.id)),
+                },
               ])
             }
           >
-            <Text style={styles.dangerButtonText}>Cancel order</Text>
+            <Text style={s.dangerLabel}>{t("orderCancel")}</Text>
           </Pressable>
-        )}
+        ) : null}
 
-        {/* Courier actions */}
-        {isCourier && order.status === "pending" && !order.courier_id && session && (
+        {isCourier && order.status === "pending" && !order.courier_id && session ? (
           <Pressable
-            style={styles.primaryButton}
+            style={[s.primaryButton, busy && s.disabled]}
             disabled={busy}
             onPress={() => withBusy(() => claimOrder(order.id, session.user.id))}
           >
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Accept job</Text>}
+            {busy ? (
+              <ActivityIndicator color={colors.textInverse} />
+            ) : (
+              <Text style={s.primaryLabel}>{t("orderAcceptJob")}</Text>
+            )}
           </Pressable>
-        )}
+        ) : null}
 
-        {isMyJob && bulk && !settlement.counted && session && (
-          <View style={styles.countBox}>
-            <Text style={styles.countTitle}>{t("topluCountPrompt")}</Text>
-            <View style={styles.countRow}>
+        {isMyJob && bulk && !settlement.counted && session ? (
+          <View style={s.countBox}>
+            <Text style={s.countTitle}>{t("topluCountPrompt")}</Text>
+            <View style={s.countRow}>
               <TextInput
-                style={styles.countInput}
+                style={s.countInput}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
+                placeholderTextColor={colors.textSecondary}
                 value={countInput}
                 onChangeText={setCountInput}
               />
               <Pressable
-                style={styles.countButton}
+                style={[
+                  s.countButton,
+                  (busy || !Number.isFinite(Number(countInput)) || countInput.trim() === "") &&
+                    s.disabled,
+                ]}
                 disabled={busy || !Number.isFinite(Number(countInput)) || countInput.trim() === ""}
                 onPress={() =>
-                  withBusy(() =>
-                    recordTopluCount(order.id, session.user.id, Number(countInput))
-                  )
+                  withBusy(() => recordTopluCount(order.id, session.user.id, Number(countInput)))
                 }
               >
-                <Text style={styles.countButtonLabel}>{t("topluCountAction")}</Text>
+                <Text style={s.countButtonLabel}>{t("topluCountAction")}</Text>
               </Pressable>
             </View>
           </View>
-        )}
+        ) : null}
 
-        {isMyJob && ["collecting", "cleaning", "delivering"].includes(order.status) && (
+        {isMyJob && ["collecting", "cleaning", "delivering"].includes(order.status) ? (
           <Pressable
-            style={styles.primaryButton}
+            style={[s.primaryButton, busy && s.disabled]}
             disabled={busy}
             onPress={() => withBusy(async () => void (await advanceOrderStatus(order.id, order.status)))}
           >
             {busy ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textInverse} />
             ) : (
-              <Text style={styles.primaryButtonText}>Mark as next step</Text>
+              <Text style={s.primaryLabel}>{t("orderNextStep")}</Text>
             )}
           </Pressable>
-        )}
+        ) : null}
       </ScrollView>
-    </>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  container: { padding: 20, paddingBottom: 60, gap: 4 },
-  section: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, marginTop: 18, color: "#666" },
-  value: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15 },
-  itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.background,
+    padding: 24,
   },
-  totalLabel: { fontFamily: "PlusJakartaSans_700Bold" },
-  bulkBox: { marginTop: 8 },
-  countBox: {
-    marginTop: 24,
+  body: { paddingHorizontal: 20, gap: 12 },
+  error: {
+    ...type.caption,
+    color: colors.danger,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  muted: { ...type.body, color: colors.textSecondary },
+
+  statusCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
-    borderRadius: 14,
-    backgroundColor: "#F1F1F4",
+    gap: 10,
   },
-  countTitle: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, marginBottom: 10 },
+  statusTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  statusLabel: { flex: 1, fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
+  trackLink: { flexDirection: "row", alignItems: "center", gap: 7 },
+  trackLabel: { fontFamily: font.semibold, fontSize: 14, color: colors.primary },
+
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 5,
+  },
+  cardTitle: { ...type.caption, color: colors.textSecondary },
+  cardBody: { ...type.body, color: colors.textPrimary },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 9 },
+
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  rowLabel: { ...type.body, flex: 1, color: colors.textSecondary },
+  rowValue: { ...type.body, color: colors.textPrimary },
+  rowStrong: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
+
+  awaitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+  awaitingLabel: { ...type.caption, flex: 1, color: colors.textSecondary },
+  paymentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  paymentLabel: { ...type.caption, color: colors.textSecondary },
+
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  primaryLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
+  dangerButton: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.pill,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  dangerLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.danger },
+  disabled: { opacity: 0.5 },
+
+  countBox: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 10,
+  },
+  countTitle: { ...type.body, color: colors.textPrimary },
   countRow: { flexDirection: "row", gap: 10 },
   countInput: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#DAD8CA",
+    fontFamily: font.medium,
+    fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "PlusJakartaSans_500Medium",
-    fontSize: 16,
   },
   countButton: {
-    backgroundColor: "#1E8E4E",
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
     paddingHorizontal: 18,
     justifyContent: "center",
   },
-  countButtonLabel: { fontFamily: "PlusJakartaSans_600SemiBold", color: "#fff", fontSize: 14 },
-  awaitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
-  awaitingLabel: {
-    flex: 1,
-    fontFamily: "PlusJakartaSans_400Regular",
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#7A828E",
-  },
-  paymentNote: { fontFamily: "PlusJakartaSans_400Regular", color: "#999", fontSize: 12, marginTop: 6 },
-  error: { color: "#c0392b", marginTop: 12, fontFamily: "PlusJakartaSans_400Regular" },
-  primaryButton: { backgroundColor: "#111", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 24 },
-  primaryButtonText: { color: "#fff", fontFamily: "PlusJakartaSans_600SemiBold" },
-  dangerButton: {
-    borderWidth: 1,
-    borderColor: "#c0392b",
-    borderRadius: 10,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  dangerButtonText: { color: "#c0392b", fontFamily: "PlusJakartaSans_600SemiBold" },
+  countButtonLabel: { fontFamily: font.semibold, fontSize: 14, color: colors.textInverse },
 });
