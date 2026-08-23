@@ -25,16 +25,37 @@ export default function SignupScreen() {
   const { t, lang, setLang } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
+
+    // Checked here rather than left to the database: a courier standing at a
+    // door with no phone number has no way to finish the job.
+    if (!name.trim()) return setError(t("signupNameRequired"));
+    if (phone.trim().length < 7) return setError(t("signupPhoneRequired"));
+    if (password.length < 8) return setError(t("signupPasswordShort"));
+
     setSubmitting(true);
-    const { error: signUpError } = await signUp(email.trim(), password);
+    const { error: signUpError, needsConfirmation } = await signUp(email.trim(), password, {
+      name: name.trim(),
+      phone: phone.trim(),
+    });
     setSubmitting(false);
+
     if (signUpError) {
       setError(signUpError);
+      return;
+    }
+    // With email confirmation on, signUp returns no session. Routing into the
+    // app here bounced straight back off the auth guard with nothing said, so
+    // the screen now explains what happened instead.
+    if (needsConfirmation) {
+      setConfirmSent(true);
       return;
     }
     router.replace("/(tabs)");
@@ -87,6 +108,38 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Name field */}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>{t("signupNameLabel")}</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="person-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder={t("signupNamePlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="words"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+        </View>
+
+        {/* Phone field */}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>{t("signupPhoneLabel")}</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="call-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder={t("signupPhonePlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+            />
+          </View>
+        </View>
+
         {/* Email field */}
         <View style={styles.fieldWrap}>
           <Text style={styles.fieldLabel}>{t("emailLabel")}</Text>
@@ -122,6 +175,19 @@ export default function SignupScreen() {
 
         {/* Error message */}
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        {confirmSent ? (
+          <View style={styles.confirmBox}>
+            <Ionicons name="mail-open-outline" size={22} color={colors.primary} />
+            <Text style={styles.confirmTitle}>{t("signupConfirmTitle")}</Text>
+            <Text style={styles.confirmBody}>
+              {t("signupConfirmBody", { email: email.trim() })}
+            </Text>
+            <Pressable onPress={() => router.replace("/(auth)/login")}>
+              <Text style={styles.confirmLink}>{t("signupBackToLogin")}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* Sign up button */}
         <BigButton
@@ -221,6 +287,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
+  confirmBox: {
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    padding: 20,
+    marginBottom: 4,
+  },
+  confirmTitle: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
+  confirmBody: {
+    fontFamily: font.regular,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  confirmLink: { fontFamily: font.semibold, fontSize: 14, color: colors.primary, marginTop: 4 },
   error: {
     fontFamily: font.regular,
     fontSize: 13,

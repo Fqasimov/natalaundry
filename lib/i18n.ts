@@ -185,6 +185,19 @@ const az = {
   // Legacy six-value `orders.status`, shown on the order list badge. The nine
   // lifecycle states have their own labels (state*) — these are the coarse
   // ones the badge uses.
+  // Signup
+  signupNameLabel: "Ad və soyad",
+  signupNamePlaceholder: "Aysel Məmmədova",
+  signupPhoneLabel: "Telefon nömrəsi",
+  signupPhonePlaceholder: "+994 50 123 45 67",
+  signupNameRequired: "Adınızı yazın.",
+  signupPhoneRequired: "Telefon nömrənizi yazın — kuryerin sizinlə əlaqə saxlaması üçün lazımdır.",
+  signupPasswordShort: "Şifrə ən azı 8 simvol olmalıdır.",
+  signupConfirmTitle: "E-poçtunuzu təsdiqləyin",
+  signupConfirmBody:
+    "{email} ünvanına təsdiq linki göndərdik. Linkə klikləyəndən sonra daxil ola bilərsiniz.",
+  signupBackToLogin: "Girişə qayıt",
+
   leaveAtDoor: "Qapıya qoyun",
   giveToConcierge: "Konsyerjə verəcəm",
   takeFromConcierge: "Konsyerjdən alacam",
@@ -512,6 +525,18 @@ const ru: Record<StringKey, string> = {
   profileSectionSupport: "Поддержка",
   repeatLastOrder: "Повторить последний заказ",
   pastOrders: "История заказов",
+  signupNameLabel: "Имя и фамилия",
+  signupNamePlaceholder: "Айсель Мамедова",
+  signupPhoneLabel: "Номер телефона",
+  signupPhonePlaceholder: "+994 50 123 45 67",
+  signupNameRequired: "Укажите ваше имя.",
+  signupPhoneRequired: "Укажите номер телефона — он нужен курьеру, чтобы связаться с вами.",
+  signupPasswordShort: "Пароль должен быть не короче 8 символов.",
+  signupConfirmTitle: "Подтвердите почту",
+  signupConfirmBody:
+    "Мы отправили ссылку для подтверждения на {email}. Перейдите по ней, чтобы войти.",
+  signupBackToLogin: "Вернуться ко входу",
+
   leaveAtDoor: "Оставьте у двери",
   giveToConcierge: "Передам консьержу",
   takeFromConcierge: "Заберу у консьержа",
@@ -828,6 +853,18 @@ const en: Record<StringKey, string> = {
   profileSectionSupport: "Support",
   repeatLastOrder: "Repeat last order",
   pastOrders: "Past orders",
+  signupNameLabel: "Full name",
+  signupNamePlaceholder: "Aysel Mammadova",
+  signupPhoneLabel: "Phone number",
+  signupPhonePlaceholder: "+994 50 123 45 67",
+  signupNameRequired: "Please enter your name.",
+  signupPhoneRequired: "Please enter your phone number — the courier needs it to reach you.",
+  signupPasswordShort: "Password must be at least 8 characters.",
+  signupConfirmTitle: "Confirm your email",
+  signupConfirmBody:
+    "We sent a confirmation link to {email}. Follow it and you can sign in.",
+  signupBackToLogin: "Back to sign in",
+
   leaveAtDoor: "Leave it at the door",
   giveToConcierge: "I'll leave it with the concierge",
   takeFromConcierge: "I'll collect it from the concierge",
