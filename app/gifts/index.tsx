@@ -14,6 +14,7 @@ import {
   type BoxDefinition,
   type RewardKind,
 } from "@/lib/rewards";
+import { useRewardCopy } from "@/lib/rewards-i18n";
 import { Pill, ScreenHeader } from "@/components/ui";
 
 // "Hədiyyə Qutusu" — dark hero, the customer's unspent rewards, then the
@@ -39,6 +40,7 @@ const SEED_REWARDS: ActiveReward[] = (
 export default function GiftBoxScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
+  const gift = useRewardCopy();
   const [rewards, setRewards] = useState<ActiveReward[]>(SEED_REWARDS);
   const [openingBox, setOpeningBox] = useState<BoxDefinition | null>(null);
   const [revealed, setRevealed] = useState<RewardKind | null>(null);
@@ -100,12 +102,12 @@ export default function GiftBoxScreen() {
           return (
             <View key={reward.id} style={styles.rewardCard}>
               <LinearGradient colors={def.gradient} style={styles.rewardIcon}>
-                <Ionicons name={def.icon as never} size={22} color={colors.textInverse} />
+                <Ionicons name={def.icon} size={22} color={colors.textInverse} />
               </LinearGradient>
               <View style={{ flex: 1 }}>
-                <Text style={styles.rewardTitle}>{def.title}</Text>
+                <Text style={styles.rewardTitle}>{gift.rewardTitle(reward.kind, def.title)}</Text>
                 <Text style={styles.rewardDesc} numberOfLines={2}>
-                  {def.description}
+                  {gift.rewardDescription(reward.kind, def.description)}
                 </Text>
                 <View style={styles.expiryRow}>
                   <Ionicons name="hourglass-outline" size={12} color={colors.danger} />
@@ -126,11 +128,11 @@ export default function GiftBoxScreen() {
         {BOX_DEFINITIONS.map((box) => (
           <Pressable key={box.tier} style={styles.boxCard} onPress={() => openBox(box)}>
             <LinearGradient colors={box.gradient} style={styles.boxIcon}>
-              <Ionicons name={box.icon as never} size={26} color={colors.textInverse} />
+              <Ionicons name={box.icon} size={26} color={colors.textInverse} />
             </LinearGradient>
             <View style={{ flex: 1 }}>
-              <Text style={styles.boxTitle}>{box.title}</Text>
-              <Text style={styles.boxDesc}>{box.description}</Text>
+              <Text style={styles.boxTitle}>{gift.boxTitle(box.tier, box.title)}</Text>
+              <Text style={styles.boxDesc}>{gift.boxDescription(box.tier, box.description)}</Text>
               {box.tier === "daily_bronze" ? (
                 <View style={styles.readyRow}>
                   <Ionicons name="checkmark-circle" size={13} color={colors.success} />
@@ -139,7 +141,7 @@ export default function GiftBoxScreen() {
               ) : null}
             </View>
             <View style={{ alignItems: "flex-end", gap: 8 }}>
-              <Pill label={box.badge} tone={box.badgeTone} />
+              <Pill label={gift.boxBadge(box.tier, box.badge)} tone={box.badgeTone} />
               <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
             </View>
           </Pressable>
@@ -163,7 +165,8 @@ export default function GiftBoxScreen() {
               <Ionicons name="checkmark-circle" size={44} color={colors.success} />
               <Text style={styles.claimTitle}>{t("congrats")}</Text>
               <Text style={styles.claimBody}>
-                {REWARD_DEFINITIONS[revealed].title} {t("addedToAccount")}
+                {gift.rewardTitle(revealed, REWARD_DEFINITIONS[revealed].title)}{" "}
+                {t("addedToAccount")}
               </Text>
               <Pressable style={styles.okButton} onPress={closeAll}>
                 <Text style={styles.okLabel}>{t("ok")}</Text>
@@ -182,12 +185,16 @@ export default function GiftBoxScreen() {
                 </Text>
               </View>
               <Ionicons
-                name={REWARD_DEFINITIONS[revealed].icon as never}
+                name={REWARD_DEFINITIONS[revealed].icon}
                 size={52}
                 color={colors.textInverse}
               />
-              <Text style={styles.revealTitle}>{REWARD_DEFINITIONS[revealed].title}</Text>
-              <Text style={styles.revealDesc}>{REWARD_DEFINITIONS[revealed].description}</Text>
+              <Text style={styles.revealTitle}>
+                {gift.rewardTitle(revealed, REWARD_DEFINITIONS[revealed].title)}
+              </Text>
+              <Text style={styles.revealDesc}>
+                {gift.rewardDescription(revealed, REWARD_DEFINITIONS[revealed].description)}
+              </Text>
               <View style={styles.ttlPill}>
                 <Ionicons name="time-outline" size={13} color={colors.textInverse} />
                 <Text style={styles.ttlLabel}>{t("useWithinWeek")}</Text>

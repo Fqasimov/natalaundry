@@ -185,6 +185,10 @@ const az = {
   // Legacy six-value `orders.status`, shown on the order list badge. The nine
   // lifecycle states have their own labels (state*) — these are the coarse
   // ones the badge uses.
+  leaveAtDoor: "Qapıya qoyun",
+  giveToConcierge: "Konsyerjə verəcəm",
+  takeFromConcierge: "Konsyerjdən alacam",
+
   // Wallet
   walletNoTransactions: "Hələ əməliyyat yoxdur",
   walletIntro: "Balansınızı sifarişlərdə istifadə edə bilərsiniz.",
@@ -508,6 +512,10 @@ const ru: Record<StringKey, string> = {
   profileSectionSupport: "Поддержка",
   repeatLastOrder: "Повторить последний заказ",
   pastOrders: "История заказов",
+  leaveAtDoor: "Оставьте у двери",
+  giveToConcierge: "Передам консьержу",
+  takeFromConcierge: "Заберу у консьержа",
+
   walletNoTransactions: "Операций пока нет",
   walletIntro: "Баланс можно использовать при оплате заказов.",
   walletKindTopUp: "Пополнение",
@@ -820,6 +828,10 @@ const en: Record<StringKey, string> = {
   profileSectionSupport: "Support",
   repeatLastOrder: "Repeat last order",
   pastOrders: "Past orders",
+  leaveAtDoor: "Leave it at the door",
+  giveToConcierge: "I'll leave it with the concierge",
+  takeFromConcierge: "I'll collect it from the concierge",
+
   walletNoTransactions: "No transactions yet",
   walletIntro: "Your balance can be used to pay for orders.",
   walletKindTopUp: "Top-up",

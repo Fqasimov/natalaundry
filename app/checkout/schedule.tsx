@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
+import { buildDayLabels } from "@/lib/dates";
 import { useCart } from "@/lib/state/cart";
 import {
   DELIVERY_TIERS,
@@ -26,33 +27,22 @@ const TIER_META: Record<
   eco: { icon: "leaf", titleKey: "eco", descKey: "ecoDesc", color: colors.success },
 };
 
-// Azerbaijani short month names, used for the "8 avq, Ş." style day labels
-// the video shows in the delivery-day picker.
-const MONTHS_AZ = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
-const WEEKDAYS_AZ = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
-
-function buildDays(t: (k: "today" | "tomorrow") => string) {
-  const out: string[] = [];
-  for (let i = 0; i < 7; i += 1) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    if (i === 0) out.push(t("today"));
-    else if (i === 1) out.push(t("tomorrow"));
-    else out.push(`${d.getDate()} ${MONTHS_AZ[d.getMonth()]}, ${WEEKDAYS_AZ[d.getDay()]}`);
-  }
-  return out;
-}
-
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { draft, patchDraft, subtotal } = useCart();
   const [picker, setPicker] = useState<{ field: keyof typeof draft; options: string[] } | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
-  const days = useMemo(() => buildDays(t as never), [t]);
-  const handoverGive = [t("handOverInPerson"), "Qapıya qoyun", "Konsyerjə verəcəm"];
-  const handoverTake = [t("receiveInPerson"), "Qapıya qoyun", "Konsyerjdən alacam"];
+  // The day labels follow the reader's language: they were built from a
+  // hard-coded Azerbaijani month/weekday table, so an English or Russian
+  // customer picked their delivery day off "26 avq, Ç.".
+  const days = useMemo(
+    () => buildDayLabels(lang, { today: t("today"), tomorrow: t("tomorrow") }),
+    [lang, t],
+  );
+  const handoverGive = [t("handOverInPerson"), t("leaveAtDoor"), t("giveToConcierge")];
+  const handoverTake = [t("receiveInPerson"), t("leaveAtDoor"), t("takeFromConcierge")];
 
   const belowThreshold = subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD;
 

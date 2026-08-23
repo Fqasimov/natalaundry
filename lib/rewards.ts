@@ -1,3 +1,8 @@
+import type { Ionicons } from "@expo/vector-icons";
+
+/** Ionicons glyph names, so a typo is a compile error rather than a blank circle. */
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
 // Hədiyyə Qutusu (gift box) system, modelled from the 1.0.2 recording.
 //
 // IMPORTANT: no rewards tables appeared in the information_schema dump we
@@ -23,7 +28,7 @@ export type RewardDefinition = {
   kind: RewardKind;
   title: string;
   description: string;
-  icon: string;
+  icon: IoniconName;
   gradient: [string, string];
   /** Payload interpreted by the API when the reward is applied to an order. */
   value?: { amount?: number; percent?: number; serviceId?: string; points?: number };
@@ -93,7 +98,7 @@ export type BoxDefinition = {
   description: string;
   badge: string;
   badgeTone: "info" | "primary" | "muted";
-  icon: string;
+  icon: IoniconName;
   gradient: [string, string];
 };
 

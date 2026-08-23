@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Switch, Modal, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -43,6 +43,18 @@ export default function TopluScreen() {
 
   const windowOptions = useMemo(() => buildWindow(t("today"), t("tomorrow")), [t]);
   const [pickup, setPickup] = useState(windowOptions[0]?.label ?? "");
+
+  // The stored language arrives from AsyncStorage a beat after first paint, so
+  // the initial state above is built while the app is still on its Azerbaijani
+  // default. Without this the chosen slot stayed "Bu gün, 16:00 - 18:00" for
+  // an English customer — and got written to the order that way.
+  useEffect(() => {
+    setPickup((current) => {
+      if (windowOptions.some((option) => option.label === current)) return current;
+      const sameSlot = windowOptions.find((option) => current.endsWith(option.slot));
+      return sameSlot?.label ?? windowOptions[0]?.label ?? "";
+    });
+  }, [windowOptions]);
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [isOutsideCity, setIsOutsideCity] = useState(false);
