@@ -101,6 +101,22 @@ Key invariants:
 - **i18n**: AZ is the source of truth (verbatim from the video), RU/EN are
   translations. Every new string needs all three. Never hardcode display
   copy or currency amounts in a screen — parameterise through `t()`.
+  Data-shaped copy lives beside its data, not in `lib/i18n.ts`:
+  `lib/catalog-i18n.ts` (services, categories, items) and
+  `lib/rewards-i18n.ts` (gift rewards, box tiers), each keyed by the same ids
+  as its source and falling back to the AZ original. Dates go through
+  `lib/dates.ts` — explicit tables, not `Intl`, because Hermes ships a
+  trimmed ICU and has no reliable `az`.
+  **Check a change in all three languages, not just AZ.** Most i18n bugs
+  found so far were invisible in Azerbaijani.
+- **Cyrillic**: Plus Jakarta Sans has none. iOS/Android fall back per glyph,
+  but CSS does not, so web needs the fallback stack in `theme/tokens.ts`.
+  Any family added there needs one too.
+- **Catalogue parity**: `lib/catalog.ts` and `backend/config/catalog.php`
+  must match exactly; `CatalogParityTest` parses the TS and enforces it.
+- **Never check-then-write**, and not only for courier claims: the
+  eligibility read and the write that consumes it belong in one transaction
+  with `lockForUpdate()`. Gift boxes and order discounts both had this bug.
 - **Order lifecycle**: nine states in `orders.lifecycle_state`
   (`App\Support\OrderLifecycle` ↔ `lib/lifecycle.ts`). `orders.status` is
   derived from it on every transition and must never be written directly —
