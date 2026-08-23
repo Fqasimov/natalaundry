@@ -84,28 +84,33 @@ class OrderService
         $isOutsideCity = (bool) ($payload['is_outside_city'] ?? false);
         $subtotal = $this->pricing->subtotal($lines);
 
-        [$discount, $promo, $userReward, $autoPromoCode] = $this->resolveDiscounts(
-            $profile,
-            $subtotal,
-            $payload['promo_code'] ?? null,
-            $payload['user_reward_id'] ?? null,
-        );
-
-        $breakdown = $this->pricing->breakdown($lines, $tier, $isOutsideCity, $discount);
-
-        // A free-delivery reward zeroes the fee after the tier is priced.
-        if ($userReward && $this->giftBoxes->waivesDelivery($userReward)) {
-            $breakdown['delivery_fee'] = 0.0;
-            $breakdown['total'] = round(
-                max(0, $breakdown['subtotal'] - $breakdown['discount']),
-                2
-            );
-        }
-
+        // Discounts are resolved inside the transaction, against locked rows.
+        // Resolving them out here made this a check-then-write: two orders
+        // submitted together both saw the same reward as spendable and both
+        // took it, and a promo code with a redemption cap could be redeemed
+        // past it. Both hand out money, so the read and the write have to be
+        // the same critical section.
         return DB::transaction(function () use (
-            $profile, $payload, $tier, $lines, $breakdown, $isOutsideCity, $photos, $promo,
-            $userReward, $autoPromoCode
+            $profile, $payload, $tier, $lines, $subtotal, $isOutsideCity, $photos
         ) {
+            [$discount, $promo, $userReward, $autoPromoCode] = $this->resolveDiscounts(
+                $profile,
+                $subtotal,
+                $payload['promo_code'] ?? null,
+                $payload['user_reward_id'] ?? null,
+            );
+
+            $breakdown = $this->pricing->breakdown($lines, $tier, $isOutsideCity, $discount);
+
+            // A free-delivery reward zeroes the fee after the tier is priced.
+            if ($userReward && $this->giftBoxes->waivesDelivery($userReward)) {
+                $breakdown['delivery_fee'] = 0.0;
+                $breakdown['total'] = round(
+                    max(0, $breakdown['subtotal'] - $breakdown['discount']),
+                    2
+                );
+            }
+
             $order = Order::create([
                 'user_id' => $profile->id,
                 'status' => 'pending',
@@ -159,7 +164,10 @@ class OrderService
         $autoCode = null;
 
         if ($promoCode) {
-            $promo = PromoCode::query()->where('code', strtoupper(trim($promoCode)))->first();
+            $promo = PromoCode::query()
+                ->where('code', strtoupper(trim($promoCode)))
+                ->lockForUpdate()
+                ->first();
             if (! $promo || ! $promo->isRedeemable($subtotal)) {
                 throw ValidationException::withMessages([
                     'promo_code' => ['This promo code is not valid for this order.'],
@@ -185,6 +193,7 @@ class OrderService
                 ->with('reward')
                 ->where('id', $userRewardId)
                 ->where('user_id', $profile->id)
+                ->lockForUpdate()
                 ->first();
 
             if (! $userReward || ! $userReward->isSpendable()) {

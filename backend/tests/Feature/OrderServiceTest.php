@@ -120,6 +120,26 @@ class OrderServiceTest extends TestCase
         $this->orders->create($this->customer(), $this->payload(['item_photos' => ['only-one.jpg']]));
     }
 
+    /**
+     * Discount resolution moved inside the create transaction, so a rejection
+     * now happens mid-transaction. It must still surface as a validation
+     * failure and leave nothing behind.
+     */
+    public function test_an_unknown_promo_code_is_rejected_and_writes_nothing(): void
+    {
+        $customer = $this->customer();
+        $before = Order::query()->count();
+
+        try {
+            $this->orders->create($customer, $this->payload(['promo_code' => 'NOPE404']));
+            $this->fail('an unknown promo code should be rejected');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('promo_code', $e->errors());
+        }
+
+        $this->assertSame($before, Order::query()->count(), 'a rejected order was still written');
+    }
+
     public function test_it_rejects_an_unknown_delivery_tier(): void
     {
         $this->expectException(ValidationException::class);
