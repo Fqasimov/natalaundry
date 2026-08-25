@@ -30,8 +30,10 @@ class StoreOrderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:1000'],
             'is_outside_city' => ['boolean'],
 
-            // The app requires three garment photos before it will submit.
-            'item_photos' => ['required', 'array', 'min:'.config('nata.required_photos')],
+            // Photos are optional. `nullable` rather than `required` so an
+            // order with none is a valid request, not a 422; the minimum
+            // still tracks config in case the gate is ever reinstated.
+            'item_photos' => ['nullable', 'array', 'min:'.config('nata.required_photos')],
             'item_photos.*' => ['string', 'max:2048'],
 
             'promo_code' => ['nullable', 'string', 'max:40'],

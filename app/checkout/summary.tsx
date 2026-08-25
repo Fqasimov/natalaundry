@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, TextInput, Alert, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, TextInput, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -12,21 +12,58 @@ import { fetchGiftBoxes, type ActiveReward } from "@/lib/gift-boxes";
 import { REWARD_PRESENTATION } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import { useAuth } from "@/lib/auth-context";
-import { OUTSIDE_CITY_FEE, REQUIRED_PHOTOS } from "@/lib/pricing";
+import { OUTSIDE_CITY_FEE, RECOMMENDED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
+import {
+  fetchPaymentOptions,
+  payForOrder,
+  waitForSettlement,
+  walletForPlatform,
+  type PaymentMethod,
+} from "@/lib/payments";
+import { PaymentMethodPicker } from "@/components/PaymentMethodPicker";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
 
 // "Sifariş xülasəsi" — the final step. Note the hard gate the shipped app
 // enforces: at least three garment photos before the order can be submitted.
 export default function SummaryScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { session } = useAuth();
   const { lines, draft, patchDraft, setQty, breakdown, reset } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [promoDraft, setPromoDraft] = useState(draft.promoCode);
   const [rewards, setRewards] = useState<ActiveReward[]>([]);
   const rewardCopy = useRewardCopy();
+
+  // Card is the default because it is the only method that is certain to be
+  // offered — wallets depend on the bank terminal, and the list is narrowed
+  // to whatever the server says is actually available.
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
+  const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
+  const [payNotice, setPayNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPaymentOptions()
+      .then((options) => {
+        if (cancelled) return;
+        // Only this device's own wallet is ever shown: an Apple Pay button on
+        // Android is a dead end.
+        const wallet = walletForPlatform();
+        setPayMethods(
+          options.methods.filter(
+            (m) => m === "card" || m === "cash" || m === wallet,
+          ),
+        );
+      })
+      // Falling back to card + cash is safe: both work without any
+      // terminal-specific configuration.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     // A failure here is not worth blocking checkout over — the customer just
@@ -38,7 +75,14 @@ export default function SummaryScreen() {
 
   const [error, setError] = useState<string | null>(null);
 
-  const photosOk = draft.photos.length >= REQUIRED_PHOTOS;
+  // Photos are encouraged, not required — this only drives the counter's
+  // colour and the hint, never whether the order can be submitted.
+  const hasAllPhotos = draft.photos.length >= RECOMMENDED_PHOTOS;
+
+  // An address needs a pin, not just a label: the courier navigates to the
+  // coordinates. This is the one thing that now gates the confirm button.
+  const hasAddress =
+    draft.address.length > 0 && draft.addressLat != null && draft.addressLng != null;
 
   const addPhoto = async (source: "camera" | "library") => {
     const permission =
@@ -65,12 +109,9 @@ export default function SummaryScreen() {
 
   const submit = async () => {
     if (!session?.user.id) return;
-    if (!photosOk) {
-      Alert.alert(t("photosRequired"));
-      return;
-    }
     setSubmitting(true);
     setError(null);
+    setPayNotice(null);
     try {
       // No money is sent: the server prices the basket itself, so the
       // breakdown above is only what the customer was shown.
@@ -80,14 +121,42 @@ export default function SummaryScreen() {
         collectionTime: `${draft.pickupDay}, ${draft.pickupSlot}`,
         deliveryTime: `${draft.deliveryDay}, ${draft.deliverySlot}`,
         address: draft.address,
-        addressLat: null,
-        addressLng: null,
+        addressLat: draft.addressLat,
+        addressLng: draft.addressLng,
         notes: draft.courierNote || null,
         isOutsideCity: draft.isOutsideCity,
         photos: draft.photos,
         promoCode: draft.promoCode || null,
         rewardId: draft.rewardId,
+        paymentMethod: payMethod,
       });
+
+      // The order exists from here on. Payment is a separate step against it,
+      // so a card that declines leaves a real, unpaid order the customer can
+      // retry from — losing the basket over a declined card would be worse
+      // than showing them an order that still needs paying.
+      try {
+        const state = await payForOrder(order.id, payMethod, lang);
+        const settled =
+          state.payment_status === "pending"
+            ? await waitForSettlement(order.id)
+            : state;
+
+        if (settled.payment_status !== "paid" && payMethod !== "cash") {
+          // Not an error — the order is placed. Say what happened and let the
+          // order screen carry the retry.
+          setPayNotice(
+            settled.payment_status === "pending" || settled.stale
+              ? t("payPendingNotice")
+              : t("payOrderPlacedUnpaid"),
+          );
+        }
+      } catch {
+        // The order is already created; a payment failure must not read as an
+        // order failure. The order screen shows the real payment state.
+        setPayNotice(t("payOrderPlacedUnpaid"));
+      }
+
       reset();
       router.replace(`/order/${order.id}`);
     } catch (e) {
@@ -172,13 +241,31 @@ export default function SummaryScreen() {
         ) : null}
 
         <Text style={styles.section}>{t("deliveryAddress")}</Text>
-        <TextInput
-          style={styles.addressInput}
-          placeholder={t("addNewAddress")}
-          placeholderTextColor={colors.textSecondary}
-          value={draft.address}
-          onChangeText={(address) => patchDraft({ address })}
-        />
+        {/* Picked on a map rather than typed: a free-text address gives the
+            courier nothing to navigate to, and orders.address_lat/lng exist
+            precisely so it doesn't have to. */}
+        <Pressable
+          style={styles.addressPick}
+          onPress={() => router.push("/checkout/address")}
+        >
+          <Ionicons
+            name={hasAddress ? "location" : "location-outline"}
+            size={20}
+            color={hasAddress ? colors.primary : colors.textSecondary}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[styles.addressText, !hasAddress && styles.addressPlaceholder]}
+              numberOfLines={2}
+            >
+              {hasAddress ? draft.address : t("addressPickCta")}
+            </Text>
+            {hasAddress ? (
+              <Text style={styles.addressChange}>{t("addressPickChange")}</Text>
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </Pressable>
 
         <View style={styles.outsideRow}>
           <View style={{ flex: 1 }}>
@@ -199,8 +286,10 @@ export default function SummaryScreen() {
             <Ionicons name="camera" size={22} color={colors.primary} />
             <Text style={styles.photoTitle}>{t("photosTitle")}</Text>
             <Pill
-              label={`${draft.photos.length}/${REQUIRED_PHOTOS}`}
-              tone={photosOk ? "success" : "danger"}
+              label={`${draft.photos.length}/${RECOMMENDED_PHOTOS}`}
+              // Muted, not red: falling short is fine now, so it should not
+              // look like an error the customer has to clear.
+              tone={hasAllPhotos ? "success" : "muted"}
             />
           </View>
           <Text style={styles.photoHint}>{t("photosHint")}</Text>
@@ -234,13 +323,21 @@ export default function SummaryScreen() {
             </Pressable>
           </View>
 
-          {!photosOk ? (
-            <View style={styles.photoWarning}>
-              <Ionicons name="alert-circle" size={16} color={colors.danger} />
-              <Text style={styles.photoWarningLabel}>{t("photosRequired")}</Text>
+          {!hasAllPhotos ? (
+            <View style={styles.photoSuggestion}>
+              <Ionicons name="information-circle" size={16} color={colors.textSecondary} />
+              <Text style={styles.photoSuggestionLabel}>{t("photosOptional")}</Text>
             </View>
           ) : null}
         </View>
+
+        <Text style={styles.section}>{t("payMethodTitle")}</Text>
+        <PaymentMethodPicker
+          methods={payMethods}
+          value={payMethod}
+          onChange={setPayMethod}
+          disabled={submitting}
+        />
 
         <View style={styles.totalsCard}>
           <TotalRow label={t("subtotal")} value={money(breakdown.subtotal)} />
@@ -255,6 +352,7 @@ export default function SummaryScreen() {
           </View>
         </View>
 
+        {payNotice ? <Text style={styles.notice}>{payNotice}</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
 
@@ -263,7 +361,7 @@ export default function SummaryScreen() {
           label={t("confirmOrder")}
           onPress={submit}
           loading={submitting}
-          disabled={!photosOk || lines.length === 0}
+          disabled={lines.length === 0 || !hasAddress}
         />
       </View>
     </View>
@@ -337,15 +435,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   promoButtonLabel: { fontFamily: font.semibold, fontSize: 14, color: colors.textInverse },
-  addressInput: {
+  addressPick: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    fontFamily: font.regular,
+  },
+  addressText: {
+    fontFamily: font.medium,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: colors.textPrimary,
+  },
+  addressPlaceholder: { fontFamily: font.regular, color: colors.textSecondary },
+  addressChange: {
+    fontFamily: font.semibold,
+    fontSize: 12,
+    color: colors.primary,
+    marginTop: 3,
   },
   outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
   outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
@@ -388,16 +500,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   photoTileLabel: { fontFamily: font.medium, fontSize: 12.5, color: colors.primary },
-  photoWarning: {
+  // Informational, not a blocker — photos stopped being mandatory, so this
+  // is deliberately not the red danger treatment it used to be.
+  photoSuggestion: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
     padding: 12,
     marginTop: 14,
   },
-  photoWarningLabel: { flex: 1, fontFamily: font.regular, fontSize: 12.5, color: colors.danger, lineHeight: 18 },
+  photoSuggestionLabel: {
+    flex: 1,
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
   totalsCard: { backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, padding: 18, marginTop: 22 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
   totalLabel: { fontFamily: font.regular, fontSize: 15, color: colors.textSecondary },
@@ -406,6 +526,18 @@ const styles = StyleSheet.create({
   grandLabel: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
   grandValue: { fontFamily: font.bold, fontSize: 18, color: colors.primary },
   error: { fontFamily: font.regular, fontSize: 13, color: colors.danger, marginTop: 14 },
+  // The order was placed but the money has not arrived — a warning, not a
+  // failure, so it must not read like the order was lost.
+  notice: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: 12,
+    marginTop: 14,
+  },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,

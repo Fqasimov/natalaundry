@@ -114,8 +114,31 @@ class OrderServiceTest extends TestCase
         $this->assertSame('Sviter', $order->items->firstWhere('item_id', 'sweater')->item_name);
     }
 
-    public function test_it_requires_three_photos(): void
+    /**
+     * Photos used to be a hard gate at three. They are optional now, so an
+     * order with one photo — or none at all — has to go through.
+     */
+    public function test_photos_are_optional(): void
     {
+        $one = $this->orders->create(
+            $this->customer(),
+            $this->payload(['item_photos' => ['only-one.jpg']])
+        );
+        $this->assertSame(['only-one.jpg'], $one->item_photos);
+
+        $none = $this->orders->create($this->customer(), $this->payload(['item_photos' => []]));
+        $this->assertSame([], $none->item_photos);
+    }
+
+    /**
+     * The gate is a config value rather than a deleted code path, so raising
+     * it has to actually reinstate server-side enforcement — otherwise the
+     * setting would be a lie.
+     */
+    public function test_the_photo_gate_can_be_reinstated_by_config(): void
+    {
+        config(['nata.required_photos' => 3]);
+
         $this->expectException(ValidationException::class);
         $this->orders->create($this->customer(), $this->payload(['item_photos' => ['only-one.jpg']]));
     }

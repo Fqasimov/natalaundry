@@ -59,6 +59,39 @@ still needs to be pulled to confirm — the earlier `pg_proc` query only
 returned this one function so far, run it again if the second row didn't
 come back.
 
+## Confirmed live table list (2026-08-25)
+
+Pulled from `pg_class` against production. The `public` schema contains
+**exactly eleven** tables:
+
+```
+courier_details, customer_details, notifications, order_items,
+order_offers, orders, payment_intents, payments, profiles,
+service_prices, wallet_transactions
+```
+
+RLS is enabled on all eleven.
+
+### Tables this codebase expects that DO NOT EXIST in production
+
+| Table | Created by | App code that needs it |
+|---|---|---|
+| `order_status_logs` | `2026_08_21_000001_add_order_lifecycle_tables` | order timeline |
+| `courier_assignments` | same | `fetchOfferedOrders` — courier job pool |
+| `courier_locations` | same | live tracking (`lib/tracking.ts`) |
+| `rewards` | `2026_08_20_094021_create_gift_box_tables` | gift box prizes |
+| `user_rewards` | same | won prizes, checkout reward picker |
+| `gift_box_openings` | same | box open history |
+| `promo_codes` | same | promo entry, `PromoService` |
+
+Neither migration has ever been applied to the live database. Until they are,
+every feature in that right-hand column fails against production regardless of
+whether the API is reachable — the tables simply are not there.
+
+`orders.reward_id` still exists live with no rewards table behind it, which is
+the reconciliation flagged below. Resolve that before running the gift-box
+migration, or the foreign key will not line up.
+
 ## Still needed
 
 - Full column list for every table above (run the `information_schema.columns`

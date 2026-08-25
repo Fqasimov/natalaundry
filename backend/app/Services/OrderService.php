@@ -48,9 +48,11 @@ class OrderService
     {
         $photos = $payload['item_photos'] ?? [];
         $required = (int) config('nata.required_photos');
-        if (count($photos) < $required) {
-            // Mirrors the app's hard gate: "Sifarişi davam etdirmək üçün ən azı
-            // 3 ədəd paltar şəkli yükləməlisiniz."
+        // Photos are optional by default (`required_photos` is 0), so this is
+        // normally a no-op. It stays because the gate is a config value: if
+        // it is ever raised again, the server has to be the thing that
+        // enforces it, not just the app.
+        if ($required > 0 && count($photos) < $required) {
             throw ValidationException::withMessages([
                 'item_photos' => ["At least {$required} garment photos are required."],
             ]);

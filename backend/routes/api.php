@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\GiftBoxController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderLifecycleController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\WalletController;
@@ -12,6 +13,16 @@ use Illuminate\Support\Facades\Route;
 
 // The catalogue mirrors the public "Anyone can read active prices" policy.
 Route::get('catalog', [CatalogController::class, 'index']);
+
+// Which payment methods checkout may offer. Public: the answer depends only
+// on server configuration, not on who is asking.
+Route::get('payments/methods', [PaymentController::class, 'methods']);
+
+// Where Kapital Bank redirects the customer's browser after the hosted
+// payment page. Unauthenticated by necessity — a browser coming back from the
+// bank carries no Supabase token — so nothing in the query string is trusted:
+// the handler re-reads the real status from the bank. See PaymentController.
+Route::get('payments/callback', [PaymentController::class, 'callback']);
 
 // Everything else runs against the caller's Supabase access token.
 Route::middleware(['supabase', 'throttle:api'])->group(function () {
@@ -28,6 +39,12 @@ Route::middleware(['supabase', 'throttle:api'])->group(function () {
     Route::post('orders/{order}/claim', [OrderController::class, 'claim']);
     Route::post('orders/{order}/advance', [OrderController::class, 'advance']);
     Route::post('orders/{order}/count', [OrderController::class, 'count']);
+
+    // Payments. The amount is never taken from the request — it is read from
+    // the order the server priced; see PaymentService.
+    Route::post('orders/{order}/pay', [PaymentController::class, 'start'])->middleware('throttle:orders');
+    Route::get('orders/{order}/payment', [PaymentController::class, 'show']);
+    Route::post('orders/{order}/refund', [PaymentController::class, 'refund']);
 
     // Lifecycle: the nine-step collection -> laundry -> delivery flow.
     // 'available' is declared before the {order} routes so the literal

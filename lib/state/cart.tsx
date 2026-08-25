@@ -27,7 +27,15 @@ export type CheckoutDraft = {
   deliveryHandover: string;
   courierNote: string;
   repeatOrder: boolean;
+  /** Human-readable line, resolved from the map pin by reverse geocoding. */
   address: string;
+  /**
+   * The pin itself. Null until the customer has picked one — which is what
+   * the summary screen checks before it will submit, since a typed-looking
+   * address with no coordinates gives the courier nothing to navigate to.
+   */
+  addressLat: number | null;
+  addressLng: number | null;
   isOutsideCity: boolean;
   promoCode: string;
   /** A won gift-box prize the customer chose to spend on this order. */
@@ -51,6 +59,8 @@ const initialDraft: CheckoutDraft = {
   courierNote: "",
   repeatOrder: false,
   address: "",
+  addressLat: null,
+  addressLng: null,
   isOutsideCity: false,
   promoCode: "",
   rewardId: null,

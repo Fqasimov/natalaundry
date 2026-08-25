@@ -31,6 +31,22 @@ npm install
 npx expo start
 ```
 
+## Payments
+
+Card payments go through the Kapital Bank e-commerce gateway (hosted payment
+page + redirect); cash-on-delivery settles outside the gateway. Backend
+configuration lives in `backend/config/kapital.php` and `backend/.env`.
+
+Apple Pay / Google Pay are built but **disabled** (`KAPITAL_WALLETS_ENABLED=false`).
+The documented Kapital API accepts `"paymentMethods": ["Card"]` and exposes no
+endpoint that takes a wallet token, so there is nothing for a native Apple Pay
+sheet to submit to. Enabling the flag shows the wallet buttons and routes them
+through the same hosted page — do that only once Kapital confirms wallet
+acceptance is live on the merchant terminal, otherwise the button lands the
+customer on a plain card form.
+
+See `SECURITY.md` for why the redirect's `STATUS` parameter is ignored.
+
 ## Backend
 
 Supabase project: `dzplzvogobqmwaaimkef` (region `ap-northeast-2`).

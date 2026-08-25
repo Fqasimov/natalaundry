@@ -1,5 +1,6 @@
 import { ApiError, apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
+import type { PaymentMethod } from "@/lib/payments";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
 // Queries here match the confirmed schema (information_schema dump,
@@ -94,6 +95,12 @@ type NewOrderInput = {
   photos: string[];
   promoCode: string | null;
   rewardId: string | null;
+  /**
+   * How the customer intends to pay. Recorded on the order so it is known
+   * before the gateway is involved; the charge itself is started separately
+   * by lib/payments.ts once the order exists and has a server-priced total.
+   */
+  paymentMethod: PaymentMethod;
 };
 
 /**
@@ -129,6 +136,7 @@ export async function createOrder(input: NewOrderInput) {
     // The prize the customer chose to spend. The server checks it is theirs,
     // unspent and unexpired, and prices it — the app only names it.
     user_reward_id: input.rewardId,
+    payment_method: input.paymentMethod,
   });
 
   return data;

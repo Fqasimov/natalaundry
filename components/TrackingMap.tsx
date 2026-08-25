@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { colors, radius } from "@/theme/tokens";
 
@@ -12,6 +12,12 @@ export type LatLng = { lat: number; lng: number };
  * arrive every few seconds, and teleporting the marker reads as a glitch.
  * `animateMarkerToCoordinate` is Android-only, so iOS gets a region animation
  * instead — both end up smooth, neither needs a paid tracking SDK.
+ *
+ * Provider: Google on Android, the platform default (Apple Maps) on iOS.
+ * Forcing PROVIDER_GOOGLE on iOS makes this screen unusable in Expo Go, which
+ * ships Apple Maps only, so tracking could not be tested without a custom dev
+ * client. Nothing here depends on Google specifically — the courier position
+ * comes from our own courier_locations table, not from a Google product.
  */
 export function TrackingMap({
   courier,
@@ -39,7 +45,7 @@ export function TrackingMap({
     <View style={s.wrap}>
       <MapView
         ref={map}
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
         style={StyleSheet.absoluteFill}
         initialRegion={{
           latitude: focus.lat,

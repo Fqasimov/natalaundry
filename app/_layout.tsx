@@ -15,6 +15,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { LanguageProvider } from "@/lib/language-context";
 import { CartProvider } from "@/lib/state/cart";
+import { CartFab } from "@/components/CartFab";
 import { colors } from "@/theme/tokens";
 
 SplashScreen.preventAutoHideAsync();
@@ -51,6 +52,10 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: colors.background },
                 }}
               />
+              {/* Sibling of the Stack, not inside a screen, so the basket
+                  stays reachable across every route rather than being
+                  re-mounted per screen. It hides itself when empty. */}
+              <CartFab />
             </CartProvider>
           </AuthProvider>
         </LanguageProvider>

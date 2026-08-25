@@ -77,6 +77,16 @@ export function priceOrder({
   };
 }
 
-// The order summary requires at least three garment photos before the
-// "Sifarişi təsdiqlə" button is allowed to submit.
-export const REQUIRED_PHOTOS = 3;
+/**
+ * Garment photos are optional.
+ *
+ * The shipped 1.0.2 build hard-gated checkout on three photos. That gate is
+ * gone: it blocked orders outright, and the photos exist to document
+ * pre-existing defects, which is worth encouraging but not worth losing an
+ * order over. The uploader is still offered and still suggests this many —
+ * `RECOMMENDED_PHOTOS` drives the "0/3" counter — but nothing enforces it.
+ *
+ * The server no longer requires them either (see backend/config/nata.php);
+ * leaving the gate on only one side would just move the failure.
+ */
+export const RECOMMENDED_PHOTOS = 3;

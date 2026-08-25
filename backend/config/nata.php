@@ -28,10 +28,16 @@ return [
         'tiers' => ['standard', 'express', 'eco'],
     ],
 
-    // The order summary refuses to submit without this many garment photos.
-    // Bulk orders are exempt: there is nothing to photograph until the
-    // courier has collected and counted the load.
-    'required_photos' => 3,
+    /*
+     * Garment photos are no longer required to place an order.
+     *
+     * The shipped 1.0.2 build demanded three. That gate is gone on both
+     * sides: the app suggests three (lib/pricing.ts RECOMMENDED_PHOTOS) but
+     * nothing blocks checkout, and this server-side minimum is 0 to match.
+     * Set it above 0 to reinstate the gate — OrderService still enforces
+     * whatever number is here, so the two cannot drift apart.
+     */
+    'required_photos' => (int) env('NATA_REQUIRED_PHOTOS', 0),
 
     /*
      * "Toplu" — the bulk / count-after-pickup order type.

@@ -19,7 +19,6 @@ import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import type { Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
-import { tierFor } from "@/lib/membership";
 import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 
 // Profile rebuilt to the structure of the Laravel/React reference build:
@@ -137,7 +136,6 @@ export default function ProfileScreen() {
     );
   }
 
-  const tier = tierFor(profile.points ?? 0);
   const email = profile.email ?? session?.user.email ?? null;
 
   return (
@@ -208,13 +206,6 @@ export default function ProfileScreen() {
                 profile.is_subscribed ? t("subscriptionName") : t("subscriptionInactive")
               }
               onPress={() => router.push("/profile/subscription")}
-            />
-            <View style={s.divider} />
-            <Row
-              icon="mci:medal-outline"
-              label={t("myLevel")}
-              value={tier.name}
-              onPress={() => router.push("/profile/level")}
             />
             <View style={s.divider} />
             <Row
@@ -374,5 +365,16 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: ui.ink,
   },
-  rowValue: { fontFamily: font.medium, fontSize: 15, color: ui.inkSoft },
+  // flexShrink + maxWidth: without them a long value (Russian subscription
+  // and balance strings are the worst offenders) keeps its full intrinsic
+  // width, squashing the label to nothing and pushing the chevron off the
+  // card. Capping it at half the row makes the two share the space.
+  rowValue: {
+    flexShrink: 1,
+    maxWidth: "50%",
+    fontFamily: font.medium,
+    fontSize: 15,
+    color: ui.inkSoft,
+    textAlign: "right",
+  },
 });

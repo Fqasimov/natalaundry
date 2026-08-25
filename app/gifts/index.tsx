@@ -24,9 +24,11 @@ import {
 import { REWARD_PRESENTATION, REWARD_TTL_DAYS } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import {
-  fetchGiftBoxes,
+  drawDemoReward,
+  fetchGiftBoxesOrDemo,
   openGiftBox,
   type ActiveReward,
+  type DemoFlag,
   type GiftBoxState,
   type UnopenedBox,
 } from "@/lib/gift-boxes";
@@ -43,7 +45,7 @@ export default function GiftBoxScreen() {
   const { t } = useI18n();
   const copy = useRewardCopy();
 
-  const [state, setState] = useState<GiftBoxState | null>(null);
+  const [state, setState] = useState<(GiftBoxState & DemoFlag) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [opening, setOpening] = useState<UnopenedBox | null>(null);
@@ -53,12 +55,16 @@ export default function GiftBoxScreen() {
 
   const load = useCallback(async () => {
     try {
-      setState(await fetchGiftBoxes());
+      // Falls back to a labelled local sample when the API is unreachable, so
+      // the reveal can still be exercised with no backend. A real API error
+      // still surfaces — see lib/gift-boxes.ts.
+      setState(await fetchGiftBoxesOrDemo());
       setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch {
+      // The message from the server is not something a customer can act on.
+      setError(t("giftOffline"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -79,13 +85,22 @@ export default function GiftBoxScreen() {
     setOpening(box);
     setLidUp(false);
     setWon(null);
+
+    // Demo boxes are drawn locally — there is no server to ask, and asking
+    // would fail. Nothing is granted; this only plays the animation.
+    if (state?.demo) {
+      setWon(drawDemoReward());
+      setLidUp(true);
+      return;
+    }
+
     try {
       const reward = await openGiftBox(box.order_id);
       setWon(reward);
       setLidUp(true);
-    } catch (e) {
+    } catch {
       setOpening(null);
-      setError(e instanceof Error ? e.message : String(e));
+      setError(t("giftOffline"));
     }
   };
 
@@ -128,7 +143,27 @@ export default function GiftBoxScreen() {
           <Text style={s.heroBody}>{t("giftBoxesIntro")}</Text>
         </LinearGradient>
 
-        {error ? <Text style={s.error}>{error}</Text> : null}
+        {error ? (
+          <View style={s.errorCard}>
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.danger} />
+            <Text style={s.error}>{error}</Text>
+            <Pressable onPress={onRefresh} hitSlop={8}>
+              <Text style={s.retry}>{t("retry")}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* Says plainly that this is sample data. The animation is the point
+            of the screen and has to be viewable without a backend, but a
+            demo prize must never read as one the customer actually won. */}
+        {state?.demo ? (
+          <View style={s.demoCard}>
+            <View style={s.demoBadge}>
+              <Text style={s.demoBadgeLabel}>{t("giftDemoBadge")}</Text>
+            </View>
+            <Text style={s.demoNote}>{t("giftDemoNote")}</Text>
+          </View>
+        ) : null}
 
         {!state ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
@@ -253,14 +288,48 @@ export default function GiftBoxScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   body: { paddingHorizontal: 20, gap: 12 },
-  error: {
-    fontFamily: font.regular,
-    fontSize: 12.5,
-    color: colors.danger,
+  errorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: colors.dangerSoft,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
+  },
+  error: {
+    flex: 1,
+    fontFamily: font.regular,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: colors.danger,
+  },
+  retry: { fontFamily: font.bold, fontSize: 12.5, color: colors.danger },
+
+  demoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  demoBadge: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    // Keeps its size so the note beside it is what shrinks.
+    flexShrink: 0,
+  },
+  demoBadgeLabel: { fontFamily: font.bold, fontSize: 10.5, color: colors.textInverse },
+  demoNote: {
+    flex: 1,
+    fontFamily: font.regular,
+    fontSize: 12,
+    lineHeight: 16.5,
+    color: colors.textSecondary,
   },
 
   hero: { borderRadius: radius.lg, alignItems: "center", paddingVertical: 22, gap: 6 },

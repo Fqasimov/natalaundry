@@ -64,6 +64,11 @@ const config: ExpoConfig = {
     "expo-location",
     "expo-camera",
     "expo-image-picker",
+    // Opens the Kapital Bank hosted payment page in a system auth session.
+    // Deliberately not an in-app WebView: the customer types card details on
+    // that page, and they should be able to see the real address bar and
+    // padlock, and have their browser's autofill available.
+    "expo-web-browser",
     [
       "expo-splash-screen",
       {

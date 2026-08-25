@@ -270,7 +270,9 @@ export default function HomeScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.promoTitleRow}>
-                  <Text style={styles.promoTitle}>{t("firstOrderPromoTitle")}</Text>
+                  <Text style={styles.promoTitle} numberOfLines={2}>
+                    {t("firstOrderPromoTitle")}
+                  </Text>
                   <View style={styles.promoBadge}>
                     <Text style={styles.promoBadgeLabel}>{t("firstOrderPromoBadge")}</Text>
                   </View>
@@ -668,6 +670,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   repeatTitle: { fontFamily: font.bold, fontSize: 14.5, color: colors.textPrimary },
+  // The button keeps its size; the text block beside it (already flex:1)
+  // absorbs the difference, so a long Russian label can't push it off-card.
   repeatBody: {
     fontFamily: font.regular,
     fontSize: 12.5,
@@ -679,6 +683,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    flexShrink: 0,
   },
   repeatButtonBusy: { opacity: 0.6 },
   repeatButtonLabel: { fontFamily: font.bold, fontSize: 12.5, color: colors.textInverse },
@@ -747,6 +752,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    // Holds its width so the title beside it is what gives way; without this
+    // the badge gets crushed and its label spills past the pill.
+    flexShrink: 0,
   },
   promoBadgeLabel: { fontFamily: font.bold, fontSize: 10, color: "#5A3A00" },
   promoBody: {

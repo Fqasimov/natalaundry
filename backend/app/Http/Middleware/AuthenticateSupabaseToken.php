@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Profile;
+use App\Support\SupabaseJwks;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,10 +12,18 @@ use Symfony\Component\HttpFoundation\Response;
  * Verifies the Supabase access token the mobile app already holds, so the
  * app keeps using Supabase Auth and this API simply trusts the same token.
  *
- * Supports HS256 (the project's legacy JWT secret, SUPABASE_JWT_SECRET). If
- * the project has been migrated to asymmetric JWT signing keys, verification
- * should be swapped for the project's JWKS endpoint — the claim handling
- * below stays the same.
+ * Two signing schemes, because Supabase projects moved between them:
+ *
+ * - **ES256** — asymmetric keys published at the project's JWKS endpoint.
+ *   This is what the live project issues, and it needs no secret in our
+ *   environment at all: the key is public and only verifies.
+ * - **HS256** — the legacy shared secret (SUPABASE_JWT_SECRET). Kept because
+ *   a project that has not migrated still issues these, and the test suite
+ *   mints them.
+ *
+ * The algorithm is chosen from the token header, but only from that fixed
+ * pair, and each is checked against its own key material. A token naming any
+ * other algorithm — `none` above all — is rejected before any key is loaded.
  *
  * On success the resolved Profile is attached to the request.
  */
@@ -79,11 +88,6 @@ class AuthenticateSupabaseToken
      */
     private function verify(string $token): ?array
     {
-        $secret = config('services.supabase.jwt_secret');
-        if (! $secret) {
-            return null;
-        }
-
         $parts = explode('.', $token);
         if (count($parts) !== 3) {
             return null;
@@ -91,13 +95,27 @@ class AuthenticateSupabaseToken
         [$encodedHeader, $encodedPayload, $encodedSignature] = $parts;
 
         $header = json_decode($this->base64UrlDecode($encodedHeader) ?: '', true);
-        if (! is_array($header) || ($header['alg'] ?? null) !== 'HS256') {
+        if (! is_array($header)) {
             return null;
         }
 
-        $expected = hash_hmac('sha256', "{$encodedHeader}.{$encodedPayload}", $secret, true);
-        $provided = $this->base64UrlDecode($encodedSignature);
-        if ($provided === null || ! hash_equals($expected, $provided)) {
+        $signature = $this->base64UrlDecode($encodedSignature);
+        if ($signature === null) {
+            return null;
+        }
+
+        $signed = "{$encodedHeader}.{$encodedPayload}";
+
+        // The algorithm comes from the token, which the caller controls, so it
+        // is matched against an explicit allow-list rather than passed to a
+        // verifier. Anything else — including "none" — falls through to null.
+        $verified = match ($header['alg'] ?? null) {
+            'ES256' => $this->verifyEs256($signed, $signature, $header['kid'] ?? null),
+            'HS256' => $this->verifyHs256($signed, $signature),
+            default => false,
+        };
+
+        if (! $verified) {
             return null;
         }
 
@@ -129,6 +147,43 @@ class AuthenticateSupabaseToken
         }
 
         return $claims;
+    }
+
+    /**
+     * ES256, against the project's published JWKS.
+     *
+     * No secret is involved: the key verifies signatures and cannot make
+     * them, which is the whole point of the move away from a shared secret.
+     */
+    private function verifyEs256(string $signed, string $signature, mixed $kid): bool
+    {
+        if (! is_string($kid) || $kid === '') {
+            return false;
+        }
+
+        $pem = app(SupabaseJwks::class)->keyFor($kid);
+        if ($pem === null) {
+            return false;
+        }
+
+        // JWS carries r‖s; OpenSSL wants DER.
+        $der = SupabaseJwks::signatureToDer($signature);
+        if ($der === null) {
+            return false;
+        }
+
+        return openssl_verify($signed, $der, $pem, OPENSSL_ALGO_SHA256) === 1;
+    }
+
+    /** HS256, against the legacy shared secret. */
+    private function verifyHs256(string $signed, string $signature): bool
+    {
+        $secret = config('services.supabase.jwt_secret');
+        if (! $secret) {
+            return false;
+        }
+
+        return hash_equals(hash_hmac('sha256', $signed, $secret, true), $signature);
     }
 
     /** `aud` may be a string or a list; either must name our audience. */

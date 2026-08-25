@@ -148,6 +148,30 @@ class SupabaseSchema
             $table->string('item_id');
         });
 
+        // `payments` and `payment_intents` both exist in the live project
+        // (they appear in the RLS dump); these mirror the columns the app
+        // relies on. transaction_ref holds the Kapital Bank order id.
+        Schema::create('payments', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('order_id');
+            $table->decimal('amount', 12, 2);
+            $table->string('status')->default('Pending');
+            $table->string('payment_method')->default('Card');
+            $table->string('transaction_ref')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('payment_intents', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('user_id');
+            $table->string('purpose');
+            $table->decimal('amount', 12, 2);
+            $table->string('status')->default('pending');
+            $table->string('transaction_ref')->nullable();
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('settled_at')->nullable();
+        });
+
         // Tables this codebase does own (see the gift-box migration).
         Schema::create('rewards', function (Blueprint $table) {
             $table->uuid('id')->primary();

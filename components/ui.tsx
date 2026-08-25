@@ -30,7 +30,7 @@ export function ScreenHeader({
   rightLabel?: string;
   onRightPress?: () => void;
   onBack?: () => void;
-  backFallback?: Href<string>;
+  backFallback?: Href;
 }) {
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -254,7 +254,15 @@ const s = StyleSheet.create({
   bigButtonInner: { flexDirection: "row", alignItems: "center", gap: 8 },
   bigButtonLabel: { fontFamily: font.semibold, fontSize: 16, color: colors.textInverse },
   disabled: { opacity: 0.45 },
-  pill: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  // Pills sit in flex rows next to headings. flexShrink:0 keeps the pill at
+  // its label's size so the heading is what wraps, rather than the pill being
+  // squeezed until its text spills out of the rounded background.
+  pill: {
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
   pillLabel: { fontFamily: font.semibold, fontSize: 12 },
   bubble: { alignItems: "center", justifyContent: "center" },
 });
