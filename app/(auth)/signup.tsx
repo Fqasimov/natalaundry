@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppLogo } from "@/components/AppLogo";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
@@ -63,9 +63,9 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.root}>
-      {/* ── Blue hero header ── */}
+      {/* ── Midnight-green hero header ── */}
       <LinearGradient
-        colors={["#5AADEC", "#3184EC", "#1A6AD4"]}
+        colors={[brand.heroFrom, brand.heroMid, brand.heroTo]}
         start={{ x: 0.3, y: 0 }}
         end={{ x: 0.7, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 12 }]}
@@ -178,7 +178,7 @@ export default function SignupScreen() {
 
         {confirmSent ? (
           <View style={styles.confirmBox}>
-            <Ionicons name="mail-open-outline" size={22} color={colors.primary} />
+            <Ionicons name="mail-open-outline" size={22} color={brand.midnight} />
             <Text style={styles.confirmTitle}>{t("signupConfirmTitle")}</Text>
             <Text style={styles.confirmBody}>
               {t("signupConfirmBody", { email: email.trim() })}
@@ -192,7 +192,7 @@ export default function SignupScreen() {
         {/* Sign up button */}
         <BigButton
           label={t("signupBtn")}
-          tone="primary"
+          tone="brand"
           onPress={onSubmit}
           loading={submitting}
           iconRight="person-add-outline"
@@ -211,7 +211,7 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   hero: {
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   langLabel: {
     fontFamily: font.semibold,
     fontSize: 13,
-    color: "rgba(255,255,255,0.80)",
+    color: brand.onDarkSoft,
   },
   langLabelActive: { color: colors.textPrimary },
 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: brand.scrimStrong,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   heroSub: {
     fontFamily: font.regular,
     fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
+    color: brand.onDarkSoft,
   },
 
   // ── Form ──────────────────────────────────────────────────────────────────
@@ -272,9 +272,9 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     borderRadius: radius.md,
     paddingHorizontal: 14,
   },
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   confirmBox: {
     alignItems: "center",
     gap: 8,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.aliceBlue,
     borderRadius: radius.lg,
     padding: 20,
     marginBottom: 4,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
   },
-  confirmLink: { fontFamily: font.semibold, fontSize: 14, color: colors.primary, marginTop: 4 },
+  confirmLink: { fontFamily: font.semibold, fontSize: 14, color: brand.midnight, marginTop: 4 },
   error: {
     fontFamily: font.regular,
     fontSize: 13,
@@ -325,6 +325,6 @@ const styles = StyleSheet.create({
   loginLink: {
     fontFamily: font.semibold,
     fontSize: 15,
-    color: colors.primary,
+    color: brand.midnight,
   },
 });

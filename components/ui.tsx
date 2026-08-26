@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, type Href } from "expo-router";
 import { AppIcon, type IconName } from "@/components/AppIcon";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 /**
  * Back chevron + centred bold title + optional right-hand text action.
@@ -99,7 +99,10 @@ export function Stepper({
   );
 }
 
-type ButtonTone = "accent" | "amber" | "primary";
+// "brand" is the coastal-palette tone used by the auth flow; the other three
+// stay exactly as sampled from the 1.0.2 recording so the catalogue, checkout
+// and profile screens are untouched by the restyle.
+type ButtonTone = "accent" | "amber" | "primary" | "brand";
 
 export function BigButton({
   label,
@@ -119,7 +122,13 @@ export function BigButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const bg =
-    tone === "amber" ? colors.amber : tone === "primary" ? colors.primary : colors.accent;
+    tone === "brand"
+      ? brand.midnight
+      : tone === "amber"
+        ? colors.amber
+        : tone === "primary"
+          ? colors.primary
+          : colors.accent;
   return (
     <Pressable
       onPress={onPress}

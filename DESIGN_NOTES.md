@@ -23,6 +23,53 @@ transcribed from frames of that recording rather than invented.
 Each service also carries its own tint through the catalogue — dry cleaning
 periwinkle, ironing peach, shoes taupe, bedding cyan, bags pink.
 
+## The coastal palette (entry flow, home and orders)
+
+A second palette was supplied later as a colour sheet and applied to the entry
+flow, the home screen and the orders section. It lives in `theme/tokens.ts` as
+`brand`, **alongside** the video-sampled `colors` rather than replacing it.
+
+| Token | Value | Sheet name |
+| --- | --- | --- |
+| `brand.timberwolf` | `#D3D0C8` | Timberwolf |
+| `brand.aliceBlue` | `#E9F1F6` | Alice Blue |
+| `brand.lightBlue` | `#B2D5E2` | Light Blue |
+| `brand.moonstone` | `#44A6B5` | Moonstone |
+| `brand.midnight` | `#004554` | Midnight Green |
+
+Everything else in `brand` is a blend of those five with white, or a darkened
+step between two of them — no sixth hue was introduced.
+
+**What it covers:** `app/index.tsx`, `app/(auth)/*` (login, signup, customer
+portal), `app/(tabs)/index.tsx`, `app/(tabs)/orders.tsx`, the tab bar, and
+`StatusBadge`.
+
+**What it deliberately does not cover:** the whole profile section, the
+catalogue and checkout screens, the gifts screen, and courier/tracking. Those
+still run on the video-sampled blue/orange `colors`, and the global
+`serviceTheme` still drives the catalogue's per-service hues — the home
+screen's bento grid carries its own local palette version instead.
+
+**Black type is shared, not recoloured.** `colors.textPrimary` (`#14181F`) and
+`colors.ink` still set every heading, price and body line on the restyled
+screens. The palette moves surfaces, fills, gradients and accents only.
+
+Three values are darker than the sheet because the sheet's own colours did not
+carry type at the sizes used:
+
+- `brand.heroFrom` is `#1E7387`, not Moonstone — the 13px language pills need
+  4.5:1 against white, and Moonstone gives 2.6:1.
+- `brand.moonstoneInk` (`#256F7D`) sets the in-progress `StatusBadge`, which
+  paints its tint at 10% behind that same tint as type.
+- `brand.timberwolfInk` (`#6E6859`) does the same for the pending badge.
+
+The tab bar's raised "+" takes a Midnight Green glyph rather than a white one:
+white on Moonstone is 2.85:1, under the 3:1 a graphical object needs.
+
+`completed` and `cancelled` order badges keep green and red. Those two read as
+outcomes rather than brand colour, and dropping the red on a cancelled order
+would cost real information.
+
 ## Screens rebuilt
 
 | Screen | Route | From |

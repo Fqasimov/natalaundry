@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { AppLogo } from "@/components/AppLogo";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 // Admin lives on the website, not in the app: facility staff work at a desk
 // with an order feed and dispatch controls, which is a poor fit for a phone,
@@ -27,16 +27,16 @@ const ROLES: Array<{
   {
     key: "customer",
     icon: "shirt",            // clothes icon — perfect for laundry customer
-    tint: "#E8F1FD",
-    fg: colors.primary,
+    tint: brand.lightBlueSoft,
+    fg: brand.midnight,
     titleKey: "roleCustomer",
     descKey: "roleCustomerDesc",
   },
   {
     key: "courier",
     icon: "bicycle",          // courier on bike — urban delivery
-    tint: "#FDE9E3",
-    fg: colors.accent,
+    tint: brand.timberwolfSoft,
+    fg: brand.moonstone,
     titleKey: "roleCourier",
     descKey: "roleCourierDesc",
   },
@@ -49,8 +49,8 @@ export default function WelcomeScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: brand.background }}>
+        <ActivityIndicator size="large" color={brand.moonstone} />
       </View>
     );
   }
@@ -73,9 +73,9 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Blue gradient hero header */}
+      {/* Midnight-green gradient hero header */}
       <LinearGradient
-        colors={["#5AADEC", "#3184EC", "#1A6AD4"]}
+        colors={[brand.heroFrom, brand.heroMid, brand.heroTo]}
         start={{ x: 0.3, y: 0 }}
         end={{ x: 0.7, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 12 }]}
@@ -107,7 +107,7 @@ export default function WelcomeScreen() {
         <Text style={styles.heroSub}>{t("heroTitle")}</Text>
       </LinearGradient>
 
-      {/* Bottom cream card area */}
+      {/* Bottom Alice Blue card area */}
       <ScrollView
         style={styles.body}
         contentContainerStyle={[styles.bodyContent, { paddingBottom: insets.bottom + 24 }]}
@@ -149,7 +149,7 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   hero: {
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   langLabel: {
     fontFamily: font.semibold,
     fontSize: 13,
-    color: "rgba(255,255,255,0.80)",
+    color: brand.onDarkSoft,
   },
   langLabelActive: { color: colors.textPrimary },
 
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   heroSub: {
     fontFamily: font.medium,
     fontSize: 15,
-    color: "rgba(255,255,255,0.90)",
+    color: brand.onDarkSoft,
     textAlign: "center",
     lineHeight: 22,
   },
@@ -211,10 +211,10 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 14,
