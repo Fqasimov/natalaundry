@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import type { OrderStatus } from "@/types/database";
 
@@ -14,11 +14,18 @@ const LABEL_KEY: Record<OrderStatus, string> = {
   cancelled: "statusCancelled",
 };
 
+// The badge only ever appears in the orders section, so it follows the coastal
+// palette: Timberwolf ink for "waiting on us", Moonstone while the order is
+// moving (darkened: the badge paints its tint at 10% behind that same tint,
+// and Moonstone at full strength only reaches 2.6:1 on it), and Midnight
+// Green for the last leg. `completed` and `cancelled` keep
+// green and red — those two read as outcomes, not as brand colour, and losing
+// the red on a cancelled order would cost real information.
 const TINT: Record<OrderStatus, string> = {
-  pending: colors.amber,
-  collecting: colors.primary,
-  cleaning: colors.primary,
-  delivering: colors.primary,
+  pending: brand.timberwolfInk,
+  collecting: brand.moonstoneInk,
+  cleaning: brand.moonstoneInk,
+  delivering: brand.midnight,
   completed: colors.success,
   cancelled: colors.danger,
 };

@@ -1,13 +1,17 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Redirect, Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, font } from "@/theme/tokens";
+import { brand, colors, font } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 
-// Three-slot tab bar from the video: Ana səhifə, a raised orange "+" that
-// jumps straight into the catalogue, and Profil.
+// Three-slot tab bar from the video: Ana səhifə, a raised "+" that jumps
+// straight into the catalogue, and Profil. The bar is app chrome shown over
+// every tab, so it follows the coastal palette with the rest of the shell —
+// Moonstone for the raised "+" in place of the original orange-red (with a
+// Midnight Green glyph — white on Moonstone is only 2.85:1), and
+// Midnight Green for the active tab tint.
 export default function TabsLayout() {
   const { session, isLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
@@ -29,15 +33,15 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: brand.midnight,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: { fontFamily: font.medium, fontSize: 11 },
         tabBarStyle: {
           height: 78,
           paddingTop: 8,
           paddingBottom: 18,
-          backgroundColor: colors.surface,
-          borderTopColor: colors.divider,
+          backgroundColor: brand.surface,
+          borderTopColor: brand.divider,
         },
       }}
     >
@@ -62,7 +66,7 @@ export default function TabsLayout() {
               testID={props.testID}
             >
               <View style={styles.fab}>
-                <Ionicons name="add" size={30} color={colors.textInverse} />
+                <Ionicons name="add" size={30} color={brand.midnight} />
               </View>
               <Text style={styles.fabLabel}>{t("order")}</Text>
             </Pressable>
@@ -92,11 +96,11 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: colors.accent,
+    backgroundColor: brand.moonstone,
     alignItems: "center",
     justifyContent: "center",
     marginTop: -20,
-    shadowColor: colors.accent,
+    shadowColor: brand.midnight,
     shadowOpacity: 0.4,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

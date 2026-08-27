@@ -51,6 +51,62 @@ export const colors = {
   dangerSoft: "#FDECEA",
 } as const;
 
+// ─── Coastal palette ────────────────────────────────────────────────────────
+// The five brand colours supplied as a palette sheet (Timberwolf, Alice Blue,
+// Light Blue, Moonstone, Midnight Green), plus the blends needed to build
+// gradients, soft fills and borders out of them.
+//
+// This sits *alongside* `colors` rather than replacing it: the home screen,
+// the orders list and the auth flow are styled from `brand`, while the profile
+// section and the checkout/catalogue screens keep the original blue/orange
+// tokens sampled from the 1.0.2 recording. Near-black text (`textPrimary`,
+// `ink`) is deliberately shared by both — the palette recolours surfaces and
+// accents, never the black type.
+export const brand = {
+  // The five palette colours, verbatim from the sheet.
+  timberwolf: "#D3D0C8", // RGB 211, 208, 200
+  aliceBlue: "#E9F1F6", //  RGB 233, 241, 246
+  lightBlue: "#B2D5E2", //  RGB 178, 213, 226
+  moonstone: "#44A6B5", //  RGB  68, 166, 181
+  midnight: "#004554", //   RGB   0,  69,  84
+
+  // Hero gradient: moonstone stepped down into midnight green. The stops are
+  // darker than moonstone itself because the hero carries white type at the
+  // top — plain #44A6B5 under white only reaches ~2.6:1.
+  heroFrom: "#1E7387",
+  heroMid: "#0F6072",
+  heroTo: "#004554",
+
+  // Blends, all mixes of the five above with white.
+  moonstoneDark: "#38909E", // pressed / hovered moonstone
+  moonstoneSoft: "#DAEDF1", // moonstone at ~12% over white
+  lightBlueSoft: "#CDE3EC", // between Light Blue and Alice Blue
+  timberwolfSoft: "#E4E2DC", // Timberwolf lightened
+  timberwolfDeep: "#C4C0B6", // Timberwolf darkened, for the gift band
+  moonstoneInk: "#256F7D", //  Moonstone darkened until it is legible as type
+  timberwolfInk: "#6E6859", // Timberwolf pushed to a legible type weight
+
+  // Surfaces.
+  background: "#E9F1F6", // Alice Blue is the app surface here, not ivory
+  surface: "#FFFFFF",
+  surfaceAlt: "#DCEAF1",
+  border: "#CBDEE8",
+  borderStrong: "#B2D5E2",
+  divider: "#DFE9EF",
+
+  // Type on the palette's own light fills (never used for the black type
+  // that the rest of the app already sets in `textPrimary`).
+  onSoft: "#004554",
+  onSoftMuted: "#3F6B77",
+
+  // Type and scrims on the midnight-green hero.
+  onDark: "#FFFFFF",
+  onDarkSoft: "rgba(255,255,255,0.86)",
+  onDarkFaint: "rgba(255,255,255,0.72)",
+  scrim: "rgba(255,255,255,0.16)",
+  scrimStrong: "rgba(255,255,255,0.24)",
+} as const;
+
 // Each service carries its own tint through the whole catalogue — the circle
 // selector, the hero banner and the accordion icons all key off it. Icons use
 // MaterialCommunityIcons for the laundry-domain glyphs (washing machine,

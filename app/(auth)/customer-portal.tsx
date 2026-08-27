@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { AppLogo } from "@/components/AppLogo";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 // router.back() does nothing when the stack is empty — a deep link or a
 // reload lands here with no history — so fall back to the welcome screen
@@ -22,9 +22,9 @@ export default function CustomerPortalScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Blue gradient hero header */}
+      {/* Midnight-green gradient hero header */}
       <LinearGradient
-        colors={["#5AADEC", "#3184EC", "#1A6AD4"]}
+        colors={[brand.heroFrom, brand.heroMid, brand.heroTo]}
         start={{ x: 0.3, y: 0 }}
         end={{ x: 0.7, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 12 }]}
@@ -90,7 +90,7 @@ export default function CustomerPortalScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   hero: {
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   langLabel: {
     fontFamily: font.semibold,
     fontSize: 13,
-    color: "rgba(255,255,255,0.80)",
+    color: brand.onDarkSoft,
   },
   langLabelActive: { color: colors.textPrimary },
 
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: brand.scrimStrong,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary,
+    backgroundColor: brand.midnight,
     borderRadius: radius.pill,
     paddingVertical: 18,
   },
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingVertical: 18,
   },
   btnSecondaryLabel: {

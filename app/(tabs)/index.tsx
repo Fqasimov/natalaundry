@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
-import { colors, font, money, radius, serviceTheme } from "@/theme/tokens";
+import { brand, colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { CATALOG } from "@/lib/catalog";
 import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { TOPLU_DEPOSIT } from "@/lib/toplu";
@@ -28,16 +28,26 @@ import { LIFECYCLE_LABEL, stepIndex, LIFECYCLE_STATES } from "@/lib/lifecycle";
 import { FIRST_ORDER_CODE } from "@/lib/promo";
 import type { Order } from "@/types/database";
 
-// ─── Service design tokens (from screenshot) ────────────────────────────────
+// ─── Service design tokens ──────────────────────────────────────────────────
+// The bento grid used to give every service its own hue (periwinkle, peach,
+// taupe, cyan, pink). Restyled onto the coastal palette, the five tiles are
+// separated by *value* instead — Light Blue, Alice Blue, Timberwolf and the
+// blends between them — with the icon discs alternating Midnight Green and
+// Moonstone so adjacent cards never repeat. `fg` is the card's own accent, used
+// by its "Bax →" label and chevron.
+//
+// This stays local to the home screen: the global `serviceTheme` still drives
+// the catalogue and checkout screens, which are outside the restyle.
 const SERVICE_THEME: Record<
   string,
-  { bg: string; iconBg: string; iconFg: string }
+  { bg: string; iconBg: string; iconFg: string; fg: string }
 > = {
-  dry_cleaning: { bg: "#E9E7FB", iconBg: "#5B57D6", iconFg: "#FFFFFF" },
-  ironing:      { bg: "#FEF0E3", iconBg: "#F0922A", iconFg: "#FFFFFF" },
-  shoes:        { bg: "#EDE8E2", iconBg: "#8A6A5C", iconFg: "#FFFFFF" },
-  bedding:      { bg: "#DFF5F5", iconBg: "#2BB5B5", iconFg: "#FFFFFF" },
-  bags:         { bg: "#FDEEF2", iconBg: "#E8215A", iconFg: "#FFFFFF" },
+  dry_cleaning: { bg: brand.lightBlue,      iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
+  ironing:      { bg: brand.aliceBlue,      iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
+  shoes:        { bg: brand.timberwolf,     iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
+  bedding:      { bg: brand.lightBlueSoft,  iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
+  bags:         { bg: brand.timberwolfSoft, iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
+  toplu:        { bg: brand.moonstoneSoft,  iconBg: "#FFFFFF",       iconFg: brand.midnight, fg: brand.midnight },
 };
 
 // ─── Animated press card ─────────────────────────────────────────────────────
@@ -206,7 +216,7 @@ export default function HomeScreen() {
       >
         {/* ── Hero: greeting, the welcome offer, and the live order ── */}
         <LinearGradient
-          colors={[colors.heroFrom, colors.heroTo]}
+          colors={[brand.heroFrom, brand.heroTo]}
           style={[styles.hero, { paddingTop: insets.top + 12 }]}
         >
           <View style={styles.heroTopRow}>
@@ -253,7 +263,7 @@ export default function HomeScreen() {
             <Ionicons
               name={unread > 0 ? "mail-unread" : "checkmark-circle"}
               size={18}
-              color={unread > 0 ? "#FFD98A" : "#8FE3B0"}
+              color={unread > 0 ? brand.lightBlue : brand.onDarkFaint}
             />
             <Text style={styles.inboxLabel} numberOfLines={2}>
               {unread > 0 ? t("unreadCount", { count: unread }) : t("notificationsEmpty")}
@@ -266,7 +276,7 @@ export default function HomeScreen() {
           {showPromo ? (
             <View style={styles.promoCard}>
               <View style={styles.promoIcon}>
-                <AppIcon name="mci:sale" size={22} color="#B25C00" />
+                <AppIcon name="mci:sale" size={22} color={brand.midnight} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.promoTitleRow}>
@@ -331,7 +341,7 @@ export default function HomeScreen() {
           {canRepeat ? (
             <View style={styles.repeatCard}>
               <View style={styles.repeatIcon}>
-                <Ionicons name="refresh" size={20} color={colors.primary} />
+                <Ionicons name="refresh" size={20} color={brand.midnight} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.repeatTitle}>⚡ {t("repeatPrevTitle")}</Text>
@@ -355,13 +365,16 @@ export default function HomeScreen() {
             style={styles.giftBanner}
             onPress={() => router.push("/gifts")}
           >
+            {/* Timberwolf rather than the catalogue's purple: it is the only
+                warm colour in the palette, so it lifts the banner off the
+                midnight-green hero without introducing a sixth hue. */}
             <LinearGradient
-              colors={["#7C2CB6", "#67199F"]}
+              colors={[brand.timberwolf, brand.timberwolfDeep]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.giftBannerInner}
             >
-              <Ionicons name="gift" size={30} color="#F6D66B" />
+              <Ionicons name="gift" size={30} color={brand.midnight} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.giftTitle}>🎁 {t("giftBox")}</Text>
                 <Text style={styles.giftSubtitle}>{t("giftBoxSubtitle")}</Text>
@@ -369,7 +382,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={22}
-                color={colors.textInverse}
+                color={brand.midnight}
               />
             </LinearGradient>
           </Pressable>
@@ -429,11 +442,11 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.mediumTitle}>{copy.service(ironing)}</Text>
                   <View style={styles.baxRow}>
-                    <Text style={[styles.baxLabel, { color: "#C96D12" }]}>{t("view")}</Text>
+                    <Text style={[styles.baxLabel, { color: ironTheme.fg }]}>{t("view")}</Text>
                     <Ionicons
                       name="arrow-forward"
                       size={12}
-                      color="#C96D12"
+                      color={ironTheme.fg}
                     />
                   </View>
                 </View>
@@ -454,11 +467,11 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.mediumTitle}>{copy.service(shoes)}</Text>
                   <View style={styles.baxRow}>
-                    <Text style={[styles.baxLabel, { color: "#735345" }]}>{t("view")}</Text>
+                    <Text style={[styles.baxLabel, { color: shoeTheme.fg }]}>{t("view")}</Text>
                     <Ionicons
                       name="arrow-forward"
                       size={12}
-                      color="#735345"
+                      color={shoeTheme.fg}
                     />
                   </View>
                 </View>
@@ -471,13 +484,13 @@ export default function HomeScreen() {
               than sitting in the grid as if it were one more price list. */}
           <PressCard
             onPress={() => router.push("/toplu")}
-            style={[styles.topluCard, { backgroundColor: serviceTheme.toplu.tint }]}
+            style={[styles.topluCard, { backgroundColor: SERVICE_THEME.toplu.bg }]}
             contentStyle={styles.topluContent}
           >
             <ServiceIcon
               icon={serviceTheme.toplu.icon}
-              bg="rgba(255,255,255,0.65)"
-              fg={serviceTheme.toplu.fg}
+              bg={SERVICE_THEME.toplu.iconBg}
+              fg={SERVICE_THEME.toplu.iconFg}
               size={46}
             />
             <View style={{ flex: 1 }}>
@@ -485,7 +498,7 @@ export default function HomeScreen() {
               <Text style={styles.topluTagline}>{t("topluTagline")}</Text>
             </View>
             <View style={styles.topluDepositPill}>
-              <Text style={[styles.topluDepositLabel, { color: serviceTheme.toplu.fg }]}>
+              <Text style={[styles.topluDepositLabel, { color: SERVICE_THEME.toplu.fg }]}>
                 {money(TOPLU_DEPOSIT)}
               </Text>
             </View>
@@ -514,7 +527,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={18}
-                color="#1C9E9E"
+                color={bedTheme.fg}
               />
             </PressCard>
 
@@ -541,7 +554,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={18}
-                color="#CC184D"
+                color={bagTheme.fg}
               />
             </PressCard>
           </View>
@@ -562,7 +575,7 @@ export default function HomeScreen() {
                   <Ionicons
                     name={step.icon as keyof typeof Ionicons.glyphMap}
                     size={20}
-                    color={colors.primary}
+                    color={brand.midnight}
                   />
                 </View>
                 {i < all.length - 1 ? <View style={styles.howLine} /> : null}
@@ -594,7 +607,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   hero: { paddingHorizontal: 20, paddingBottom: 26 },
@@ -612,7 +625,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: brand.scrim,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -623,11 +636,12 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     marginTop: 18,
   },
-  // Gold, as in the shipped design — it lifts the greeting off the blue far
-  // better than white-on-blue does.
+  // The shipped design set the greeting in gold so it lifted off the blue.
+  // Light Blue does the same job against Midnight Green and stays inside the
+  // palette; white-on-teal would flatten it into the brand line above.
   greeting: {
     fontFamily: font.extrabold,
-    color: "#FFD64A",
+    color: brand.lightBlue,
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.5,
@@ -638,7 +652,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: brand.scrim,
     borderRadius: radius.lg,
     paddingHorizontal: 14,
     paddingVertical: 13,
@@ -649,14 +663,14 @@ const styles = StyleSheet.create({
     fontFamily: font.medium,
     fontSize: 13.5,
     lineHeight: 19,
-    color: "rgba(255,255,255,0.92)",
+    color: brand.onDarkSoft,
   },
 
   repeatCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     padding: 14,
     marginTop: 16,
@@ -665,7 +679,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#E7F0FB",
+    backgroundColor: brand.lightBlueSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -679,7 +693,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   repeatButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.midnight,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -696,17 +710,17 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#E7F0FB",
+    backgroundColor: brand.lightBlueSoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  howLine: { flex: 1, width: 2, minHeight: 26, backgroundColor: colors.border },
+  howLine: { flex: 1, width: 2, minHeight: 26, backgroundColor: brand.borderStrong },
   howBody: { flex: 1, paddingBottom: 22 },
   howNumber: {
     fontFamily: font.bold,
     fontSize: 12.5,
     letterSpacing: 0.5,
-    color: colors.primary,
+    color: brand.moonstone,
   },
   howTitle: {
     fontFamily: font.bold,
@@ -727,7 +741,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFF4DE",
+    backgroundColor: brand.aliceBlue,
     borderRadius: radius.lg,
     padding: 14,
     marginTop: 18,
@@ -736,7 +750,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFE1AE",
+    backgroundColor: brand.lightBlue,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -745,10 +759,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: font.bold,
     fontSize: 14.5,
-    color: "#5A3A00",
+    color: brand.onSoft,
   },
   promoBadge: {
-    backgroundColor: "#FFD48A",
+    backgroundColor: brand.moonstone,
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -756,18 +770,18 @@ const styles = StyleSheet.create({
     // the badge gets crushed and its label spills past the pill.
     flexShrink: 0,
   },
-  promoBadgeLabel: { fontFamily: font.bold, fontSize: 10, color: "#5A3A00" },
+  promoBadgeLabel: { fontFamily: font.bold, fontSize: 10, color: brand.onDark },
   promoBody: {
     fontFamily: font.regular,
     fontSize: 12.5,
     lineHeight: 17,
-    color: "#7A5510",
+    color: brand.onSoftMuted,
     marginTop: 3,
   },
 
   // Active order
   orderCard: {
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: brand.scrim,
     borderRadius: radius.lg,
     padding: 16,
     marginTop: 16,
@@ -778,9 +792,9 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.75)",
+    color: brand.onDarkFaint,
   },
-  orderNo: { fontFamily: font.medium, fontSize: 12, color: "rgba(255,255,255,0.75)" },
+  orderNo: { fontFamily: font.medium, fontSize: 12, color: brand.onDarkFaint },
   orderState: {
     fontFamily: font.bold,
     fontSize: 18,
@@ -795,7 +809,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.25)",
   },
-  progressSegmentDone: { backgroundColor: "#FFD98A" },
+  progressSegmentDone: { backgroundColor: brand.lightBlue },
   orderActionRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14 },
   orderAction: { fontFamily: font.bold, fontSize: 14, color: colors.textInverse },
 
@@ -813,7 +827,7 @@ const styles = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: 12.5,
     lineHeight: 17,
-    color: "rgba(255,255,255,0.8)",
+    color: brand.onDarkSoft,
     marginTop: 3,
   },
   giftBanner: { marginTop: 22, borderRadius: radius.lg, overflow: "hidden" },
@@ -823,11 +837,11 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 18,
   },
-  giftTitle: { fontFamily: font.bold, fontSize: 16, color: colors.textInverse },
+  giftTitle: { fontFamily: font.bold, fontSize: 16, color: brand.onSoft },
   giftSubtitle: {
     fontFamily: font.regular,
     fontSize: 12.5,
-    color: "rgba(255,255,255,0.85)",
+    color: brand.onSoftMuted,
     marginTop: 3,
   },
 
@@ -861,7 +875,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   popularBadge: {
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: "rgba(255,255,255,0.82)",
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -869,7 +883,7 @@ const styles = StyleSheet.create({
   popularLabel: {
     fontFamily: font.bold,
     fontSize: 9.5,
-    color: "#2772DB",
+    color: brand.midnight,
     letterSpacing: 0.4,
   },
   featureTitle: {
@@ -943,7 +957,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   topluDepositPill: {
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -985,7 +999,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary,
+    backgroundColor: brand.midnight,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -1001,7 +1015,7 @@ const styles = StyleSheet.create({
     minWidth: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.amber,
+    backgroundColor: brand.lightBlue,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,

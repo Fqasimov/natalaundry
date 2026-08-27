@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/AppIcon";
 import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -93,7 +93,7 @@ export default function OrdersScreen() {
         <Text style={s.error}>{loadError}</Text>
       ) : !orders ? (
         <View style={s.center}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={brand.moonstone} />
         </View>
       ) : (
         <FlatList
@@ -101,11 +101,11 @@ export default function OrdersScreen() {
           data={orders}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.moonstone} />
           }
           ListEmptyComponent={
             <View style={s.empty}>
-              <AppIcon name="mci:hanger" size={30} color={colors.textSecondary} />
+              <AppIcon name="mci:hanger" size={30} color={brand.moonstone} />
               <Text style={s.emptyLabel}>{t("noOrders")}</Text>
             </View>
           }
@@ -133,7 +133,7 @@ export default function OrdersScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   error: {
     ...type.caption,
@@ -155,10 +155,10 @@ const s = StyleSheet.create({
     alignItems: "center",
     borderRadius: radius.pill,
     paddingVertical: 9,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
   },
-  segmentActive: { backgroundColor: colors.primary },
-  segmentLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textSecondary },
+  segmentActive: { backgroundColor: brand.midnight },
+  segmentLabel: { fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
   segmentLabelActive: { color: colors.textInverse },
 
   list: { paddingHorizontal: 20, gap: 12 },
@@ -166,10 +166,10 @@ const s = StyleSheet.create({
   emptyLabel: { ...type.body, color: colors.textSecondary },
 
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     gap: 6,
   },
