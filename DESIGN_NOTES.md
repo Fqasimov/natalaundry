@@ -49,10 +49,16 @@ own inter-screen background in `app/_layout.tsx`.
 
 There is no seam left on any path a customer can walk.
 
-**What it deliberately does not cover:** `app/courier/*`. That is a different
-role in a different context — a courier is working, not shopping — and it
-keeps the video-sampled `colors`. The home screen's bento grid also keeps its
-own local palette version.
+`app/courier/*` is on it too, so the palette is now app-wide across both
+roles. The home screen's bento grid keeps its own local palette version.
+
+Two ambers survive on the courier screen and are load-bearing:
+
+- the **GPS dot**, amber against `success` green — amber is "not sharing
+  yet", which is a live state the courier needs to read at a glance
+- the **job-offer count badge** — offers are first-to-claim, so a courier who
+  misses the badge loses the work to someone else. It has to stand out
+  against the palette, not settle into it.
 
 ### Identity colours that survive inside the palette
 

@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -125,7 +125,7 @@ export default function CourierDashboard() {
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={brand.moonstoneInk} />
       </View>
     );
   }
@@ -228,7 +228,7 @@ export default function CourierDashboard() {
                     })
                   }
                 >
-                  <Ionicons name="logo-google" size={15} color={colors.primary} />
+                  <Ionicons name="logo-google" size={15} color={brand.moonstoneInk} />
                   <Text style={s.navLabel}>{t("navigateGoogle")}</Text>
                 </Pressable>
                 <Pressable
@@ -240,7 +240,7 @@ export default function CourierDashboard() {
                     })
                   }
                 >
-                  <Ionicons name="navigate" size={15} color={colors.primary} />
+                  <Ionicons name="navigate" size={15} color={brand.moonstoneInk} />
                   <Text style={s.navLabel}>{t("navigateApp")}</Text>
                 </Pressable>
               </View>
@@ -277,12 +277,12 @@ export default function CourierDashboard() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor: brand.background,
     padding: 24,
   },
   tabs: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
@@ -293,11 +293,14 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
   },
-  tabActive: { backgroundColor: colors.primary },
-  tabLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textSecondary },
+  tabActive: { backgroundColor: brand.moonstoneInk },
+  tabLabel: { fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
   tabLabelActive: { color: colors.textInverse },
+  // Amber, not moonstone: this counts unclaimed job offers, and offers are
+  // first-to-claim — a courier who misses it loses the work to someone else.
+  // It has to stand out against the palette rather than blend into it.
   tabBadge: {
     minWidth: 20,
     height: 20,
@@ -319,25 +322,25 @@ const s = StyleSheet.create({
     paddingVertical: 9,
   },
   body: { paddingHorizontal: 20, gap: 12 },
-  muted: { ...type.body, color: colors.textSecondary, textAlign: "center", marginTop: 32 },
+  muted: { ...type.body, color: brand.onSoftMuted, textAlign: "center", marginTop: 32 },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     gap: 6,
   },
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  orderNo: { fontFamily: font.semibold, fontSize: 13, color: colors.textSecondary },
+  orderNo: { fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
   total: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
   state: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary, marginTop: 2 },
   address: { ...type.body, color: colors.textPrimary },
-  slot: { ...type.caption, color: colors.textSecondary },
-  waiting: { ...type.caption, color: colors.textSecondary, marginTop: 8, textAlign: "center" },
+  slot: { ...type.caption, color: brand.onSoftMuted },
+  waiting: { ...type.caption, color: brand.onSoftMuted, marginTop: 8, textAlign: "center" },
   gpsRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
   gpsDot: { width: 8, height: 8, borderRadius: 4 },
-  gpsLabel: { ...type.caption, color: colors.textSecondary },
+  gpsLabel: { ...type.caption, color: brand.onSoftMuted },
   navRow: { flexDirection: "row", gap: 10, marginTop: 10 },
   navButton: {
     flex: 1,
@@ -346,13 +349,13 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: brand.moonstoneInk,
     borderRadius: radius.pill,
     paddingVertical: 11,
   },
-  navLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.primary },
+  navLabel: { fontFamily: font.semibold, fontSize: 13, color: brand.moonstoneInk },
   primaryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.pill,
     paddingVertical: 15,
     alignItems: "center",
@@ -360,6 +363,6 @@ const s = StyleSheet.create({
   },
   primaryLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
   secondaryButton: { paddingVertical: 12, alignItems: "center" },
-  secondaryLabel: { fontFamily: font.medium, fontSize: 14, color: colors.textSecondary },
+  secondaryLabel: { fontFamily: font.medium, fontSize: 14, color: brand.onSoftMuted },
   disabled: { opacity: 0.5 },
 });
