@@ -16,7 +16,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { LanguageProvider } from "@/lib/language-context";
 import { CartProvider } from "@/lib/state/cart";
 import { CartFab } from "@/components/CartFab";
-import { colors } from "@/theme/tokens";
+import { brand } from "@/theme/tokens";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -49,12 +49,14 @@ export default function RootLayout() {
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: colors.background },
+                  // What shows between screens during a push. Ivory here
+                  // flashed against the coastal surfaces on every transition.
+                  contentStyle: { backgroundColor: brand.background },
                 }}
               />
-              {/* Sibling of the Stack, not inside a screen, so the basket
-                  stays reachable across every route rather than being
-                  re-mounted per screen. It hides itself when empty. */}
+              {/* Sibling of the Stack rather than inside a screen, so it is
+                  not re-mounted on every navigation. It renders on the home
+                  screen only — see CartFab. */}
               <CartFab />
             </CartProvider>
           </AuthProvider>

@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, money, radius } from "@/theme/tokens";
+import { brand, colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { Image } from "expo-image";
 import { GiftBoxAnimation } from "@/components/GiftBoxAnimation";
@@ -134,7 +134,7 @@ export default function GiftBoxScreen() {
       <ScrollView
         contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.moonstoneInk} />
         }
       >
         <LinearGradient colors={["#16233D", "#0D1B33"]} style={s.hero}>
@@ -166,19 +166,19 @@ export default function GiftBoxScreen() {
         ) : null}
 
         {!state ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+          <ActivityIndicator color={brand.moonstoneInk} style={{ marginTop: 24 }} />
         ) : (
           <>
             <Text style={s.section}>{t("availableBoxes")}</Text>
             {boxes.length === 0 ? (
               <View style={s.emptyCard}>
-                <Ionicons name="cube-outline" size={22} color={colors.textSecondary} />
+                <Ionicons name="cube-outline" size={22} color={brand.onSoftMuted} />
                 <Text style={s.emptyLabel}>{t("giftBoxNone")}</Text>
               </View>
             ) : (
               boxes.map((box) => (
                 <Pressable key={box.order_id} style={s.boxCard} onPress={() => open(box)}>
-                  <LinearGradient colors={["#3184EC", "#1A6AD4"]} style={s.boxIcon}>
+                  <LinearGradient colors={[brand.heroFrom, brand.heroTo]} style={s.boxIcon}>
                     <Ionicons name="gift" size={24} color={colors.textInverse} />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
@@ -199,7 +199,7 @@ export default function GiftBoxScreen() {
             </Text>
             {rewards.length === 0 ? (
               <View style={s.emptyCard}>
-                <Ionicons name="pricetags-outline" size={22} color={colors.textSecondary} />
+                <Ionicons name="pricetags-outline" size={22} color={brand.onSoftMuted} />
                 <Text style={s.emptyLabel}>{t("rewardNone")}</Text>
               </View>
             ) : (
@@ -286,7 +286,7 @@ export default function GiftBoxScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   body: { paddingHorizontal: 20, gap: 12 },
   errorCard: {
     flexDirection: "row",
@@ -310,7 +310,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -329,7 +329,7 @@ const s = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: 12,
     lineHeight: 16.5,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
   },
 
   hero: { borderRadius: radius.lg, alignItems: "center", paddingVertical: 22, gap: 6 },
@@ -349,7 +349,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     marginTop: 10,
   },
 
@@ -357,27 +357,27 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.lg,
     padding: 16,
   },
-  emptyLabel: { flex: 1, fontFamily: font.regular, fontSize: 13.5, color: colors.textSecondary },
+  emptyLabel: { flex: 1, fontFamily: font.regular, fontSize: 13.5, color: brand.onSoftMuted },
 
   boxCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: brand.moonstoneInk,
     padding: 14,
   },
   boxIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   boxTitle: { fontFamily: font.bold, fontSize: 15, color: colors.textPrimary },
-  boxSub: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
+  boxSub: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 2 },
   openPill: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -387,20 +387,20 @@ const s = StyleSheet.create({
   rewardCard: {
     flexDirection: "row",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 14,
   },
   rewardIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   rewardTitle: { fontFamily: font.semibold, fontSize: 14.5, color: colors.textPrimary },
-  rewardDesc: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
+  rewardDesc: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 2 },
   expiry: { fontFamily: font.medium, fontSize: 11.5, color: colors.danger, marginTop: 5 },
   footnote: {
     fontFamily: font.regular,
     fontSize: 12,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     textAlign: "center",
     marginTop: 8,
   },
@@ -420,7 +420,7 @@ const s = StyleSheet.create({
   prizeCard: {
     alignItems: "center",
     gap: 8,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -442,7 +442,7 @@ const s = StyleSheet.create({
     maxWidth: 280,
   },
   revealButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.pill,
     paddingHorizontal: 30,
     paddingVertical: 14,

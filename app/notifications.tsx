@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/AppIcon";
 import { ScreenHeader } from "@/components/ui";
-import { colors, font, radius, type } from "@/theme/tokens";
+import { brand, colors, font, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import {
@@ -92,7 +92,7 @@ export default function NotificationsScreen() {
 
       {!items ? (
         <View style={s.center}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={brand.moonstoneInk} />
         </View>
       ) : (
         <FlatList
@@ -100,11 +100,11 @@ export default function NotificationsScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.moonstoneInk} />
           }
           ListEmptyComponent={
             <View style={s.empty}>
-              <AppIcon name="ion:notifications-outline" size={30} color={colors.textSecondary} />
+              <AppIcon name="ion:notifications-outline" size={30} color={brand.onSoftMuted} />
               <Text style={s.emptyLabel}>{t("notificationsNone")}</Text>
             </View>
           }
@@ -129,7 +129,7 @@ export default function NotificationsScreen() {
                   </Text>
                 </View>
                 {orderId ? (
-                  <AppIcon name="ion:chevron-forward" size={16} color={colors.textSecondary} />
+                  <AppIcon name="ion:chevron-forward" size={16} color={brand.onSoftMuted} />
                 ) : null}
               </Pressable>
             );
@@ -141,27 +141,27 @@ export default function NotificationsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { paddingHorizontal: 20, gap: 10 },
   empty: { alignItems: "center", gap: 10, marginTop: 56 },
-  emptyLabel: { ...type.body, color: colors.textSecondary },
+  emptyLabel: { ...type.body, color: brand.onSoftMuted },
 
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  cardUnread: { borderColor: colors.primary },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  dotRead: { backgroundColor: colors.border },
+  cardUnread: { borderColor: brand.moonstoneInk },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.moonstoneInk },
+  dotRead: { backgroundColor: brand.border },
   cardBody: { flex: 1, gap: 3 },
   message: { fontFamily: font.medium, fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
-  time: { ...type.caption, color: colors.textSecondary },
+  time: { ...type.caption, color: brand.onSoftMuted },
 });

@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/AppIcon";
 import { ScreenHeader } from "@/components/ui";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
@@ -86,7 +86,7 @@ export default function WalletScreen() {
 
       {!transactions ? (
         <View style={s.center}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={brand.moonstoneInk} />
         </View>
       ) : (
         <FlatList
@@ -94,7 +94,7 @@ export default function WalletScreen() {
           data={transactions}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.moonstoneInk} />
           }
           ListHeaderComponent={
             <View style={s.header}>
@@ -108,7 +108,7 @@ export default function WalletScreen() {
           }
           ListEmptyComponent={
             <View style={s.empty}>
-              <AppIcon name="mci:wallet-outline" size={30} color={colors.textSecondary} />
+              <AppIcon name="mci:wallet-outline" size={30} color={brand.onSoftMuted} />
               <Text style={s.emptyLabel}>{t("walletNoTransactions")}</Text>
             </View>
           }
@@ -143,20 +143,20 @@ export default function WalletScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { paddingHorizontal: 20, gap: 10 },
   header: { gap: 10, marginBottom: 6 },
 
   balanceCard: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.lg,
     padding: 20,
     gap: 4,
   },
   balanceLabel: { fontFamily: font.medium, fontSize: 13, color: "rgba(255,255,255,0.82)" },
   balanceValue: { fontFamily: font.extrabold, fontSize: 32, color: colors.textInverse },
-  intro: { ...type.caption, color: colors.textSecondary },
+  intro: { ...type.caption, color: brand.onSoftMuted },
   error: {
     ...type.caption,
     color: colors.danger,
@@ -167,22 +167,22 @@ const s = StyleSheet.create({
   },
 
   empty: { alignItems: "center", gap: 10, marginTop: 48 },
-  emptyLabel: { ...type.body, color: colors.textSecondary },
+  emptyLabel: { ...type.body, color: brand.onSoftMuted },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   rowText: { flex: 1, gap: 2 },
   rowKind: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
-  rowNote: { ...type.caption, color: colors.textSecondary },
+  rowNote: { ...type.caption, color: brand.onSoftMuted },
   rowAmount: { fontFamily: font.bold, fontSize: 15 },
   credit: { color: colors.success },
   debit: { color: colors.textPrimary },

@@ -40,19 +40,40 @@ flow, the home screen and the orders section. It lives in `theme/tokens.ts` as
 Everything else in `brand` is a blend of those five with white, or a darkened
 step between two of them — no sixth hue was introduced.
 
-**What it covers:** `app/index.tsx`, `app/(auth)/*` (login, signup, customer
-portal), `app/(tabs)/index.tsx`, `app/(tabs)/orders.tsx`, the tab bar,
-`StatusBadge`, the service overview (`app/service/[serviceId].tsx`), the whole
-checkout flow (`app/checkout/*`, `app/payment/[orderId].tsx`,
-`PaymentMethodPicker`), and `CartFab`.
+**What it covers: the entire customer app.** Landing, auth, home, orders,
+the tab bar, `StatusBadge`, the service overview, the whole checkout flow
+(`app/checkout/*`, `app/payment/[orderId].tsx`, `PaymentMethodPicker`),
+`CartFab`, the order detail and tracking screens, notifications, gifts,
+`app/toplu`, the profile tab and every profile sub-screen, and the stack's
+own inter-screen background in `app/_layout.tsx`.
 
-That is the entire order path — landing, login, home, catalogue, schedule,
-address, summary, payment — in one palette, with no seam.
+There is no seam left on any path a customer can walk.
 
-**What it deliberately does not cover:** the profile section, the gifts
-screen, `app/toplu`, and courier/tracking. Those still run on the
-video-sampled blue/orange `colors` — the home screen's bento grid carries its
-own local palette version instead.
+**What it deliberately does not cover:** `app/courier/*`. That is a different
+role in a different context — a courier is working, not shopping — and it
+keeps the video-sampled `colors`. The home screen's bento grid also keeps its
+own local palette version.
+
+### Identity colours that survive inside the palette
+
+Four things are *not* recoloured, because in each case the colour carries
+information the palette cannot:
+
+| Kept | Where | Why |
+| --- | --- | --- |
+| `serviceTheme` tints | catalogue circles, hero banners, `toplu` green | tells the six services apart |
+| Gift-box navy | `app/gifts` hero and reveal backdrop | matched to the rendered artwork; recolouring leaves the image on a visible rectangle of the wrong colour |
+| Red | destructive rows, cancelled badges, errors | an outcome, not brand colour |
+| Green | `completed` badges, eco tier | same |
+
+`app/profile/personal.tsx` is a fourth kind of exception: it stays
+deliberately monochrome — a form on white with no accent competing for the
+eye — but its greys now come from `brand` so they do not read as a cold cast
+against the teal-tinted chrome around them.
+
+The profile tab and `SettingsScaffold` had each defined an identical
+seven-colour palette object. They now share one, in `SettingsScaffold`, so
+they cannot drift apart.
 
 ### Service overview: what stayed, and why
 

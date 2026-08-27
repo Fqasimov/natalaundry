@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import MapView, { PROVIDER_GOOGLE, type Region } from "react-native-maps";
-import { colors } from "@/theme/tokens";
+import { brand, colors } from "@/theme/tokens";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -80,7 +80,7 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderWidth: 3,
     borderColor: colors.textInverse,
     // Lifts the head so the stem's tip, not the circle, marks the point.
@@ -89,7 +89,7 @@ const s = StyleSheet.create({
   pinStem: {
     width: 2,
     height: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
   },
   pinShadow: {
     width: 8,

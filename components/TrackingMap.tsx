@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { colors, radius } from "@/theme/tokens";
+import { brand, colors, radius } from "@/theme/tokens";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -67,7 +67,7 @@ export function TrackingMap({
             coordinate={{ latitude: courier.lat, longitude: courier.lng }}
             rotation={heading ?? 0}
             flat
-            pinColor={colors.primary}
+            pinColor={brand.moonstoneInk}
           />
         ) : null}
       </MapView>
@@ -80,11 +80,11 @@ const s = StyleSheet.create({
     height: 260,
     borderRadius: radius.lg,
     overflow: "hidden",
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
   },
   placeholder: {
     height: 260,
     borderRadius: radius.lg,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
   },
 });

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { isToplu, settleToplu } from "@/lib/toplu";
 import { useAuth } from "@/lib/auth-context";
@@ -89,7 +89,7 @@ export default function OrderDetailScreen() {
   if (!order) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={brand.moonstoneInk} />
       </View>
     );
   }
@@ -120,7 +120,7 @@ export default function OrderDetailScreen() {
           </View>
           {isOwner && isTracking(state) ? (
             <Pressable style={s.trackLink} onPress={() => router.push(`/track/${order.id}`)}>
-              <Ionicons name="navigate" size={15} color={colors.primary} />
+              <Ionicons name="navigate" size={15} color={brand.moonstoneInk} />
               <Text style={s.trackLabel}>{t("trackOrder")}</Text>
             </Pressable>
           ) : null}
@@ -201,7 +201,7 @@ export default function OrderDetailScreen() {
                 </>
               ) : (
                 <View style={s.awaitingRow}>
-                  <Ionicons name="hourglass-outline" size={15} color={colors.textSecondary} />
+                  <Ionicons name="hourglass-outline" size={15} color={brand.onSoftMuted} />
                   <Text style={s.awaitingLabel}>{t("topluNotCountedYet")}</Text>
                 </View>
               )}
@@ -216,7 +216,7 @@ export default function OrderDetailScreen() {
             <Ionicons
               name={paid ? "checkmark-circle" : "cash-outline"}
               size={15}
-              color={paid ? colors.success : colors.textSecondary}
+              color={paid ? colors.success : brand.onSoftMuted}
             />
             <Text style={[s.paymentLabel, paid && { color: colors.success }]}>
               {paid ? t("orderPaid") : t("orderPaymentCash")}
@@ -267,7 +267,7 @@ export default function OrderDetailScreen() {
                 style={s.countInput}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={brand.onSoftMuted}
                 value={countInput}
                 onChangeText={setCountInput}
               />
@@ -307,12 +307,12 @@ export default function OrderDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor: brand.background,
     padding: 24,
   },
   body: { paddingHorizontal: 20, gap: 12 },
@@ -324,45 +324,45 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  muted: { ...type.body, color: colors.textSecondary },
+  muted: { ...type.body, color: brand.onSoftMuted },
 
   statusCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     gap: 10,
   },
   statusTop: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusLabel: { flex: 1, fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
   trackLink: { flexDirection: "row", alignItems: "center", gap: 7 },
-  trackLabel: { fontFamily: font.semibold, fontSize: 14, color: colors.primary },
+  trackLabel: { fontFamily: font.semibold, fontSize: 14, color: brand.moonstoneInk },
 
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     gap: 5,
   },
-  cardTitle: { ...type.caption, color: colors.textSecondary },
+  cardTitle: { ...type.caption, color: brand.onSoftMuted },
   cardBody: { ...type.body, color: colors.textPrimary },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 9 },
+  divider: { height: 1, backgroundColor: brand.border, marginVertical: 9 },
 
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  rowLabel: { ...type.body, flex: 1, color: colors.textSecondary },
+  rowLabel: { ...type.body, flex: 1, color: brand.onSoftMuted },
   rowValue: { ...type.body, color: colors.textPrimary },
   rowStrong: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
 
   awaitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  awaitingLabel: { ...type.caption, flex: 1, color: colors.textSecondary },
+  awaitingLabel: { ...type.caption, flex: 1, color: brand.onSoftMuted },
   paymentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  paymentLabel: { ...type.caption, color: colors.textSecondary },
+  paymentLabel: { ...type.caption, color: brand.onSoftMuted },
 
   primaryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.pill,
     paddingVertical: 15,
     alignItems: "center",
@@ -379,10 +379,10 @@ const s = StyleSheet.create({
   disabled: { opacity: 0.5 },
 
   countBox: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     gap: 10,
   },
@@ -393,13 +393,13 @@ const s = StyleSheet.create({
     fontFamily: font.medium,
     fontSize: 15,
     color: colors.textPrimary,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   countButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.sm,
     paddingHorizontal: 18,
     justifyContent: "center",

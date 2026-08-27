@@ -13,7 +13,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon, type IconName } from "@/components/AppIcon";
 import { AppLogo } from "@/components/AppLogo";
-import { colors, font, money, radius, type } from "@/theme/tokens";
+import { brand, font, money, radius, type } from "@/theme/tokens";
+import { settingsUi } from "@/components/SettingsScaffold";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -25,21 +26,15 @@ import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 // a header block, then Orders / Membership & balance / Account / Support
 // sections of tappable rows.
 //
-// Follows the shipped design: a pale blue surface, a plain header with a
-// settings affordance, the identity block laid out horizontally, and rows
-// carrying blue outline icons rather than filled bubbles. The palette is local
-// to this screen so the ivory/blue/service tints stay untouched elsewhere.
+// Follows the shipped design: a pale surface, a plain header with a settings
+// affordance, the identity block laid out horizontally, and rows carrying
+// outline icons rather than filled bubbles. The palette is now the coastal
+// `brand` one, shared with the sub-screens this opens into.
 
-const ui = {
-  bg: "#F4F8FD",
-  surface: "#FFFFFF",
-  border: "#E6EEF7",
-  divider: "#EDF2F8",
-  ink: "#0F1B2D",
-  inkSoft: "#7F8CA0",
-  accent: "#1E77E5",
-  danger: "#F0492F",
-} as const;
+// The profile screen and its sub-screens shared an identical palette
+// object, duplicated in two files. It now lives once, in SettingsScaffold,
+// so the two cannot drift apart.
+const ui = settingsUi;
 
 /** Shown as the value on the language row. */
 const LANGUAGE_LABEL: Record<Language, string> = {
@@ -295,7 +290,7 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#E7F0FB",
+    backgroundColor: ui.accentSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -327,7 +322,7 @@ const s = StyleSheet.create({
   notice: {
     ...type.caption,
     color: ui.accent,
-    backgroundColor: "#E7F0FB",
+    backgroundColor: ui.accentSoft,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -358,7 +353,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 17,
   },
-  rowPressed: { backgroundColor: "#F7FAFE" },
+  rowPressed: { backgroundColor: brand.aliceBlue },
   rowLabel: {
     flex: 1,
     fontFamily: font.bold,

@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, font } from "@/theme/tokens";
+import { brand, colors, font } from "@/theme/tokens";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -39,12 +39,12 @@ export const AddressPickerMap = forwardRef<
 const s = StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
-  title: { fontFamily: font.bold, fontSize: 15, color: colors.textSecondary },
+  title: { fontFamily: font.bold, fontSize: 15, color: brand.onSoftMuted },
   coords: { fontFamily: font.medium, fontSize: 13, color: colors.textPrimary },
-  note: { fontFamily: font.regular, fontSize: 12, color: colors.textSecondary },
+  note: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted },
 });

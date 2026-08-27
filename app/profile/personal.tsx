@@ -9,23 +9,25 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { font, radius, type } from "@/theme/tokens";
+import { brand, colors, font, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import { supabase } from "@/lib/supabase";
 import { ScreenHeader } from "@/components/ui";
 
-// Monochrome to match the profile screen it opens from — same local palette,
-// kept out of theme/tokens so the rest of the app stays in colour.
+// Deliberately the quietest screen in the app: a form, on white, with no
+// accent colour competing for the eye. It keeps that restraint, but the greys
+// now come from the coastal palette so they don't read as a cold cast against
+// the teal-tinted chrome around them.
 const mono = {
-  bg: "#FFFFFF",
-  surface: "#FFFFFF",
-  bubble: "#F2F2F3",
-  border: "#E4E4E6",
-  ink: "#111112",
-  inkSoft: "#6E6E73",
-  inverse: "#FFFFFF",
+  bg: brand.surface,
+  surface: brand.surface,
+  bubble: brand.aliceBlue,
+  border: brand.border,
+  ink: colors.textPrimary,
+  inkSoft: brand.onSoftMuted,
+  inverse: colors.textInverse,
 } as const;
 
 // profiles.name/phone are the confirmed editable fields — customer_details/

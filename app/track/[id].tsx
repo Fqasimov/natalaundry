@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "@/components/ui";
 import { TrackingMap } from "@/components/TrackingMap";
-import { colors, font, radius, type } from "@/theme/tokens";
+import { brand, colors, font, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { fetchOrder } from "@/lib/orders";
 import {
@@ -115,7 +115,7 @@ export default function TrackOrderScreen() {
   if (!order) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={brand.moonstoneInk} />
       </View>
     );
   }
@@ -160,7 +160,7 @@ export default function TrackOrderScreen() {
           />
         ) : (
           <View style={s.offlineCard}>
-            <Ionicons name="navigate-outline" size={18} color={colors.textSecondary} />
+            <Ionicons name="navigate-outline" size={18} color={brand.onSoftMuted} />
             <Text style={s.offlineLabel}>{t("trackingOffline")}</Text>
           </View>
         )}
@@ -208,27 +208,27 @@ export default function TrackOrderScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor: brand.background,
     padding: 24,
   },
   body: { paddingHorizontal: 20, gap: 16 },
   error: { ...type.body, color: colors.danger, textAlign: "center" },
 
   statusCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
   },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusLabel: { flex: 1, fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
-  orderNo: { ...type.caption, color: colors.textSecondary, marginTop: 4 },
+  orderNo: { ...type.caption, color: brand.onSoftMuted, marginTop: 4 },
   livePill: {
     flexDirection: "row",
     alignItems: "center",
@@ -238,21 +238,21 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  stalePill: { backgroundColor: colors.surfaceAlt },
+  stalePill: { backgroundColor: brand.surfaceAlt },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
-  staleDot: { backgroundColor: colors.textSecondary },
+  staleDot: { backgroundColor: brand.onSoftMuted },
   liveLabel: { fontFamily: font.bold, fontSize: 11, color: colors.success },
-  staleLabel: { color: colors.textSecondary },
+  staleLabel: { color: brand.onSoftMuted },
 
   offlineCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.lg,
     padding: 16,
   },
-  offlineLabel: { ...type.body, flex: 1, color: colors.textSecondary },
+  offlineLabel: { ...type.body, flex: 1, color: brand.onSoftMuted },
 
   sectionTitle: {
     fontFamily: font.bold,
@@ -261,10 +261,10 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   timeline: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
   },
   step: { flexDirection: "row", gap: 12 },
@@ -274,17 +274,17 @@ const s = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: brand.border,
+    backgroundColor: brand.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  stepDotDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepDotDone: { backgroundColor: brand.moonstoneInk, borderColor: brand.moonstoneInk },
   stepDotNow: { backgroundColor: colors.accent, borderColor: colors.accent },
-  stepLine: { flex: 1, width: 2, minHeight: 22, backgroundColor: colors.border },
-  stepLineDone: { backgroundColor: colors.primary },
+  stepLine: { flex: 1, width: 2, minHeight: 22, backgroundColor: brand.border },
+  stepLineDone: { backgroundColor: brand.moonstoneInk },
   stepBody: { flex: 1, paddingBottom: 14 },
-  stepLabel: { fontFamily: font.medium, fontSize: 14, color: colors.textSecondary },
+  stepLabel: { fontFamily: font.medium, fontSize: 14, color: brand.onSoftMuted },
   stepLabelDone: { fontFamily: font.semibold, color: colors.textPrimary },
-  stepTime: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  stepTime: { ...type.caption, color: brand.onSoftMuted, marginTop: 2 },
 });

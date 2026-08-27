@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ui";
-import { font, radius, type } from "@/theme/tokens";
+import { brand, colors, font, radius, type } from "@/theme/tokens";
 
 /**
  * Shared chrome for the profile sub-screens.
@@ -11,15 +11,18 @@ import { font, radius, type } from "@/theme/tokens";
  * The palette matches app/(tabs)/profile.tsx, which is where they open from.
  */
 export const settingsUi = {
-  bg: "#F4F8FD",
-  surface: "#FFFFFF",
-  border: "#E6EEF7",
-  divider: "#EDF2F8",
-  ink: "#0F1B2D",
-  inkSoft: "#7F8CA0",
-  accent: "#1E77E5",
-  accentSoft: "#E7F0FB",
-  danger: "#F0492F",
+  bg: brand.background,
+  surface: brand.surface,
+  border: brand.border,
+  divider: brand.divider,
+  // Near-black type is shared with the rest of the app: the palette moves
+  // surfaces and accents, never the black the copy is set in.
+  ink: colors.textPrimary,
+  inkSoft: brand.onSoftMuted,
+  accent: brand.moonstoneInk,
+  accentSoft: brand.moonstoneSoft,
+  // Destructive stays red. It reads as an outcome, not as brand colour.
+  danger: colors.danger,
 } as const;
 
 export function SettingsScaffold({

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -38,12 +38,12 @@ const s = StyleSheet.create({
   wrap: {
     height: 260,
     borderRadius: radius.lg,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
-  title: { fontFamily: font.bold, fontSize: 15, color: colors.textSecondary },
+  title: { fontFamily: font.bold, fontSize: 15, color: brand.onSoftMuted },
   coords: { fontFamily: font.medium, fontSize: 13, color: colors.textPrimary },
-  note: { fontFamily: font.regular, fontSize: 12, color: colors.textSecondary },
+  note: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted },
 });

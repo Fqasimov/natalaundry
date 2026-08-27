@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Switch, Modal
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, money, radius, serviceTheme } from "@/theme/tokens";
+import { brand, colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { useAuth } from "@/lib/auth-context";
 import { createTopluOrder } from "@/lib/orders";
@@ -122,23 +122,23 @@ export default function TopluScreen() {
         <TextInput
           style={styles.input}
           placeholder={t("addNewAddress")}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={brand.onSoftMuted}
           value={address}
           onChangeText={setAddress}
         />
 
         <Text style={styles.section}>{t("topluPickupWindow")}</Text>
         <Pressable style={styles.selectRow} onPress={() => setPickerOpen(true)}>
-          <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
+          <Ionicons name="time-outline" size={18} color={brand.onSoftMuted} />
           <Text style={styles.selectValue}>{pickup || "—"}</Text>
-          <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+          <Ionicons name="chevron-down" size={18} color={brand.onSoftMuted} />
         </Pressable>
 
         <Text style={styles.section}>{t("addCourierNote")}</Text>
         <TextInput
           style={[styles.input, { height: 80 }]}
           placeholder={t("addCourierNote")}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={brand.onSoftMuted}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -154,7 +154,7 @@ export default function TopluScreen() {
           <Switch
             value={isOutsideCity}
             onValueChange={setIsOutsideCity}
-            trackColor={{ true: theme.fg, false: "#D8D8DE" }}
+            trackColor={{ true: theme.fg, false: brand.timberwolf }}
           />
         </View>
 
@@ -232,14 +232,14 @@ function Step({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   hero: { borderRadius: radius.xl, padding: 22, alignItems: "center", gap: 10 },
   heroTitle: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4, color: colors.textPrimary },
   heroBody: {
     fontFamily: font.regular,
     fontSize: 14,
     lineHeight: 21,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     textAlign: "center",
   },
   sectionLabel: {
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     letterSpacing: 0.9,
     textTransform: "uppercase",
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     marginTop: 26,
     marginBottom: 12,
   },
@@ -256,13 +256,13 @@ const styles = StyleSheet.create({
   stepNumber: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   stepNumberLabel: { fontFamily: font.bold, fontSize: 13, color: colors.textInverse },
   stepTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  stepBody: { fontFamily: font.regular, fontSize: 13.5, lineHeight: 19, color: colors.textSecondary, marginTop: 2 },
+  stepBody: { fontFamily: font.regular, fontSize: 13.5, lineHeight: 19, color: brand.onSoftMuted, marginTop: 2 },
   section: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary, marginTop: 24, marginBottom: 10 },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontFamily: font.regular,
@@ -273,39 +273,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   selectValue: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
   outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 22 },
   outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 3 },
+  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   depositCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 18,
     marginTop: 24,
   },
   depositRow: { flexDirection: "row", alignItems: "center" },
   depositLabel: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
-  depositNote: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 3 },
+  depositNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   depositValue: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4 },
   error: { fontFamily: font.regular, fontSize: 13, color: colors.danger, marginTop: 14 },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.background,
+    borderTopColor: brand.divider,
+    backgroundColor: brand.background,
   },
-  sheetBackdrop: { flex: 1, backgroundColor: "rgba(15,20,28,0.5)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 12 },
+  sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,69,84,0.5)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: brand.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 12 },
   sheetRow: { paddingVertical: 16, paddingHorizontal: 12 },
   sheetLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
 });
