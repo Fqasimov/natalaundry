@@ -3,30 +3,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "@/lib/state/cart";
-import { colors, font } from "@/theme/tokens";
+import { brand, colors, font } from "@/theme/tokens";
 
 /**
- * Floating basket button.
+ * Floating basket button — home screen only.
  *
- * A customer who picks items and then wanders off — to the home tab, to their
- * profile — otherwise has no visible way back to the basket, and the draft
- * lives only in memory. This keeps the way back on screen wherever they go.
+ * It is a fixture of the home screen rather than a thing that appears when the
+ * basket fills: it is always there, so its position is learnable and it never
+ * shifts the layout by materialising mid-scroll. An empty basket still opens
+ * the summary, which is where "your basket is empty" belongs.
  *
- * It hides itself when the basket is empty (nothing to return to) and on the
- * checkout screens themselves (the basket is already what you are looking at,
- * and it would sit on top of the confirm button).
+ * Every other screen is excluded, not just the ones where it would overlap.
+ * The catalogue and checkout already carry their own basket affordances (the
+ * running total bar, the confirm button), and a second floating one competes
+ * with them.
  */
 
-/** Routes where a floating basket button would be redundant or in the way. */
-const HIDDEN_ON = ["/checkout", "/payment", "/toplu", "/track", "/courier"];
+/** The home tab. expo-router strips the "(tabs)" group, so index is "/". */
+const HOME = "/";
 
 export function CartFab() {
   const insets = useSafeAreaInsets();
   const { count } = useCart();
   const pathname = usePathname();
 
-  if (count === 0) return null;
-  if (HIDDEN_ON.some((prefix) => pathname.startsWith(prefix))) return null;
+  if (pathname !== HOME) return null;
 
   return (
     <Pressable
@@ -44,11 +45,16 @@ export function CartFab() {
         <Ionicons name="cart" size={26} color={colors.textInverse} />
       </View>
 
-      <View style={styles.badge}>
-        <Text style={styles.badgeLabel} numberOfLines={1}>
-          {count > 99 ? "99+" : count}
-        </Text>
-      </View>
+      {/* The badge is the one part that is still conditional — a "0" on a
+          permanent button reads as a broken counter rather than an empty
+          basket. */}
+      {count > 0 ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeLabel} numberOfLines={1}>
+            {count > 99 ? "99+" : count}
+          </Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -60,10 +66,12 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: colors.primary,
+    // Now that it only ever sits on the restyled home screen, it takes that
+    // screen's palette rather than the 1.0.2 blue.
+    backgroundColor: brand.midnight,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.primary,
+    shadowColor: brand.midnight,
     shadowOpacity: 0.4,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -80,9 +88,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    // Separates the badge from the button beneath it on any background.
+    // Separates the badge from the button beneath it. Matches the home
+    // screen's own surface, which is the only place this now renders.
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: brand.background,
   },
   badgeLabel: {
     fontFamily: font.bold,

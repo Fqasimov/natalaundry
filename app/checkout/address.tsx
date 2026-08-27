@@ -12,7 +12,7 @@ import {
 import { BigButton, ScreenHeader } from "@/components/ui";
 import { useCart } from "@/lib/state/cart";
 import { useI18n } from "@/lib/language-context";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 /** Baku city centre — where the map opens before we know anything better. */
 const BAKU = { latitude: 40.3776, longitude: 49.892, latitudeDelta: 0.05, longitudeDelta: 0.05 };
@@ -139,9 +139,9 @@ export default function AddressPickerScreen() {
 
         <Pressable style={s.locateBtn} onPress={useMyLocation} disabled={locating}>
           {locating ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={brand.moonstoneInk} />
           ) : (
-            <Ionicons name="locate" size={20} color={colors.primary} />
+            <Ionicons name="locate" size={20} color={brand.moonstoneInk} />
           )}
         </Pressable>
       </View>
@@ -150,11 +150,11 @@ export default function AddressPickerScreen() {
         <Text style={s.sheetLabel}>{t("addressPickSelected")}</Text>
 
         <View style={s.addressRow}>
-          <Ionicons name="location" size={18} color={colors.primary} />
+          <Ionicons name="location" size={18} color={brand.moonstoneInk} />
           <Text style={s.address} numberOfLines={2}>
             {resolving && !label ? t("addressPickResolving") : label || t("addressPickHint")}
           </Text>
-          {resolving && label ? <ActivityIndicator size="small" color={colors.textSecondary} /> : null}
+          {resolving && label ? <ActivityIndicator size="small" color={brand.onSoftMuted} /> : null}
         </View>
 
         <BigButton label={t("addressPickConfirm")} onPress={confirm} disabled={!label} />
@@ -164,7 +164,7 @@ export default function AddressPickerScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   mapWrap: { flex: 1 },
   locateBtn: {
     position: "absolute",
@@ -173,30 +173,30 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: brand.midnight,
     shadowOpacity: 0.18,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
   sheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: 16,
     paddingTop: 16,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    borderTopColor: brand.divider,
   },
   sheetLabel: {
     fontFamily: font.semibold,
     fontSize: 12.5,
     letterSpacing: 0.3,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     textTransform: "uppercase",
   },
   addressRow: { flexDirection: "row", alignItems: "center", gap: 10 },

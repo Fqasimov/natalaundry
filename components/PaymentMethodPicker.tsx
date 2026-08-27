@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { AppIcon, type IconName } from "@/components/AppIcon";
 import { useI18n } from "@/lib/language-context";
 import type { StringKey } from "@/lib/i18n";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 import type { PaymentMethod } from "@/lib/payments";
 
 /**
@@ -64,7 +64,7 @@ export function PaymentMethodPicker({
               <AppIcon
                 name={look.icon}
                 size={19}
-                color={chosen ? colors.textInverse : colors.textSecondary}
+                color={chosen ? colors.textInverse : brand.onSoftMuted}
               />
             </View>
 
@@ -89,14 +89,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 13,
     paddingVertical: 13,
   },
-  rowChosen: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  rowChosen: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
   rowDisabled: { opacity: 0.5 },
   iconWrap: {
     width: 36,
@@ -104,25 +104,25 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
   },
-  iconWrapChosen: { backgroundColor: colors.primary },
+  iconWrapChosen: { backgroundColor: brand.moonstoneInk },
   label: { fontFamily: font.semibold, fontSize: 14.5, color: colors.textPrimary },
-  note: { fontFamily: font.regular, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  note: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted, marginTop: 2 },
   radio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: brand.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  radioOn: { borderColor: colors.primary },
+  radioOn: { borderColor: brand.moonstoneInk },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
   },
 });

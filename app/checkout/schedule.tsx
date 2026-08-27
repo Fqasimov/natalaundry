@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Modal, TextInput
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, money, radius } from "@/theme/tokens";
+import { brand, colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { buildDayLabels } from "@/lib/dates";
 import { useCart } from "@/lib/state/cart";
@@ -22,7 +22,7 @@ const TIER_META: Record<
   DeliveryTier,
   { icon: keyof typeof Ionicons.glyphMap; titleKey: "standard" | "express" | "eco"; descKey: "standardDesc" | "expressDesc" | "ecoDesc"; color: string }
 > = {
-  standard: { icon: "time", titleKey: "standard", descKey: "standardDesc", color: colors.primary },
+  standard: { icon: "time", titleKey: "standard", descKey: "standardDesc", color: brand.moonstoneInk },
   express: { icon: "flash", titleKey: "express", descKey: "expressDesc", color: colors.textPrimary },
   eco: { icon: "leaf", titleKey: "eco", descKey: "ecoDesc", color: colors.success },
 };
@@ -111,7 +111,7 @@ export default function ScheduleScreen() {
             >
               <View style={styles.tierHeader}>
                 <Ionicons name={meta.icon} size={20} color={meta.color} />
-                <Text style={[styles.tierTitle, selected && { color: colors.primary }]}>
+                <Text style={[styles.tierTitle, selected && { color: brand.moonstoneInk }]}>
                   {t(meta.titleKey)}
                 </Text>
               </View>
@@ -134,7 +134,7 @@ export default function ScheduleScreen() {
           <Switch
             value={draft.repeatOrder}
             onValueChange={(repeatOrder) => patchDraft({ repeatOrder })}
-            trackColor={{ true: colors.primary, false: "#D8D8DE" }}
+            trackColor={{ true: brand.moonstoneInk, false: brand.timberwolf }}
           />
         </View>
       </ScrollView>
@@ -180,7 +180,7 @@ export default function ScheduleScreen() {
               value={draft.courierNote}
               onChangeText={(courierNote) => patchDraft({ courierNote })}
             />
-            <BigButton label={t("save")} tone="primary" onPress={() => setNoteOpen(false)} />
+            <BigButton label={t("save")} tone="brand" onPress={() => setNoteOpen(false)} />
           </View>
         </View>
       </Modal>
@@ -199,24 +199,24 @@ function SelectRow({
 }) {
   return (
     <Pressable style={styles.selectRow} onPress={onPress}>
-      <Ionicons name={icon} size={18} color={colors.textSecondary} />
+      <Ionicons name={icon} size={18} color={brand.onSoftMuted} />
       <Text style={styles.selectValue}>{value}</Text>
-      <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+      <Ionicons name="chevron-down" size={18} color={brand.onSoftMuted} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   section: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary, marginTop: 20, marginBottom: 10 },
   selectRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
     marginBottom: 8,
@@ -224,26 +224,26 @@ const styles = StyleSheet.create({
   selectValue: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
   warning: { fontFamily: font.regular, fontSize: 12.5, color: colors.danger, marginBottom: 10, lineHeight: 18 },
   tierCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     marginBottom: 10,
   },
-  tierCardSelected: { borderColor: colors.primary, backgroundColor: "#F7FAFF" },
+  tierCardSelected: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
   tierHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   tierTitle: { fontFamily: font.semibold, fontSize: 16, color: colors.textPrimary },
-  tierDesc: { fontFamily: font.regular, fontSize: 13, color: colors.textSecondary, marginTop: 6 },
+  tierDesc: { fontFamily: font.regular, fontSize: 13, color: brand.onSoftMuted, marginTop: 6 },
   tierFee: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary, marginTop: 8 },
   noteButton: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: brand.moonstoneSoft,
     borderRadius: radius.md,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 14,
   },
-  noteButtonLabel: { fontFamily: font.medium, fontSize: 15, color: colors.primary },
+  noteButtonLabel: { fontFamily: font.medium, fontSize: 15, color: brand.moonstoneInk },
   repeatRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -255,19 +255,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.background,
+    borderTopColor: brand.divider,
+    backgroundColor: brand.background,
   },
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(15,20,28,0.5)",
+    backgroundColor: "rgba(0,69,84,0.5)",
     justifyContent: "flex-end",
   },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 12 },
+  sheet: { backgroundColor: brand.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 12 },
   sheetRow: { paddingVertical: 16, paddingHorizontal: 12 },
   sheetLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
   noteSheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     padding: 20,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   noteTitle: { fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
   noteInput: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     borderRadius: radius.md,
     padding: 14,
     minHeight: 90,

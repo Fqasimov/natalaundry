@@ -6,7 +6,7 @@ import { AppIcon } from "@/components/AppIcon";
 import { BigButton } from "@/components/ui";
 import { useI18n } from "@/lib/language-context";
 import { waitForSettlement, type PaymentStatus } from "@/lib/payments";
-import { colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, radius } from "@/theme/tokens";
 
 /**
  * Where the bank's redirect lands.
@@ -69,18 +69,18 @@ export default function PaymentReturnScreen() {
     <View style={[styles.root, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.body}>
         {!done ? (
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={brand.moonstoneInk} />
         ) : (
           <View
             style={[
               styles.badge,
-              { backgroundColor: paid ? colors.primarySoft : colors.surfaceAlt },
+              { backgroundColor: paid ? brand.moonstoneSoft : brand.surfaceAlt },
             ]}
           >
             <AppIcon
               name={paid ? "ion:checkmark-circle" : pending ? "ion:time-outline" : "ion:close-circle"}
               size={44}
-              color={paid ? colors.primary : pending ? colors.textSecondary : colors.danger}
+              color={paid ? brand.moonstoneInk : pending ? brand.onSoftMuted : colors.danger}
             />
           </View>
         )}
@@ -103,7 +103,7 @@ export default function PaymentReturnScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 24 },
+  root: { flex: 1, backgroundColor: brand.background, paddingHorizontal: 24 },
   body: { flex: 1, alignItems: "center", justifyContent: "center", gap: 20 },
   badge: {
     width: 88,

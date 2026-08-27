@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, font, money, radius } from "@/theme/tokens";
+import { brand, colors, font, money, radius } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCart } from "@/lib/state/cart";
@@ -180,6 +180,7 @@ export default function SummaryScreen() {
                 <Text style={styles.itemUnit}>{money(line.price)}</Text>
               </View>
               <Stepper
+                tone="brand"
                 value={line.quantity}
                 onChange={(next) => setQty(line.serviceId, line.itemId, next)}
               />
@@ -192,7 +193,7 @@ export default function SummaryScreen() {
           <TextInput
             style={styles.promoInput}
             placeholder={t("promoPlaceholder")}
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={brand.onSoftMuted}
             autoCapitalize="characters"
             value={promoDraft}
             onChangeText={setPromoDraft}
@@ -251,7 +252,7 @@ export default function SummaryScreen() {
           <Ionicons
             name={hasAddress ? "location" : "location-outline"}
             size={20}
-            color={hasAddress ? colors.primary : colors.textSecondary}
+            color={hasAddress ? brand.moonstoneInk : brand.onSoftMuted}
           />
           <View style={{ flex: 1 }}>
             <Text
@@ -264,7 +265,7 @@ export default function SummaryScreen() {
               <Text style={styles.addressChange}>{t("addressPickChange")}</Text>
             ) : null}
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={18} color={brand.onSoftMuted} />
         </Pressable>
 
         <View style={styles.outsideRow}>
@@ -277,13 +278,13 @@ export default function SummaryScreen() {
           <Switch
             value={draft.isOutsideCity}
             onValueChange={(isOutsideCity) => patchDraft({ isOutsideCity })}
-            trackColor={{ true: colors.primary, false: "#D8D8DE" }}
+            trackColor={{ true: brand.moonstoneInk, false: brand.timberwolf }}
           />
         </View>
 
         <View style={styles.photoCard}>
           <View style={styles.photoHeader}>
-            <Ionicons name="camera" size={22} color={colors.primary} />
+            <Ionicons name="camera" size={22} color={brand.moonstoneInk} />
             <Text style={styles.photoTitle}>{t("photosTitle")}</Text>
             <Pill
               label={`${draft.photos.length}/${RECOMMENDED_PHOTOS}`}
@@ -314,18 +315,18 @@ export default function SummaryScreen() {
 
           <View style={styles.photoButtons}>
             <Pressable style={styles.photoTile} onPress={() => addPhoto("camera")}>
-              <Ionicons name="camera-outline" size={24} color={colors.primary} />
+              <Ionicons name="camera-outline" size={24} color={brand.moonstoneInk} />
               <Text style={styles.photoTileLabel}>{t("takePhoto")}</Text>
             </Pressable>
             <Pressable style={styles.photoTile} onPress={() => addPhoto("library")}>
-              <Ionicons name="images-outline" size={24} color={colors.primary} />
+              <Ionicons name="images-outline" size={24} color={brand.moonstoneInk} />
               <Text style={styles.photoTileLabel}>{t("pickFromGallery")}</Text>
             </Pressable>
           </View>
 
           {!hasAllPhotos ? (
             <View style={styles.photoSuggestion}>
-              <Ionicons name="information-circle" size={16} color={colors.textSecondary} />
+              <Ionicons name="information-circle" size={16} color={brand.onSoftMuted} />
               <Text style={styles.photoSuggestionLabel}>{t("photosOptional")}</Text>
             </View>
           ) : null}
@@ -378,33 +379,33 @@ function TotalRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   section: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary, marginTop: 18, marginBottom: 10 },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
   },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 },
-  divided: { borderTopWidth: 1, borderTopColor: colors.divider },
+  divided: { borderTopWidth: 1, borderTopColor: brand.divider },
   itemName: { fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
-  itemUnit: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },
+  itemUnit: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 2 },
   lineTotal: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary, minWidth: 62, textAlign: "right" },
   rewardList: { gap: 8 },
   rewardRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
-  rewardRowChosen: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  rewardRowChosen: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
   rewardIcon: {
     width: 34,
     height: 34,
@@ -413,23 +414,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rewardTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
-  rewardMeta: { fontFamily: font.regular, fontSize: 11.5, color: colors.textSecondary, marginTop: 2 },
-  rewardAction: { fontFamily: font.semibold, fontSize: 12.5, color: colors.textSecondary },
-  rewardActionOn: { color: colors.primary },
+  rewardMeta: { fontFamily: font.regular, fontSize: 11.5, color: brand.onSoftMuted, marginTop: 2 },
+  rewardAction: { fontFamily: font.semibold, fontSize: 12.5, color: brand.onSoftMuted },
+  rewardActionOn: { color: brand.moonstoneInk },
   promoRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   promoInput: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontFamily: font.regular,
     color: colors.textPrimary,
   },
   promoButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: brand.moonstoneInk,
     borderRadius: radius.md,
     paddingHorizontal: 18,
     justifyContent: "center",
@@ -439,10 +440,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -452,27 +453,27 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.textPrimary,
   },
-  addressPlaceholder: { fontFamily: font.regular, color: colors.textSecondary },
+  addressPlaceholder: { fontFamily: font.regular, color: brand.onSoftMuted },
   addressChange: {
     fontFamily: font.semibold,
     fontSize: 12,
-    color: colors.primary,
+    color: brand.moonstoneInk,
     marginTop: 3,
   },
   outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
   outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary, marginTop: 3 },
+  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   photoCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     padding: 16,
     marginTop: 20,
   },
   photoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   photoTitle: { flex: 1, fontFamily: font.bold, fontSize: 15, color: colors.textPrimary },
-  photoHint: { fontFamily: font.regular, fontSize: 13, lineHeight: 19, color: colors.textSecondary, marginTop: 8 },
+  photoHint: { fontFamily: font.regular, fontSize: 13, lineHeight: 19, color: brand.onSoftMuted, marginTop: 8 },
   thumbRow: { marginTop: 12 },
   thumbWrap: { marginRight: 10 },
   thumb: { width: 68, height: 68, borderRadius: radius.md },
@@ -496,17 +497,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+    borderColor: brand.moonstoneInk,
+    backgroundColor: brand.moonstoneSoft,
   },
-  photoTileLabel: { fontFamily: font.medium, fontSize: 12.5, color: colors.primary },
+  photoTileLabel: { fontFamily: font.medium, fontSize: 12.5, color: brand.moonstoneInk },
   // Informational, not a blocker — photos stopped being mandatory, so this
   // is deliberately not the red danger treatment it used to be.
   photoSuggestion: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.md,
     padding: 12,
     marginTop: 14,
@@ -515,16 +516,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: font.regular,
     fontSize: 12.5,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     lineHeight: 18,
   },
-  totalsCard: { backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, padding: 18, marginTop: 22 },
+  totalsCard: { backgroundColor: brand.surfaceAlt, borderRadius: radius.lg, padding: 18, marginTop: 22 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
-  totalLabel: { fontFamily: font.regular, fontSize: 15, color: colors.textSecondary },
+  totalLabel: { fontFamily: font.regular, fontSize: 15, color: brand.onSoftMuted },
   totalValue: { fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
-  totalsDivider: { height: 1, backgroundColor: "#DCDCE2", marginVertical: 10 },
+  totalsDivider: { height: 1, backgroundColor: brand.border, marginVertical: 10 },
   grandLabel: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
-  grandValue: { fontFamily: font.bold, fontSize: 18, color: colors.primary },
+  grandValue: { fontFamily: font.bold, fontSize: 18, color: brand.moonstoneInk },
   error: { fontFamily: font.regular, fontSize: 13, color: colors.danger, marginTop: 14 },
   // The order was placed but the money has not arrived — a warning, not a
   // failure, so it must not read like the order was lost.
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.textPrimary,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: brand.surfaceAlt,
     borderRadius: radius.md,
     padding: 12,
     marginTop: 14,
@@ -542,7 +543,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.background,
+    borderTopColor: brand.divider,
+    backgroundColor: brand.background,
   },
 });

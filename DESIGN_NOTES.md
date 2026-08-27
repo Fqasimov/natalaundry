@@ -42,12 +42,17 @@ step between two of them — no sixth hue was introduced.
 
 **What it covers:** `app/index.tsx`, `app/(auth)/*` (login, signup, customer
 portal), `app/(tabs)/index.tsx`, `app/(tabs)/orders.tsx`, the tab bar,
-`StatusBadge`, and the service overview (`app/service/[serviceId].tsx`).
+`StatusBadge`, the service overview (`app/service/[serviceId].tsx`), the whole
+checkout flow (`app/checkout/*`, `app/payment/[orderId].tsx`,
+`PaymentMethodPicker`), and `CartFab`.
 
-**What it deliberately does not cover:** the whole profile section, the
-checkout screens, the gifts screen, and courier/tracking. Those still run on
-the video-sampled blue/orange `colors` — the home screen's bento grid carries
-its own local palette version instead.
+That is the entire order path — landing, login, home, catalogue, schedule,
+address, summary, payment — in one palette, with no seam.
+
+**What it deliberately does not cover:** the profile section, the gifts
+screen, `app/toplu`, and courier/tracking. Those still run on the
+video-sampled blue/orange `colors` — the home screen's bento grid carries its
+own local palette version instead.
 
 ### Service overview: what stayed, and why
 
@@ -70,8 +75,44 @@ orange for the same reason — it commits the basket to checkout, so it was the
 odd one out before.
 
 The stepper and count pill took `tone="brand"` (`brand.moonstoneInk`, 5.75:1
-against white). Both components keep their old blue as the default, so
-checkout — which is not restyled — is untouched.
+against white). Both components keep their old blue as the default, so any
+screen not yet restyled is untouched by the change.
+
+### Checkout: the warm buttons stay warm
+
+The same rule carries through checkout. Surfaces, borders, secondary type and
+every interactive blue moved to `brand`; the buttons that move the order
+forward did not:
+
+| Button | Screen | Colour | Why |
+| --- | --- | --- | --- |
+| `+` | catalogue | `accent` orange | adds to the order |
+| Götürülmə planla | catalogue | `accent` orange | commits the basket |
+| Növbəti | schedule | `amber` | steps forward, does not commit |
+| Sifarişi təsdiqlə | summary | `accent` orange | places the order |
+| Saxla (note sheet) | schedule | `brand` midnight | saves a field, not the order |
+
+Orange means "this adds to or commits the order" and amber means "next step".
+Both survive from the 1.0.2 recording and both are load-bearing: recolouring
+them to moonstone would make the confirm button indistinguishable from the
+tier cards behind it.
+
+### The cart button is a fixture, not a notification
+
+`CartFab` renders on the home screen **only**, and renders there **always** —
+including when the basket is empty, where it opens the summary and its own
+empty state.
+
+It used to do the opposite: mount on every screen except a hidden list, and
+appear only once the basket had something in it. Both halves were wrong.
+Appearing on item-add made it a thing that materialised mid-scroll, so its
+position was never learnable and the layout shifted under the reader. Showing
+it app-wide put a second basket affordance next to screens that already have
+one — the catalogue's running-total bar, the summary's confirm button — so
+they competed.
+
+The count badge is the one part still conditional: a `0` on a permanent
+button reads as a broken counter rather than an empty basket.
 
 **Black type is shared, not recoloured.** `colors.textPrimary` (`#14181F`) and
 `colors.ink` still set every heading, price and body line on the restyled
