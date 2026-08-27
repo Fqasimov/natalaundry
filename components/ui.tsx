@@ -78,16 +78,25 @@ export function AddButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-/** Blue pill stepper that replaces the "+" once an item is in the basket. */
+/**
+ * Pill stepper that replaces the "+" once an item is in the basket.
+ *
+ * Defaults to the 1.0.2 blue. `tone="brand"` gives the coastal moonstone used
+ * on screens that have been restyled — the "+" itself stays orange either way,
+ * because add and adjust are different actions and only one of them commits.
+ */
 export function Stepper({
   value,
   onChange,
+  tone = "primary",
 }: {
   value: number;
   onChange: (next: number) => void;
+  tone?: "primary" | "brand";
 }) {
+  const bg = tone === "brand" ? brand.moonstoneInk : colors.primary;
   return (
-    <View style={s.stepper}>
+    <View style={[s.stepper, { backgroundColor: bg }]}>
       <Pressable hitSlop={6} onPress={() => onChange(value - 1)} style={s.stepperBtn}>
         <Ionicons name="remove" size={18} color={colors.textInverse} />
       </Pressable>
@@ -154,7 +163,7 @@ export function Pill({
   tone = "info",
 }: {
   label: string;
-  tone?: "info" | "primary" | "danger" | "success" | "muted";
+  tone?: "info" | "primary" | "danger" | "success" | "muted" | "brand";
 }) {
   const map = {
     info: { bg: colors.primarySoft, fg: colors.primary },
@@ -162,6 +171,7 @@ export function Pill({
     danger: { bg: colors.dangerSoft, fg: colors.danger },
     success: { bg: colors.successSoft, fg: colors.success },
     muted: { bg: colors.surfaceAlt, fg: colors.textSecondary },
+    brand: { bg: brand.moonstoneInk, fg: colors.textInverse },
   }[tone];
   return (
     <View style={[s.pill, { backgroundColor: map.bg }]}>

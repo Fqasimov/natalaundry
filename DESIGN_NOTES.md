@@ -41,14 +41,37 @@ Everything else in `brand` is a blend of those five with white, or a darkened
 step between two of them — no sixth hue was introduced.
 
 **What it covers:** `app/index.tsx`, `app/(auth)/*` (login, signup, customer
-portal), `app/(tabs)/index.tsx`, `app/(tabs)/orders.tsx`, the tab bar, and
-`StatusBadge`.
+portal), `app/(tabs)/index.tsx`, `app/(tabs)/orders.tsx`, the tab bar,
+`StatusBadge`, and the service overview (`app/service/[serviceId].tsx`).
 
 **What it deliberately does not cover:** the whole profile section, the
-catalogue and checkout screens, the gifts screen, and courier/tracking. Those
-still run on the video-sampled blue/orange `colors`, and the global
-`serviceTheme` still drives the catalogue's per-service hues — the home
-screen's bento grid carries its own local palette version instead.
+checkout screens, the gifts screen, and courier/tracking. Those still run on
+the video-sampled blue/orange `colors` — the home screen's bento grid carries
+its own local palette version instead.
+
+### Service overview: what stayed, and why
+
+The chrome moved to `brand` — Alice Blue surface, coastal borders,
+`brand.onSoftMuted` for secondary type, moonstone help card. Two things did
+not move:
+
+- **The per-service tints in `serviceTheme` are kept.** They are what tells
+  the five services apart at a glance in the circle row and the hero banner;
+  flattening them to one hue would cost real information. `heroTagline` also
+  stays on the neutral grey rather than `brand.onSoftMuted`, because it sits
+  on those tints and a teal-cast grey clashes with the pink and peach ones.
+- **Both orange controls stay orange.** The `+` on each row and "Götürülmə
+  planla" at the bottom. Orange means "this adds to or commits the order"
+  across the whole app, and that meaning does not survive being recoloured
+  to match the surface behind it.
+
+The free-delivery modal's "Sifarişi davam etdir" moved *from* blue *to*
+orange for the same reason — it commits the basket to checkout, so it was the
+odd one out before.
+
+The stepper and count pill took `tone="brand"` (`brand.moonstoneInk`, 5.75:1
+against white). Both components keep their old blue as the default, so
+checkout — which is not restyled — is untouched.
 
 **Black type is shared, not recoloured.** `colors.textPrimary` (`#14181F`) and
 `colors.ink` still set every heading, price and body line on the restyled

@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-nati
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  brand,
   colors,
   font,
   money,
@@ -23,6 +24,15 @@ import { AppIcon } from "@/components/AppIcon";
 // "Xidmət icmalı" — the catalogue. Service circles across the top, a tinted
 // hero banner for the active service, then a single flat price list, and a
 // floating estimate bar pinned to the bottom.
+//
+// Chrome is on the coastal palette (`brand`); the per-service tints in
+// `serviceTheme` are kept, because they are what tells the five services
+// apart at a glance — flattening them into one hue would cost information.
+//
+// The two orange controls are deliberate exceptions and must stay orange:
+// the "+" on each row and "Götürülmə planla" at the bottom. Orange marks
+// "this adds to or commits the order" throughout the app, and that meaning
+// does not survive being recoloured to match the surface around it.
 //
 // The list is deliberately flat: no category headers and no accordions, so
 // every item is visible and tappable without a disclosure step. Categories
@@ -128,6 +138,7 @@ export default function ServiceCatalogueScreen() {
                 <Text style={styles.itemPrice}>{money(item.price)}</Text>
                 {qty > 0 ? (
                   <Stepper
+                    tone="brand"
                     value={qty}
                     onChange={(next) => setQty(service.serviceId, item.itemId, next)}
                   />
@@ -162,7 +173,7 @@ export default function ServiceCatalogueScreen() {
             <View>
               <View style={styles.bottomTotalRow}>
                 <Text style={styles.bottomTotal}>{money(subtotal)}</Text>
-                <Pill label={String(count)} tone="primary" />
+                <Pill label={String(count)} tone="brand" />
               </View>
               <Text style={styles.bottomHint}>{t("estimatedPrice")}</Text>
             </View>
@@ -206,7 +217,7 @@ export default function ServiceCatalogueScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: brand.background },
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,6 +238,9 @@ const styles = StyleSheet.create({
   heroTagline: {
     fontFamily: font.regular,
     fontSize: 13.5,
+    // Left on the neutral grey rather than brand.onSoftMuted: this line sits
+    // on the per-service tint, which ranges from periwinkle to pink, and a
+    // teal-cast grey clashes against half of them.
     color: colors.textSecondary,
     marginTop: 4,
   },
@@ -248,17 +262,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   priceTitle: { fontFamily: font.extrabold, fontSize: 18, letterSpacing: -0.3, color: colors.textPrimary },
-  priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: colors.textSecondary },
-  priceCount: { fontFamily: font.medium, fontSize: 12.5, color: colors.textSecondary },
+  priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted },
+  priceCount: { fontFamily: font.medium, fontSize: 12.5, color: brand.onSoftMuted },
   list: { marginHorizontal: 16, gap: 10 },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: brand.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -267,22 +281,22 @@ const styles = StyleSheet.create({
   helpCard: {
     marginHorizontal: 16,
     marginTop: 6,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: brand.moonstoneSoft,
     borderRadius: radius.md,
     padding: 16,
   },
   helpTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
-  helpLink: { fontFamily: font.medium, fontSize: 14, color: colors.primary, marginTop: 3 },
+  helpLink: { fontFamily: font.medium, fontSize: 14, color: brand.moonstoneInk, marginTop: 3 },
   bottomBar: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14 },
   bottomCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.xl,
     paddingHorizontal: 18,
     paddingVertical: 12,
-    shadowColor: "#000",
+    shadowColor: brand.midnight,
     shadowOpacity: 0.12,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
@@ -290,18 +304,18 @@ const styles = StyleSheet.create({
   },
   bottomTotalRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   bottomTotal: { fontFamily: font.bold, fontSize: 21, color: colors.textPrimary },
-  bottomHint: { fontFamily: font.regular, fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  bottomHint: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted, marginTop: 2 },
   bottomButton: { paddingHorizontal: 20, paddingVertical: 14 },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(15,20,28,0.55)",
+    backgroundColor: "rgba(0,69,84,0.55)",
     alignItems: "center",
     justifyContent: "center",
     padding: 28,
   },
   modalCard: {
     width: "100%",
-    backgroundColor: colors.surface,
+    backgroundColor: brand.surface,
     borderRadius: radius.xl,
     padding: 22,
   },
@@ -310,11 +324,13 @@ const styles = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: 14,
     lineHeight: 20,
-    color: colors.textSecondary,
+    color: brand.onSoftMuted,
     marginTop: 8,
   },
+  // "Sifarişi davam etdir" commits the basket to checkout, so it takes the
+  // same orange as every other commit CTA rather than the old blue.
   modalPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
@@ -322,5 +338,5 @@ const styles = StyleSheet.create({
   },
   modalPrimaryLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
   modalSecondary: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  modalSecondaryLabel: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
+  modalSecondaryLabel: { fontFamily: font.medium, fontSize: 15, color: brand.onSoftMuted },
 });
