@@ -171,10 +171,10 @@ Key invariants:
   through Laravel via `lib/api.ts`, because RLS chooses rows and has no
   opinion about the values in them. Never add a direct table write for those.
   `EXPO_PUBLIC_API_URL` is required, deliberately with no fallback.
-- **RLS is not applied.** `backend/database/policies/rls.sql` holds the
-  policies the app assumes, unrun because Supabase is unreachable here. The
-  `profiles` column grant in it is what stops a customer setting their own
-  `role` to `admin`. See `SECURITY.md`.
+- **RLS: applied for every table that exists.** As of 2026-08-27 all 19
+  tables in `public` have `rowsecurity = true`. `rls.sql` is superseded and
+  must not be run — it names `profiles.avatar_url`, which does not exist, and
+  a GRANT on a missing column aborts the whole transaction. See `SECURITY.md`.
 
 ## Still unresolved
 
@@ -182,5 +182,31 @@ Key invariants:
   legible in the video are marked `unverified`
 - `is_my_assigned_courier(id)` function source never pulled
 - Edge Functions never checked — if any exist, that's real recoverable source
-- `orders.reward_id` exists live but no rewards table appeared in the dump;
-  reconcile before migrating production
+
+## Production database — current state (2026-08-27)
+
+Both migrations have been **applied**. `public` holds 19 tables, all with
+RLS enabled, and `rewards` is seeded with the 50-prize pool. ILK20 exists as
+a real `promo_codes` row.
+
+Two things worth carrying forward:
+
+- **The pooler host moved.** `aws-0-ap-northeast-2.pooler.supabase.com`
+  answers on both ports but rejects this project with
+  `ENOTFOUND tenant/user` — it is a routing failure that happens *before*
+  authentication, so it looks nothing like a bad password. The project lives
+  on `aws-1-*`. If a connection suddenly starts failing that way, check the
+  host prefix before touching credentials.
+- **`--pretend` under-reports.** In pretend mode Laravel's `select()`
+  returns an empty array, so `Schema::hasTable()` reads false and any block
+  guarded by it is silently skipped from the preview. The `orders` ALTER
+  (`lifecycle_state`, `processing_finished_at`, `promo_code`) never appeared
+  in the dry run but did apply for real. Read a `--pretend` as a lower bound,
+  not a manifest.
+- **Migrate on port 5432, run the app on 6543.** 6543 is the transaction
+  pooler; Laravel's schema builder needs the session pooler. Put it back
+  afterwards.
+- **Laravel creates its own `migrations` table in `public`**, which Supabase
+  exposes through PostgREST like any other. It is not named in any policy
+  file. RLS was enabled and all grants revoked on it by hand — do the same
+  for anything else Laravel adds there.

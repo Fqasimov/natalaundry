@@ -1,8 +1,23 @@
--- Policies for tables that DO NOT YET EXIST in production.
+-- ===========================================================================
+-- APPLIED 2026-08-27. This file is now a record, not a to-do.
+-- ===========================================================================
+-- Both migrations were run against production and every statement below was
+-- applied, in two transactions (the courier/lifecycle half first, then the
+-- gift-box half once those tables existed). `rls_audit.sql` query 3 now
+-- returns rowsecurity = true for all 19 tables in public.
 --
--- ===========================================================================
--- DO NOT RUN THIS YET.
--- ===========================================================================
+-- One table is missing from this file and had to be handled separately:
+-- Laravel creates its own `migrations` table in `public`, which Supabase
+-- exposes through PostgREST like any other. RLS was enabled and all grants
+-- revoked on it by hand.
+--
+-- Re-running this file is safe and idempotent.
+--
+-- The original header follows, for the reasoning it records.
+--
+-- ---------------------------------------------------------------------------
+-- Policies for tables that DID NOT EXIST in production.
+-- ---------------------------------------------------------------------------
 -- Every table below is created by a migration that has never been applied to
 -- the live database. Confirmed 2026-08-25: rls_audit.sql query 3 listed the
 -- full contents of the `public` schema, and none of these appeared.
@@ -17,17 +32,21 @@
 -- exact failure that made the original rls.sql a no-op. So this file is kept
 -- separate from rls_v2.sql rather than merged into it.
 --
--- Order of operations:
+-- Order of operations (all done):
 --   1. php artisan migrate --pretend      (review, against production)
---   2. reconcile orders.reward_id, which already exists live while no rewards
---      table does — see SCHEMA_NOTES.md "Still unresolved"
+--   2. reconcile orders.reward_id
 --   3. run the migrations
 --   4. run this file
 --   5. re-run rls_audit.sql query 3 and confirm rls_enabled = true on all
 --
--- Until step 3, the app features that read these tables cannot work against
--- production at all: courier job offers, live tracking, the order timeline,
--- gift boxes, and promo codes.
+-- On step 2: the reconciliation turned out to be a non-issue. NEITHER
+-- migration declares a foreign key against `rewards`. `orders.reward_id` is a
+-- bare nullable uuid with no constraint on it, so there was no FK that could
+-- fail to line up — the warning was over-cautious.
+--
+-- Note the gap between steps 3 and 4 is a live security hole: a table created
+-- in `public` is exposed through PostgREST immediately, and the anon key ships
+-- inside the app bundle. Run step 4 in the same sitting, not the next day.
 
 begin;
 
