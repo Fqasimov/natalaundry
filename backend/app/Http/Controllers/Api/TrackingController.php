@@ -85,7 +85,14 @@ class TrackingController extends Controller
             return response()->json(['message' => 'Not your order.'], 403);
         }
 
-        $latest = $order->locations()->orderByDesc('recorded_at')->first();
+        // created_at is the tiebreaker: recorded_at is supplied by the phone
+        // and two devices' clocks — or one device replaying a queued fix —
+        // can hand us the same instant. Without a second key the row returned
+        // is arbitrary and the marker can move backwards between polls.
+        $latest = $order->locations()
+            ->orderByDesc('recorded_at')
+            ->orderByDesc('created_at')
+            ->first();
 
         $staleAfter = (int) config('nata.tracking.stale_after_seconds');
         $isStale = $latest === null
