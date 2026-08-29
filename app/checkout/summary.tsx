@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, TextInput, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Switch,
+  TextInput,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +32,7 @@ import {
   type PaymentMethod,
 } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/PaymentMethodPicker";
+import { removeOrderPhoto, uploadOrderPhoto } from "@/lib/uploads";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
 
 // "Sifariş xülasəsi" — the final step. Note the hard gate the shipped app
@@ -84,6 +95,17 @@ export default function SummaryScreen() {
   const hasAddress =
     draft.address.length > 0 && draft.addressLat != null && draft.addressLng != null;
 
+  // Photos are uploaded as they are taken, not when the order is submitted.
+  //
+  // Until this existed the picker's `file://` URI went straight onto the
+  // order, so every photo in production points at a path on the phone that
+  // took it and is invisible to the courier and the admin. `previews` keeps
+  // the local URI for the thumbnail strip, keyed by the storage path that is
+  // actually recorded — the customer sees their own photo immediately without
+  // waiting for a round trip back out of the bucket.
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
+
   const addPhoto = async (source: "camera" | "library") => {
     const permission =
       source === "camera"
@@ -96,9 +118,39 @@ export default function SummaryScreen() {
         ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
         : await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
 
-    if (!result.canceled && result.assets?.[0]) {
-      patchDraft({ photos: [...draft.photos, result.assets[0].uri] });
+    const asset = !result.canceled ? result.assets?.[0] : null;
+    if (!asset) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const path = await uploadOrderPhoto({
+        uri: asset.uri,
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+      });
+      setPreviews((current) => ({ ...current, [path]: asset.uri }));
+      patchDraft({ photos: [...draft.photos, path] });
+    } catch (e) {
+      // Photos are optional, so a failed upload must not block checkout —
+      // say so and let them carry on or try again.
+      setError(e instanceof Error ? e.message : t("photoUploadFailed"));
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const dropPhoto = (index: number) => {
+    const path = draft.photos[index];
+    patchDraft({ photos: draft.photos.filter((_, i) => i !== index) });
+    setPreviews((current) => {
+      const next = { ...current };
+      delete next[path];
+      return next;
+    });
+    // The object is only a draft until the order is filed, so removing it is
+    // an ordinary edit rather than destroying evidence.
+    void removeOrderPhoto(path);
   };
 
   const applyPromo = () => {
@@ -297,15 +349,19 @@ export default function SummaryScreen() {
 
           {draft.photos.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
-              {draft.photos.map((uri, index) => (
-                <View key={uri} style={styles.thumbWrap}>
-                  <Image source={{ uri }} style={styles.thumb} />
-                  <Pressable
-                    style={styles.thumbRemove}
-                    onPress={() =>
-                      patchDraft({ photos: draft.photos.filter((_, i) => i !== index) })
-                    }
-                  >
+              {draft.photos.map((path, index) => (
+                <View key={path} style={styles.thumbWrap}>
+                  {/* The stored value is a private storage path, so the
+                      thumbnail comes from the local copy taken moments ago
+                      rather than a signed round trip. */}
+                  {previews[path] ? (
+                    <Image source={{ uri: previews[path] }} style={styles.thumb} />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                      <Ionicons name="image-outline" size={22} color={brand.onSoftMuted} />
+                    </View>
+                  )}
+                  <Pressable style={styles.thumbRemove} onPress={() => dropPhoto(index)}>
                     <Ionicons name="close" size={12} color={colors.textInverse} />
                   </Pressable>
                 </View>
@@ -314,15 +370,30 @@ export default function SummaryScreen() {
           ) : null}
 
           <View style={styles.photoButtons}>
-            <Pressable style={styles.photoTile} onPress={() => addPhoto("camera")}>
+            <Pressable
+              style={[styles.photoTile, uploading && styles.photoTileBusy]}
+              disabled={uploading}
+              onPress={() => addPhoto("camera")}
+            >
               <Ionicons name="camera-outline" size={24} color={brand.moonstoneInk} />
               <Text style={styles.photoTileLabel}>{t("takePhoto")}</Text>
             </Pressable>
-            <Pressable style={styles.photoTile} onPress={() => addPhoto("library")}>
+            <Pressable
+              style={[styles.photoTile, uploading && styles.photoTileBusy]}
+              disabled={uploading}
+              onPress={() => addPhoto("library")}
+            >
               <Ionicons name="images-outline" size={24} color={brand.moonstoneInk} />
               <Text style={styles.photoTileLabel}>{t("pickFromGallery")}</Text>
             </Pressable>
           </View>
+
+          {uploading ? (
+            <View style={styles.photoSuggestion}>
+              <ActivityIndicator size="small" color={brand.moonstoneInk} />
+              <Text style={styles.photoSuggestionLabel}>{t("photoUploading")}</Text>
+            </View>
+          ) : null}
 
           {!hasAllPhotos ? (
             <View style={styles.photoSuggestion}>
@@ -477,6 +548,11 @@ const styles = StyleSheet.create({
   thumbRow: { marginTop: 12 },
   thumbWrap: { marginRight: 10 },
   thumb: { width: 68, height: 68, borderRadius: radius.md },
+  thumbPlaceholder: {
+    backgroundColor: brand.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   thumbRemove: {
     position: "absolute",
     top: -4,
@@ -500,6 +576,7 @@ const styles = StyleSheet.create({
     borderColor: brand.moonstoneInk,
     backgroundColor: brand.moonstoneSoft,
   },
+  photoTileBusy: { opacity: 0.5 },
   photoTileLabel: { fontFamily: font.medium, fontSize: 12.5, color: brand.moonstoneInk },
   // Informational, not a blocker — photos stopped being mandatory, so this
   // is deliberately not the red danger treatment it used to be.
