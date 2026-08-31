@@ -143,6 +143,39 @@ future move is a DNS change rather than a store release.
 
 ---
 
+## 4a. Where this is up to — resume here
+
+**Done:** the Frankfurt project exists. The Seoul dump has been taken and
+verified — 19 tables, 29 policies, 19 functions, 10 triggers, and every row
+count matched the live database, including all 13 users with their bcrypt
+hashes intact.
+
+**The dump does not travel.** `auth.sql` holds password hashes and live
+refresh tokens, so it is gitignored and stays on the machine that made it.
+Re-taking it takes about two minutes. The *tooling* is in the repository, so
+any machine can:
+
+```
+export PG_BIN=/path/to/postgres/bin        # only if pg_dump is not on PATH
+php scripts/migration/dump.php
+php scripts/migration/verify-dump.php
+
+cp scripts/migration/new-project.env.example ~/nata-target.env
+# fill in the four NEW_* values — session pooler host, port 5432
+export TARGET_ENV=~/nata-target.env
+php scripts/migration/restore.php
+```
+
+`restore.php` refuses to run against a target that already holds rows, checks
+every table's count against the source afterwards, and fails if any table in
+`public` comes out without RLS. See `scripts/migration/README.md`.
+
+**Next after the restore** is the by-hand list in step 6 below — the four
+policy files, then `perf_indexes.sql` one statement at a time, then
+`rls_audit.sql`.
+
+---
+
 ## 5. Road A, step by step
 
 ### Preparation

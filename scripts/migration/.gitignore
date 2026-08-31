@@ -1,0 +1,9 @@
+# Dumps carry bcrypt password hashes and live refresh tokens for every user.
+# They must never be committed, and regenerating one takes about two minutes.
+dump/
+
+# A filled-in target config holds a live database password. Keep your copy
+# outside the repository and point TARGET_ENV at it.
+new-project.env
+*.env
+!new-project.env.example
