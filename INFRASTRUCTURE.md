@@ -368,7 +368,9 @@ pool, ILK20 present as a real `promo_codes` row.
   `v=spf1 include:_spf.google.com include:_spf.mail.hostinger.com ~all`.
   Resend does not need adding; it sends from the `send.` subdomain, which
   carries its own SPF.
-- **Create the EU Supabase project** and set its password.
+- **Set the EU project's SMTP and keys.** The project itself now exists
+  (section 4a); what is outstanding is the Resend SMTP settings and noting the
+  new URL / anon key / service role key for the API and the app build.
 - **Confirm which Hostinger plan.** Headers say `platform: hostinger` behind
   `hcdn`, which is how their managed hosting answers; a VPS would reply as
   nginx or Apache. Not proof. hPanel settles it — a *VPS* section with SSH
