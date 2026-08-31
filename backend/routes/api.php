@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\GiftBoxController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderLifecycleController;
+use App\Http\Controllers\Api\OrderPhotoController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\ProfileController;
@@ -39,6 +40,11 @@ Route::middleware(['supabase', 'throttle:api'])->group(function () {
     Route::post('orders/{order}/claim', [OrderController::class, 'claim']);
     Route::post('orders/{order}/advance', [OrderController::class, 'advance']);
     Route::post('orders/{order}/count', [OrderController::class, 'count']);
+
+    // Garment photos, signed on demand. The bucket is private and grants
+    // couriers and admins nothing, so this is the only way they see the
+    // evidence trail — see OrderPhotoService.
+    Route::get('orders/{order}/photos', [OrderPhotoController::class, 'index']);
 
     // Payments. The amount is never taken from the request — it is read from
     // the order the server priced; see PaymentService.

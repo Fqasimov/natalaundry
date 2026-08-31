@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderStatusLog;
 use App\Models\Profile;
+use App\Services\ForbiddenActorException;
 use App\Services\InvalidTransitionException;
 use App\Services\OrderAlreadyClaimedException;
 use App\Services\OrderLifecycleService;
@@ -233,5 +234,69 @@ class OrderLifecycleTest extends TestCase
 
         $this->expectException(InvalidTransitionException::class);
         $this->lifecycle->transition($order, OrderLifecycle::CANCELLED, $customer, 'customer');
+    }
+
+    /**
+     * The two refusals must stay distinguishable.
+     *
+     * A state refusal means "not from here, but you could" — the screen should
+     * re-read the order, because someone else has probably moved it already. A
+     * role refusal means "never, whoever you are" — the screen should not be
+     * offering the control at all. They were folded into one exception and one
+     * status code, so a client had no way to tell them apart.
+     *
+     * ForbiddenActorException extends InvalidTransitionException, so asserting
+     * the general type would pass for either. These assert the exact class.
+     */
+    public function test_a_forbidden_state_change_is_not_a_role_refusal(): void
+    {
+        $customer = $this->profile();
+        $courier = $this->profile(['role' => 'courier']);
+        $order = $this->order($customer, ['courier_id' => $courier->id]);
+
+        try {
+            $this->lifecycle->transition($order, OrderLifecycle::DELIVERED, $courier, 'courier');
+            $this->fail('Skipping to delivered should have been refused.');
+        } catch (InvalidTransitionException $e) {
+            $this->assertNotInstanceOf(
+                ForbiddenActorException::class,
+                $e,
+                'A courier may reach delivered eventually, so this is a state refusal, not a role one.',
+            );
+        }
+    }
+
+    public function test_a_role_refusal_is_reported_as_one(): void
+    {
+        $customer = $this->profile();
+        $courier = $this->profile(['role' => 'courier']);
+        $order = $this->order($customer, [
+            'courier_id' => $courier->id,
+            'lifecycle_state' => OrderLifecycle::AT_LAUNDRY,
+            'status' => 'cleaning',
+        ]);
+
+        // The state is right for this move; only the role is wrong.
+        $this->assertTrue(OrderLifecycle::canTransition(
+            OrderLifecycle::AT_LAUNDRY,
+            OrderLifecycle::PROCESSING_FINISHED,
+        ));
+
+        $this->expectException(ForbiddenActorException::class);
+        $this->lifecycle->transition($order, OrderLifecycle::PROCESSING_FINISHED, $courier, 'courier');
+    }
+
+    public function test_a_courier_who_is_not_the_assigned_one_is_a_role_refusal(): void
+    {
+        $customer = $this->profile();
+        $mine = $this->profile(['role' => 'courier']);
+        $other = $this->profile(['role' => 'courier']);
+        $order = $this->order($customer, [
+            'courier_id' => $mine->id,
+            'lifecycle_state' => OrderLifecycle::COURIER_ASSIGNED,
+        ]);
+
+        $this->expectException(ForbiddenActorException::class);
+        $this->lifecycle->transition($order, OrderLifecycle::COURIER_EN_ROUTE_PICKUP, $other, 'courier');
     }
 }

@@ -250,6 +250,13 @@ const az = {
   orderAddress: "Ünvan",
   orderNotes: "Qeyd",
   orderNoItems: "Əşya qeyd edilməyib",
+
+  // Garment photos. The courier and the admin read these too — the strip is
+  // on the shared order detail screen, not a customer-only one.
+  orderPhotos: "Əşya şəkilləri",
+  orderPhotoOpen: "Şəkli böyüt",
+  orderPhotosUnavailable: "{count} şəkil göstərilə bilmir",
+  orderPhotosRetry: "Yenidən cəhd et",
   orderCancel: "Sifarişi ləğv et",
   orderCancelConfirm: "Sifariş ləğv edilsin?",
   orderCancelKeep: "Xeyr, saxla",
@@ -646,6 +653,11 @@ const ru: Record<StringKey, string> = {
   orderAddress: "Адрес",
   orderNotes: "Комментарий",
   orderNoItems: "Вещи не указаны",
+
+  orderPhotos: "Фото вещей",
+  orderPhotoOpen: "Увеличить фото",
+  orderPhotosUnavailable: "{count} фото недоступно",
+  orderPhotosRetry: "Повторить",
   orderCancel: "Отменить заказ",
   orderCancelConfirm: "Отменить заказ?",
   orderCancelKeep: "Нет, оставить",
@@ -1033,6 +1045,11 @@ const en: Record<StringKey, string> = {
   orderAddress: "Address",
   orderNotes: "Note",
   orderNoItems: "No items recorded",
+
+  orderPhotos: "Garment photos",
+  orderPhotoOpen: "Enlarge photo",
+  orderPhotosUnavailable: "{count} photo(s) cannot be shown",
+  orderPhotosRetry: "Try again",
   orderCancel: "Cancel order",
   orderCancelConfirm: "Cancel this order?",
   orderCancelKeep: "No, keep it",

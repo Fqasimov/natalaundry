@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
+import { OrderPhotoStrip } from "@/components/OrderPhotoStrip";
 import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { isToplu, settleToplu } from "@/lib/toplu";
@@ -223,6 +224,11 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         </View>
+
+        {/* The garment photos, for whichever side is reading. Renders nothing
+            when the order has none, so bulk orders — which have no photo gate
+            — are unaffected. */}
+        <OrderPhotoStrip orderId={order.id} />
 
         {error ? <Text style={s.error}>{error}</Text> : null}
 

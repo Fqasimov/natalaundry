@@ -276,6 +276,48 @@ photographs of customers' clothing inside their homes.
 **The other half is still missing: no screen displays `item_photos` to
 anyone.** The data is real now; showing it is unbuilt.
 
+### Garment photos are now visible to the people the evidence is for
+
+The upload half was fixed during the previous audit; the display half was
+not, so `orders.item_photos` was still a column nothing read. Both halves now
+exist.
+
+`GET /api/orders/{order}/photos` returns a short-lived signed URL per photo.
+Couriers and admins hold no storage grant — a storage policy keys on the
+object path, which carries the *customer's* id, so it cannot express "the
+courier assigned to this order" without duplicating the orders join into the
+storage schema. The API holds the service role instead and checks the order
+first: the customer who placed it, the courier actually assigned to it, or an
+admin. An unassigned courier is refused, and refused before anything is
+signed, so a rejected request cannot mint a URL that outlives the rejection.
+
+Paths are read from the order row, never from the request, so naming someone
+else's object is not an available move. Legacy `file://` and `content://`
+values — every photo taken before 2026-08-27 — are reported with a null URL
+rather than sent to the storage API to fail one at a time, and the strip says
+how many cannot be shown instead of rendering broken frames. A missing service
+role key or a storage outage degrades to "no photos" rather than turning the
+order screen into an error page.
+
+URLs live five minutes and the strip refetches shortly before they expire.
+That is short for an image list, deliberately: the URL is the only thing
+protecting a photograph taken inside a customer's home.
+
+The strip is on the shared order detail screen, which is the same screen the
+courier opens from their active job, so one component serves both readers.
+
+### Forbidden-role requests are 403 again, not 422
+
+`ForbiddenActorException` splits "you may never do this" from "not from this
+state". The first is 403 and means the screen should not be offering the
+control; the second is 422 and means the screen should re-read the order,
+because someone else has already moved it. It extends
+`InvalidTransitionException` so every existing catch site keeps working — the
+order of the catch blocks in `OrderLifecycleController::guard()` is what
+produces the two codes, and reversing them silently restores the old
+behaviour, so `OrderLifecycleTest` asserts the exact exception class rather
+than the base type.
+
 ### The GPS table had no pruning job
 
 `retain_hours` had been in config since tracking was written, and the
@@ -351,16 +393,11 @@ pool, ILK20 present as a real `promo_codes` row.
 
 ### Known gaps, not blockers
 
-- No screen displays `item_photos`.
-- Courier and admin photo viewing needs an API endpoint issuing signed URLs —
-  they have no storage grant, deliberately, because a storage policy cannot
-  express "the courier assigned to this order".
-- Forbidden-role requests return **422, not 403**:
-  `OrderLifecycleController::guard()` folds them in with forbidden state
-  changes. Documented behaviour, but a client cannot tell "never allowed" from
-  "not from this state" by status code.
 - Supabase Edge Functions have never been checked. If any exist they are real
   deployed code that a migration would have to carry.
+- The photo strip has not been seen on a device. It is built and covered by
+  tests, but no human has opened it — and the signing call is the one path in
+  the app that cannot be exercised without a reachable Supabase project.
 
 ---
 
