@@ -212,6 +212,15 @@ policy files, then `perf_indexes.sql` one statement at a time, then
    tables must report `rowsecurity = true`, and query 5 must return zero rows.
    A dump can carry policies without carrying column grants, and the grant is
    what stops a customer setting their own `role`.
+
+   Then run `state_check.sql`, which answers the other half — whether the
+   objects are *there*: table count, extensions, the six perf indexes and
+   whether any built invalid, the `order-photos` bucket and its `public`
+   flag, the seed rows, Laravel's own `migrations` table, and the source of
+   `is_my_assigned_courier`, which is named in the live policies and has
+   never been read. Run it against **both** projects and diff the two
+   outputs: that comparison is a better acceptance test for the move than
+   any row count the restore script reports about itself.
 6. **Replay the policy files, in order**: `hotfix_profiles_grant.sql`,
    `hotfix_2_order_writes.sql`, `hotfix_3_staff_accounts.sql`,
    `storage_order_photos.sql`, then `perf_indexes.sql` **one statement at a
