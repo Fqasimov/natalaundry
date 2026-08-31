@@ -145,6 +145,18 @@ future move is a DNS change rather than a store release.
 
 ## 4a. Where this is up to — resume here
 
+**Confirmed 2026-08-31 over the Supabase MCP connector:** the second project is
+real. `get_project_url` returned `https://kzfsagccvxjmsbqjdpnb.supabase.co` —
+a ref that appears nowhere in this repository, where every reference is still
+`dzplzvogobqmwaaimkef` (Seoul). That settles a contradiction worth naming: an
+earlier session's notes still listed "create the EU Supabase project" as
+outstanding, and it is not.
+
+What the ref alone does **not** prove is the region. Nothing was read from the
+project beyond its URL before the connector dropped, so confirm
+`eu-central-1` in the dashboard before treating it as the restore target — and
+before assuming its schema, extensions or policies are in any particular state.
+
 **Done:** the Frankfurt project exists. The Seoul dump has been taken and
 verified — 19 tables, 29 policies, 19 functions, 10 triggers, and every row
 count matched the live database, including all 13 users with their bcrypt
