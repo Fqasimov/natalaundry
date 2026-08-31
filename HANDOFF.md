@@ -10,11 +10,41 @@ Open a PR: https://github.com/Fqasimov/natalaundry/pull/new/feat/payments-auth-r
 
 ## Read these first
 
+- **`INFRASTRUCTURE.md`** — where this runs, how much it can carry, and the
+  plan to move the database out of Seoul. Written 2026-08-31 from measurements
+  against production. **Start here if the question is "can we ship this".**
 - `SECURITY.md` — what was found and fixed, including two entries that were
   previously recorded as fixed but were not
-- `SCHEMA_NOTES.md` — the **confirmed** live table list, and the seven tables
-  this codebase expects that do not exist in production
+- `SCHEMA_NOTES.md` — the live table list. Note it is now out of date: both
+  pending migrations were applied on 2026-08-27 and `public` holds 19 tables,
+  not 11
 - `backend/database/policies/` — audit queries and policy files
+
+---
+
+## 0. What changed after this file was written
+
+Most of section 1 below is **done**. As of 2026-08-31:
+
+- Both pending migrations are **applied**. `public` holds 19 tables, all with
+  RLS enabled. `rewards` is seeded; ILK20 exists as a real row.
+- `rls_pending_migrations.sql` is **applied** — it is now a record, not a
+  to-do.
+- The `orders.reward_id` reconciliation that blocked this for days was a
+  **non-issue**: neither migration declares a foreign key against `rewards`,
+  so there was no constraint that could fail to line up.
+- Courier and admin accounts exist. Creating them surfaced two live defects,
+  fixed in `hotfix_3_staff_accounts.sql`.
+- Six missing indexes added, a courier-tracking ordering bug fixed, the GPS
+  pruning job written, and garment photo upload fixed — see
+  `INFRASTRUCTURE.md` section 6.
+
+What is still open from section 1: **rotate the two credentials**, and pull
+`is_my_assigned_courier(id)`. `rls_v2.sql` is superseded by the hotfixes for
+every table that exists.
+
+The dominant open problem is not in this file at all — the database is 375 ms
+from its users and the API is not deployed. See `INFRASTRUCTURE.md`.
 
 ---
 
