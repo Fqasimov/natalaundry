@@ -10,8 +10,8 @@ They are ordered by what blocks what. **1 blocks 2 and 7. 7 blocks 8.**
 
 | # | Action | Blocks | Time |
 |---|---|---|---|
-| 1 | Set the Frankfurt `DB_PASSWORD` | the whole backend | 2 min |
-| 2 | Verify the API talks to Frankfurt | — | 5 min |
+| ~~1~~ | ~~Set the Frankfurt `DB_PASSWORD`~~ | ✅ done 2026-09-01 | — |
+| ~~2~~ | ~~Verify the API talks to Frankfurt~~ | ✅ done 2026-09-01 | — |
 | 3 | Point Auth SMTP at Resend | signups at volume | 10 min |
 | 4 | Enable leaked-password protection | — | 1 min |
 | 5 | Rotate the Seoul password, freeze the project | — | 5 min |
@@ -25,19 +25,24 @@ They are ordered by what blocks what. **1 blocks 2 and 7. 7 blocks 8.**
 
 ---
 
-## 1. Set the Frankfurt `DB_PASSWORD`
+## 1. Set the Frankfurt `DB_PASSWORD` — ✅ DONE 2026-09-01
 
-This is the one value that has never been in my hands, and the only reason the
-backend cannot reach the new database. Everything else in `backend/.env` is
-already repointed:
+Password set by the owner; connection verified. `backend/.env` now reads:
 
 ```
-DB_HOST=aws-1-eu-central-1.pooler.supabase.com
+DB_HOST=aws-0-eu-central-1.pooler.supabase.com
 DB_PORT=6543
 DB_USERNAME=postgres.kzfsagccvxjmsbqjdpnb
 DB_DATABASE=postgres
-DB_PASSWORD=          ← empty, deliberately
+DB_PASSWORD=          ← set locally, gitignored, never committed
 ```
+
+> **The host in the first draft of this file was wrong.** It said `aws-1-`,
+> copied from the Seoul host without checking. The Frankfurt project is on the
+> **`aws-0`** fleet, and the resulting failure was the exact trap described
+> below — `ENOTFOUND tenant/user`, which reads like a rejected password and is
+> not one. Probing all four host/port combinations found `aws-0` on both ports.
+> The password was right the whole time.
 
 > **It is not the Seoul password, even though it is the same Supabase account.**
 > Database passwords are per *project*, not per account — Seoul and Frankfurt are
@@ -69,15 +74,26 @@ DB_PASSWORD=          ← empty, deliberately
 
 ---
 
-## 2. Verify the API actually talks to Frankfurt
+## 2. Verify the API actually talks to Frankfurt — ✅ DONE 2026-09-01
 
-**Steps**
+All three checks passed. Kept here as the recipe for re-verifying after any
+future move or restore.
 
 ```bash
 cd backend && php artisan migrate:status
 ```
 
-Every migration should read `Ran`. If it does, the credentials work.
+The three project migrations read `Ran`:
+`create_gift_box_tables`, `add_order_lifecycle_tables`,
+`give_courier_locations_subsecond_precision`.
+
+> **Three migrations read `Pending`, and that is correct.**
+> `0001_01_01_000000_create_users_table`, `_000001_create_cache_table` and
+> `_000002_create_jobs_table` are Laravel's default stubs. They are unused —
+> auth lives in Supabase `auth.users` + `public.profiles` — and they were
+> `Pending` on Seoul too. **Do not run `php artisan migrate` to "fix" them.**
+> It would create a `users` table in `public`, which PostgREST then exposes
+> like any other, next to the real one.
 
 Then confirm the data arrived intact through Laravel's own eyes, not just
 Postgres's:
@@ -86,9 +102,23 @@ Postgres's:
 php artisan tinker --execute="echo App\Models\Order::count().' orders, total '.App\Models\Order::sum('total');"
 ```
 
-Expect **15 orders** summing to **630.00**. If the total is anything else, stop
-and tell me — it would mean the trigger-disable during the restore did not hold,
+Expect **15 orders** summing to **630.00** — confirmed. If the total is anything
+else, stop: it would mean the trigger-disable during the restore did not hold,
 and historical rows were rewritten on the way in.
+
+For `order_items`, be precise about which figure you are checking — the two are
+easy to confuse and only one of them is the one recorded at migration time:
+
+| Measure | Value |
+|---|---|
+| rows | 31 |
+| `sum(quantity)` | 45 |
+| `sum(price)` | 312.00 |
+| **`sum(price * quantity)`** | **423.00** ← the figure verified on both sides |
+
+```bash
+php artisan tinker --execute="print_r(DB::selectOne('select count(*) n, sum(price) sp, sum(price*quantity) spq from public.order_items'));"
+```
 
 Then run the suite:
 
@@ -96,13 +126,23 @@ Then run the suite:
 cd backend && php artisan test
 ```
 
-112 tests should pass.
+**112 passed, 535 assertions, ~32s.** Safe to run against any environment: the
+tests are pinned to sqlite `:memory:` in `phpunit.xml` and never touch the real
+database.
 
-**If step 2 fails with `ENOTFOUND` or `could not translate host name`:** that is
-not the password. It is the pooler fleet prefix — Supabase has `aws-0-` and
-`aws-1-` fleets and the project can sit on either. Try `aws-0-eu-central-1.pooler.supabase.com`.
-That exact symptom cost an hour earlier in this project and looked exactly like
-a wrong password.
+**If a connection fails with `FATAL: (ENOTFOUND) tenant/user ... not found`:**
+that is **not** the password. It is a routing failure that happens *before*
+authentication — the pooler is saying it does not host this project. Supabase
+runs `aws-0-` and `aws-1-` fleets per region and a project sits on exactly one:
+
+| project | fleet |
+|---|---|
+| Seoul `dzplzvogobqmwaaimkef` | `aws-1-ap-northeast-2` |
+| **Frankfurt `kzfsagccvxjmsbqjdpnb`** | **`aws-0-eu-central-1`** |
+
+**They are opposite, which is the whole trap** — carrying the prefix across from
+the old host is what broke it here, and it has now cost time twice in this
+project. Swap the prefix before touching credentials.
 
 ---
 
