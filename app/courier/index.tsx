@@ -47,6 +47,7 @@ export default function CourierDashboard() {
   const [active, setActive] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const courierId = session?.user.id ?? null;
@@ -142,7 +143,7 @@ export default function CourierDashboard() {
             style={[s.tab, tab === key && s.tabActive]}
             onPress={() => setTab(key)}
           >
-            <Text style={[s.tabLabel, tab === key && s.tabLabelActive]}>
+            <Text style={[s.tabLabel, tab === key && s.tabLabelActive]} numberOfLines={1}>
               {key === "available" ? t("courierAvailable") : t("courierActive")}
             </Text>
             {key === "available" && offered.length > 0 ? (
@@ -158,7 +159,17 @@ export default function CourierDashboard() {
 
       <ScrollView
         contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await load();
+              setRefreshing(false);
+            }}
+            tintColor={brand.moonstoneInk}
+          />
+        }
       >
         {tab === "available" ? (
           offered.length === 0 ? (
@@ -229,7 +240,9 @@ export default function CourierDashboard() {
                   }
                 >
                   <Ionicons name="logo-google" size={15} color={brand.moonstoneInk} />
-                  <Text style={s.navLabel}>{t("navigateGoogle")}</Text>
+                  <Text style={s.navLabel} numberOfLines={1}>
+                    {t("navigateGoogle")}
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={s.navButton}
@@ -241,7 +254,9 @@ export default function CourierDashboard() {
                   }
                 >
                   <Ionicons name="navigate" size={15} color={brand.moonstoneInk} />
-                  <Text style={s.navLabel}>{t("navigateApp")}</Text>
+                  <Text style={s.navLabel} numberOfLines={1}>
+                    {t("navigateApp")}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}
@@ -287,21 +302,26 @@ const s = StyleSheet.create({
   },
   tabs: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
   tab: {
+    // Each tab takes half the row rather than sizing to its label: the
+    // Russian labels together were wider than a small phone.
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 9,
     backgroundColor: brand.surfaceAlt,
   },
   tabActive: { backgroundColor: brand.moonstoneInk },
-  tabLabel: { fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
+  tabLabel: { flexShrink: 1, fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
   tabLabelActive: { color: colors.textInverse },
   // Amber, not moonstone: this counts unclaimed job offers, and offers are
   // first-to-claim — a courier who misses it loses the work to someone else.
   // It has to stand out against the palette rather than blend into it.
   tabBadge: {
+    flexShrink: 0,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
@@ -331,9 +351,9 @@ const s = StyleSheet.create({
     padding: 16,
     gap: 6,
   },
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  orderNo: { fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
-  total: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  orderNo: { flexShrink: 1, fontFamily: font.semibold, fontSize: 13, color: brand.onSoftMuted },
+  total: { flexShrink: 0, fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
   state: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary, marginTop: 2 },
   address: { ...type.body, color: colors.textPrimary },
   slot: { ...type.caption, color: brand.onSoftMuted },
@@ -353,7 +373,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: 11,
   },
-  navLabel: { fontFamily: font.semibold, fontSize: 13, color: brand.moonstoneInk },
+  navLabel: { flexShrink: 1, fontFamily: font.semibold, fontSize: 13, color: brand.moonstoneInk },
   primaryButton: {
     backgroundColor: brand.moonstoneInk,
     borderRadius: radius.pill,

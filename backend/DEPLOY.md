@@ -64,15 +64,14 @@ If that name is taken, change it in `fly.toml` too — the two must match.
 
 ## 3. Set the secrets
 
-Six values. They are encrypted at rest and injected as environment variables at
-run time — never baked into the image, never in the repo.
+They are encrypted at rest and injected as environment variables at run time —
+never baked into the image, never in the repo.
 
 Read each from your local `backend/.env`:
 
 ```bash
 fly secrets set APP_KEY="<from .env>"
 fly secrets set DB_PASSWORD="<the Frankfurt database password>"
-fly secrets set SUPABASE_JWT_SECRET="<from .env>"
 fly secrets set SUPABASE_SERVICE_ROLE_KEY="<from .env>"
 fly secrets set SUPABASE_ANON_KEY="<from .env>"
 fly secrets set GOOGLE_MAPS_API_KEY="<from .env>"
@@ -82,16 +81,16 @@ fly secrets set KAPITAL_PASSWORD="<from .env>"
 Everything else — host, port, username, URLs, the pricing constants — is
 non-secret and already in `fly.toml`.
 
-**What each of them is actually for**, because two of them fail in ways that are
-hard to read:
+**What each of them is actually for**, because several fail in ways that are hard
+to read:
 
 | Variable | Why it matters |
 |---|---|
-| `APP_KEY` | Encrypted cookies and signed URLs. Use the **existing** one — a new key logs everyone out. |
-| `SUPABASE_JWT_SECRET` | **Every request is verified with this.** Wrong or missing and the API rejects everyone, including you. |
-| `SUPABASE_URL` | The token middleware pins the issuer to `{SUPABASE_URL}/auth/v1`. A mismatch rejects every valid token. |
-| `APP_URL` | The admin console builds its API base from this, and the CSP names it. Get it wrong and the console loads but cannot call the API — which looks like a broken console, not a config error. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-side writes that bypass RLS. Never goes near the app. |
+| `APP_KEY` | Encrypted cookies and signed URLs. Use the **existing** one from `.env` — a fresh key invalidates every session already issued. |
+| `SUPABASE_JWT_SECRET` | **Usually leave empty — do not set it.** The project signs with ES256 and `AuthenticateSupabaseToken` verifies against the public JWKS at `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`. There is no secret to copy. Set it only for a project still issuing HS256, which the middleware still accepts. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Signs garment-photo viewing URLs, and nothing else. **Secret** — it bypasses RLS entirely. Server environment only, never an `EXPO_PUBLIC_*`. Leaving it unset costs the photos (null URLs) and breaks nothing else. |
+| `SUPABASE_URL` | The token middleware pins the issuer to `{SUPABASE_URL}/auth/v1`, and the JWKS is fetched from it. A mismatch rejects every valid token. |
+| `APP_URL` | The admin console builds its API base from this, and the CSP names it. Get it wrong and the console loads but cannot call the API — which reads as a broken console, not a config error. |
 | `SUPABASE_ANON_KEY` | Publishable; the admin console signs staff in with it. |
 | `GOOGLE_MAPS_API_KEY` | Geocoding only. |
 | `KAPITAL_PASSWORD` | Payment gateway. Currently the **test** credential — see below. |
@@ -101,12 +100,6 @@ hard to read:
 ```bash
 fly secrets list
 ```
-
-> `APP_KEY` is not decorative. Without it every encrypted cookie and signed URL
-> fails. Use the *existing* one from `.env` — generating a fresh one invalidates
-> every session already issued.
-
----
 
 ## 4. Deploy
 
@@ -248,6 +241,44 @@ auth lives in Supabase, and running them would create a second `users` table in
 `public` for PostgREST to expose.
 
 **Rotating `APP_KEY` logs everyone out.** Use the existing one.
+
+---
+
+## If you ever restore into a fresh Supabase project again
+
+Frankfurt was one, and this is what a `pg_dump --schema=public --no-privileges`
+does **not** carry. Each had to be replayed by hand during the move; all of it is
+already done on the live project, and this is here for the next time.
+
+Replay in this order, from the Supabase SQL editor:
+
+1. `hotfix_profiles_grant.sql`
+2. `hotfix_2_order_writes.sql`
+3. `hotfix_3_staff_accounts.sql`
+4. `storage_order_photos.sql` — the private bucket the garment photos live in
+5. `perf_indexes.sql`, **one statement at a time** — `CREATE INDEX CONCURRENTLY`
+   cannot run inside a transaction and the SQL editor wraps a script in one
+
+Then re-run `rls_audit.sql`: every table must report `rowsecurity = true` and
+query 5 must return zero rows. See `SECURITY.md` and
+`scripts/migration/README.md`.
+
+**A dump can carry policies without carrying the column grants**, and the grant
+is what stops a customer setting their own `role` — RLS chooses *rows*, and the
+attacker is editing their own. That exact hole reopened on the restore and was
+caught by replicating the grants out of the source's catalogues.
+
+**`rls.sql` and `rls_v2.sql` are superseded** by those hotfixes for every table
+that exists. Do not run them expecting them to be current — `rls.sql` names
+`profiles.avatar_url`, which does not exist, and a `GRANT` on a missing column
+aborts the whole transaction.
+
+**The migrations are already applied** — `public` went from 11 tables to 19 on
+2026-08-27, and the restore carried that. A restored project only needs them
+replayed if its dump predates them. `--pretend` under-reports either way: in
+pretend mode `select()` returns an empty array, so `Schema::hasTable()` reads
+false and any block guarded by it silently drops out of the preview. Read it as
+a lower bound, not a manifest.
 
 **`database/policies/rls.sql` must NOT be run.** An earlier version of this file
 told you to apply it. It is superseded: it names `profiles.avatar_url`, which

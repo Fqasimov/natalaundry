@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -82,6 +91,10 @@ export default function LoginScreen() {
       </LinearGradient>
 
       {/* ── Form area ── */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView
         contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
@@ -97,7 +110,10 @@ export default function LoginScreen() {
               placeholder={t("emailPlaceholder")}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
             />
@@ -114,6 +130,8 @@ export default function LoginScreen() {
               placeholder={t("passwordPlaceholder")}
               placeholderTextColor={colors.textSecondary}
               secureTextEntry
+              autoComplete="current-password"
+              textContentType="password"
               value={password}
               onChangeText={setPassword}
             />
@@ -140,6 +158,7 @@ export default function LoginScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -230,6 +249,7 @@ const styles = StyleSheet.create({
 
   signupRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,

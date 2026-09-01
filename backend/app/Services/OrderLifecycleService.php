@@ -114,6 +114,10 @@ class OrderLifecycleService
 
     /**
      * Move an order to `$to`, enforcing the state machine and actor rules.
+     *
+     * The two kinds of refusal are thrown as different exceptions: a move the
+     * state machine forbids is InvalidTransitionException (422), a move this
+     * caller may never make is ForbiddenActorException (403).
      */
     public function transition(Order $order, string $to, ?Profile $actor, string $actorRole, ?string $note = null): Order
     {
@@ -124,18 +128,18 @@ class OrderLifecycleService
         }
 
         if (! OrderLifecycle::actorMay($to, $actorRole)) {
-            throw new InvalidTransitionException("A {$actorRole} may not move an order to {$to}.");
+            throw new ForbiddenActorException("A {$actorRole} may not move an order to {$to}.");
         }
 
         // Courier-driven steps belong to the assigned courier only.
         if ($actorRole === 'courier' && $to !== OrderLifecycle::COURIER_ASSIGNED) {
             if ($actor === null || $order->courier_id !== $actor->id) {
-                throw new InvalidTransitionException('Only the assigned courier can update this order.');
+                throw new ForbiddenActorException('Only the assigned courier can update this order.');
             }
         }
 
         if ($actorRole === 'customer' && ($actor === null || $order->user_id !== $actor->id)) {
-            throw new InvalidTransitionException('Only the customer can cancel their own order.');
+            throw new ForbiddenActorException('Only the customer can cancel their own order.');
         }
 
         return DB::transaction(function () use ($order, $from, $to, $actor, $actorRole, $note) {
@@ -214,7 +218,7 @@ class OrderLifecycleService
     protected function assertRole(Profile $profile, string $role): void
     {
         if ($profile->role !== $role) {
-            throw new InvalidTransitionException("This action requires the {$role} role.");
+            throw new ForbiddenActorException("This action requires the {$role} role.");
         }
     }
 }

@@ -182,13 +182,17 @@ export default function GiftBoxScreen() {
                     <Ionicons name="gift" size={24} color={colors.textInverse} />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.boxTitle}>{t("giftBoxReady")}</Text>
+                    <Text style={s.boxTitle} numberOfLines={2}>
+                      {t("giftBoxReady")}
+                    </Text>
                     <Text style={s.boxSub}>
                       {t("giftBoxFromOrder", { no: box.order_no ?? "—" })} · {money(box.total)}
                     </Text>
                   </View>
                   <View style={s.openPill}>
-                    <Text style={s.openLabel}>{t("giftBoxOpen")}</Text>
+                    <Text style={s.openLabel} numberOfLines={1}>
+                      {t("giftBoxOpen")}
+                    </Text>
                   </View>
                 </Pressable>
               ))
@@ -225,7 +229,7 @@ export default function GiftBoxScreen() {
               })
             )}
 
-            <Text style={s.footnote}>{t("rewardExpiresIn", { days: REWARD_TTL_DAYS })}</Text>
+            <Text style={s.footnote}>{t("rewardTtlNote", { days: REWARD_TTL_DAYS })}</Text>
           </>
         )}
       </ScrollView>
@@ -304,7 +308,7 @@ const s = StyleSheet.create({
     lineHeight: 17,
     color: colors.danger,
   },
-  retry: { fontFamily: font.bold, fontSize: 12.5, color: colors.danger },
+  retry: { flexShrink: 0, fontFamily: font.bold, fontSize: 12.5, color: colors.danger },
 
   demoCard: {
     flexDirection: "row",
@@ -381,6 +385,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    flexShrink: 0,
   },
   openLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
 

@@ -73,7 +73,9 @@ export default function CustomerPortalScreen() {
           onPress={() => router.push("/(auth)/login")}
         >
           <Ionicons name="log-in-outline" size={20} color={colors.textInverse} style={styles.btnIcon} />
-          <Text style={styles.btnPrimaryLabel}>{t("hasAccount")}</Text>
+          <Text style={styles.btnPrimaryLabel} numberOfLines={2}>
+            {t("hasAccount")}
+          </Text>
         </Pressable>
 
         {/* Secondary: Create new account */}
@@ -82,7 +84,9 @@ export default function CustomerPortalScreen() {
           onPress={() => router.push("/(auth)/signup")}
         >
           <Ionicons name="person-add-outline" size={20} color={colors.textPrimary} style={styles.btnIcon} />
-          <Text style={styles.btnSecondaryLabel}>{t("createAccount")}</Text>
+          <Text style={styles.btnSecondaryLabel} numberOfLines={2}>
+            {t("createAccount")}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -163,9 +167,12 @@ const styles = StyleSheet.create({
     backgroundColor: brand.midnight,
     borderRadius: radius.pill,
     paddingVertical: 18,
+    paddingHorizontal: 20,
   },
-  btnIcon: { marginRight: 8 },
+  btnIcon: { marginRight: 8, flexShrink: 0 },
   btnPrimaryLabel: {
+    flexShrink: 1,
+    textAlign: "center",
     fontFamily: font.semibold,
     fontSize: 16,
     color: colors.textInverse,
@@ -180,8 +187,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: brand.border,
     paddingVertical: 18,
+    paddingHorizontal: 20,
   },
   btnSecondaryLabel: {
+    flexShrink: 1,
+    textAlign: "center",
     fontFamily: font.semibold,
     fontSize: 16,
     color: colors.textPrimary,

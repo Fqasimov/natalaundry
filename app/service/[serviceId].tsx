@@ -16,6 +16,7 @@ import {
 import { findService } from "@/lib/catalog";
 import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { useI18n } from "@/lib/language-context";
+import { pluralKey } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
 import { FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
 import { AddButton, BigButton, IconBubble, Pill, ScreenHeader, Stepper } from "@/components/ui";
@@ -41,7 +42,7 @@ import { AppIcon } from "@/components/AppIcon";
 export default function ServiceCatalogueScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { add, setQty, quantityOf, subtotal, count } = useCart();
 
   const activeId = (serviceId as ServiceKey) ?? "dry_cleaning";
@@ -110,9 +111,6 @@ export default function ServiceCatalogueScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.heroName}>{copy.label(activeId, theme.label)}</Text>
             <Text style={styles.heroTagline}>{copy.tagline(service)}</Text>
-            <Pressable style={[styles.heroButton, { backgroundColor: theme.fg }]}>
-              <Text style={styles.heroButtonLabel}>{t("more")}</Text>
-            </Pressable>
           </View>
           <View style={[styles.heroIcon, { backgroundColor: "rgba(255,255,255,0.45)" }]}>
             <AppIcon name={service.icon} size={34} color={theme.fg} />
@@ -120,12 +118,12 @@ export default function ServiceCatalogueScreen() {
         </View>
 
         <View style={styles.priceHeader}>
-          <View>
+          <View style={styles.priceHeaderText}>
             <Text style={styles.priceTitle}>{t("priceList")}</Text>
             <Text style={styles.priceSubtitle}>{t("pricePerItem")}</Text>
           </View>
-          <Text style={styles.priceCount}>
-            {items.length} {t("products")}
+          <Text style={styles.priceCount} numberOfLines={1}>
+            {items.length} {t(pluralKey(lang, "products", items.length))}
           </Text>
         </View>
 
@@ -170,12 +168,14 @@ export default function ServiceCatalogueScreen() {
       {count > 0 ? (
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
           <View style={styles.bottomCard}>
-            <View>
+            <View style={styles.bottomPrice}>
               <View style={styles.bottomTotalRow}>
                 <Text style={styles.bottomTotal}>{money(subtotal)}</Text>
                 <Pill label={String(count)} tone="brand" />
               </View>
-              <Text style={styles.bottomHint}>{t("estimatedPrice")}</Text>
+              <Text style={styles.bottomHint} numberOfLines={1}>
+                {t("estimatedPrice")}
+              </Text>
             </View>
             <BigButton
               label={t("schedulePickup")}
@@ -244,14 +244,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
   },
-  heroButton: {
-    alignSelf: "flex-start",
-    borderRadius: radius.sm,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    marginTop: 14,
-  },
-  heroButtonLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
   heroIcon: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
   priceHeader: {
     flexDirection: "row",
@@ -261,9 +253,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 10,
   },
+  priceHeaderText: { flex: 1, marginRight: 12 },
   priceTitle: { fontFamily: font.extrabold, fontSize: 18, letterSpacing: -0.3, color: colors.textPrimary },
   priceSubtitle: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted },
-  priceCount: { fontFamily: font.medium, fontSize: 12.5, color: brand.onSoftMuted },
+  priceCount: { flexShrink: 0, fontFamily: font.medium, fontSize: 12.5, color: brand.onSoftMuted },
   list: { marginHorizontal: 16, gap: 10 },
   itemRow: {
     flexDirection: "row",
@@ -277,7 +270,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   itemName: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
-  itemPrice: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
+  itemPrice: { flexShrink: 0, fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
   helpCard: {
     marginHorizontal: 16,
     marginTop: 6,
@@ -296,16 +289,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     paddingHorizontal: 18,
     paddingVertical: 12,
+    gap: 12,
     shadowColor: brand.midnight,
     shadowOpacity: 0.12,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
+  bottomPrice: { flexShrink: 1 },
   bottomTotalRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   bottomTotal: { fontFamily: font.bold, fontSize: 21, color: colors.textPrimary },
   bottomHint: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted, marginTop: 2 },
-  bottomButton: { paddingHorizontal: 20, paddingVertical: 14 },
+  bottomButton: { flexShrink: 0, maxWidth: "62%", paddingHorizontal: 20, paddingVertical: 14 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,69,84,0.55)",

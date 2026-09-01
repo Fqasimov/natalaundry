@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\CourierAssignment;
 use App\Models\Order;
+use App\Services\ForbiddenActorException;
 use App\Services\InvalidTransitionException;
 use App\Services\OrderAlreadyClaimedException;
 use App\Services\OrderLifecycleService;
@@ -109,8 +110,14 @@ class OrderLifecycleController extends Controller
 
     /**
      * Translate the domain exceptions into the status codes the app expects:
-     * 409 for a lost claim race (it has its own toast), 422 for a move the
-     * state machine or the caller's role forbids.
+     *
+     *   409  the claim race was lost — the app has its own toast for it
+     *   403  this caller may never do this, whatever the order's state
+     *   422  the state machine forbids it from here, but the caller could
+     *
+     * ForbiddenActorException extends InvalidTransitionException, so the catch
+     * blocks must stay in this order — the general one would otherwise swallow
+     * the specific one and every refusal would be a 422 again.
      */
     private function guard(callable $fn): JsonResponse
     {
@@ -118,6 +125,8 @@ class OrderLifecycleController extends Controller
             return response()->json(['data' => new OrderResource($fn())]);
         } catch (OrderAlreadyClaimedException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
+        } catch (ForbiddenActorException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         } catch (InvalidTransitionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

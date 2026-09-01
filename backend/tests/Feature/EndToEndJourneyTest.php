@@ -12,6 +12,7 @@ use App\Models\UserReward;
 use App\Support\OrderLifecycle;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Tests\Support\IssuesSupabaseTokens;
 use Tests\TestCase;
 
 /**
@@ -34,7 +35,7 @@ use Tests\TestCase;
  */
 class EndToEndJourneyTest extends TestCase
 {
-    private const SECRET = 'test-jwt-secret';
+    use IssuesSupabaseTokens;
 
     private Profile $customer;
     private Profile $courier;
@@ -44,7 +45,7 @@ class EndToEndJourneyTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('services.supabase.jwt_secret', self::SECRET);
+        config()->set('services.supabase.jwt_secret', $this->supabaseSecret());
         // Empty URL keeps the middleware on the HS256 path; the ES256/JWKS
         // route has its own test and needs a live key server.
         config()->set('services.supabase.url', '');
@@ -116,14 +117,14 @@ class EndToEndJourneyTest extends TestCase
         // ── 4. The customer cannot dispatch their own order ──────────────
         // Role gates live on the server, not in whichever screen called it.
         //
-        // 422, not 403: OrderLifecycleController::guard() folds a forbidden
-        // role into InvalidTransitionException alongside a forbidden state
-        // change, and maps both to 422. Documented behaviour rather than an
-        // accident — worth knowing that a client cannot tell "you may never
-        // do this" from "not from this state" by status code alone.
+        // 403, not 422. A customer may never broadcast, from any state, so
+        // the screen should hide the control rather than retry — which is
+        // exactly what it cannot work out if this arrives as a 422 next to
+        // "not from this state". ForbiddenActorException carries the
+        // difference; see OrderLifecycleController::guard().
         $this->postJson("/api/orders/{$orderId}/broadcast", [
             'courier_ids' => [$this->courier->id],
-        ], $this->as($this->customer))->assertStatus(422);
+        ], $this->as($this->customer))->assertStatus(403);
 
         // ── 5. Admin broadcasts to the courier pool ──────────────────────
         $this->postJson("/api/orders/{$orderId}/broadcast", [
@@ -191,10 +192,11 @@ class EndToEndJourneyTest extends TestCase
             'to' => OrderLifecycle::DELIVERED,
         ], $this->as($this->courier))->assertStatus(422);
 
-        // Only an admin marks the load finished. Same 422-for-role note as above.
+        // Only an admin marks the load finished — a role refusal, so 403,
+        // in contrast to the skipped step just above which is 422.
         $this->postJson("/api/orders/{$orderId}/lifecycle/transition", [
             'to' => OrderLifecycle::PROCESSING_FINISHED,
-        ], $this->as($this->courier))->assertStatus(422);
+        ], $this->as($this->courier))->assertStatus(403);
 
         $this->postJson("/api/orders/{$orderId}/lifecycle/transition", [
             'to' => OrderLifecycle::PROCESSING_FINISHED,
@@ -413,21 +415,6 @@ class EndToEndJourneyTest extends TestCase
     }
 
     /** A signed access token for this profile, as Supabase would mint. */
-    private function as(Profile $profile): array
-    {
-        $enc = fn (string $raw) => rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
-
-        $header = $enc(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
-        $payload = $enc(json_encode([
-            'sub' => $profile->id,
-            'role' => 'authenticated',
-            'aud' => 'authenticated',
-            'exp' => time() + 3600,
-        ]));
-        $sig = $enc(hash_hmac('sha256', "{$header}.{$payload}", self::SECRET, true));
-
-        return ['Authorization' => "Bearer {$header}.{$payload}.{$sig}"];
-    }
 
     /** A minimal prize pool — the draw needs something to draw from. */
     private function seedRewards(): void

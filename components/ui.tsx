@@ -49,7 +49,11 @@ export function ScreenHeader({
         {title}
       </Text>
       <Pressable hitSlop={12} onPress={onRightPress} style={s.headerSideRight}>
-        {rightLabel ? <Text style={s.headerRightLabel}>{rightLabel}</Text> : null}
+        {rightLabel ? (
+          <Text style={s.headerRightLabel} numberOfLines={1}>
+            {rightLabel}
+          </Text>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -148,7 +152,9 @@ export function BigButton({
         <ActivityIndicator color={colors.textInverse} />
       ) : (
         <View style={s.bigButtonInner}>
-          <Text style={s.bigButtonLabel}>{label}</Text>
+          <Text style={s.bigButtonLabel} numberOfLines={2}>
+            {label}
+          </Text>
           {iconRight ? (
             <Ionicons name={iconRight} size={18} color={colors.textInverse} />
           ) : null}
@@ -175,7 +181,9 @@ export function Pill({
   }[tone];
   return (
     <View style={[s.pill, { backgroundColor: map.bg }]}>
-      <Text style={[s.pillLabel, { color: map.fg }]}>{label}</Text>
+      <Text style={[s.pillLabel, { color: map.fg }]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -221,8 +229,20 @@ const s = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  headerSide: { width: 56, height: 44, justifyContent: "center" },
-  headerSideRight: { width: 56, height: 44, alignItems: "flex-end", justifyContent: "center" },
+  // Both sides reserve 56pt so the title sits centred, but the right side is
+  // allowed to grow past it: it was a hard `width`, and every right-hand label
+  // longer than "Oxundu" — which is all of them in Russian and English — was
+  // being drawn outside its own box.
+  headerSide: { minWidth: 56, height: 44, justifyContent: "center" },
+  headerSideRight: {
+    minWidth: 56,
+    maxWidth: "34%",
+    height: 44,
+    paddingLeft: 8,
+    paddingRight: 4,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
   headerTitle: {
     flex: 1,
     textAlign: "center",
@@ -267,11 +287,21 @@ const s = StyleSheet.create({
   bigButton: {
     borderRadius: radius.pill,
     paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   bigButtonInner: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bigButtonLabel: { fontFamily: font.semibold, fontSize: 16, color: colors.textInverse },
+  // flexShrink + a two-line cap: the label sits in a row beside an optional
+  // icon, so without it a long label ("Запланировать забор") pushed the icon
+  // out of the pill instead of wrapping inside it.
+  bigButtonLabel: {
+    flexShrink: 1,
+    textAlign: "center",
+    fontFamily: font.semibold,
+    fontSize: 16,
+    color: colors.textInverse,
+  },
   disabled: { opacity: 0.45 },
   // Pills sit in flex rows next to headings. flexShrink:0 keeps the pill at
   // its label's size so the heading is what wraps, rather than the pill being

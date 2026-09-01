@@ -349,7 +349,7 @@ const s = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
     paddingHorizontal: 18,
     paddingVertical: 17,
   },
@@ -368,7 +368,7 @@ const s = StyleSheet.create({
     flexShrink: 1,
     maxWidth: "50%",
     fontFamily: font.medium,
-    fontSize: 15,
+    fontSize: 14,
     color: ui.inkSoft,
     textAlign: "right",
   },

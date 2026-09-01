@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -103,6 +112,10 @@ export default function SignupScreen() {
       </LinearGradient>
 
       {/* ── Form area ── */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView
         contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
@@ -118,6 +131,8 @@ export default function SignupScreen() {
               placeholder={t("signupNamePlaceholder")}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
               value={name}
               onChangeText={setName}
             />
@@ -134,6 +149,8 @@ export default function SignupScreen() {
               placeholder={t("signupPhonePlaceholder")}
               placeholderTextColor={colors.textSecondary}
               keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
               value={phone}
               onChangeText={setPhone}
             />
@@ -150,7 +167,10 @@ export default function SignupScreen() {
               placeholder={t("emailPlaceholder")}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
             />
@@ -167,6 +187,8 @@ export default function SignupScreen() {
               placeholder={t("passwordPlaceholder")}
               placeholderTextColor={colors.textSecondary}
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
               value={password}
               onChangeText={setPassword}
             />
@@ -206,6 +228,7 @@ export default function SignupScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -290,7 +313,9 @@ const styles = StyleSheet.create({
   confirmBox: {
     alignItems: "center",
     gap: 8,
-    backgroundColor: brand.aliceBlue,
+    backgroundColor: brand.moonstoneSoft,
+    borderWidth: 1,
+    borderColor: brand.borderStrong,
     borderRadius: radius.lg,
     padding: 20,
     marginBottom: 4,
@@ -313,6 +338,7 @@ const styles = StyleSheet.create({
 
   loginRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,

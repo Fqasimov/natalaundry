@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
+import { OrderPhotoStrip } from "@/components/OrderPhotoStrip";
 import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { isToplu, settleToplu } from "@/lib/toplu";
@@ -29,6 +30,23 @@ import {
   recordTopluCount,
 } from "@/lib/orders";
 import type { Order, OrderItem } from "@/types/database";
+
+function Row({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <View style={s.row}>
+      <Text style={[s.rowLabel, strong && s.rowStrong]}>{label}</Text>
+      <Text style={[s.rowValue, strong && s.rowStrong]}>{value}</Text>
+    </View>
+  );
+}
 
 /**
  * A single order, from whichever side the reader is on: the customer who
@@ -99,13 +117,6 @@ export default function OrderDetailScreen() {
   const state = order.lifecycle_state as LifecycleState | null;
   const paid = order.payment_status === "paid";
 
-  const Row = ({ label, value, strong }: { label: string; value: string; strong?: boolean }) => (
-    <View style={s.row}>
-      <Text style={[s.rowLabel, strong && s.rowStrong]}>{label}</Text>
-      <Text style={[s.rowValue, strong && s.rowStrong]}>{value}</Text>
-    </View>
-  );
-
   return (
     <View style={[s.root, { paddingTop: insets.top + 4 }]}>
       <ScreenHeader title={t("orderNo", { no: order.order_no ?? "—" })} backFallback="/(tabs)" />
@@ -113,7 +124,7 @@ export default function OrderDetailScreen() {
       <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}>
         <View style={s.statusCard}>
           <View style={s.statusTop}>
-            <Text style={s.statusLabel}>
+            <Text style={s.statusLabel} numberOfLines={2}>
               {state ? t(LIFECYCLE_LABEL[state] ?? "stateOrderPlaced") : ""}
             </Text>
             <StatusBadge status={order.status} />
@@ -223,6 +234,11 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         </View>
+
+        {/* The garment photos, for whichever side is reading. Renders nothing
+            when the order has none, so bulk orders — which have no photo gate
+            — are unaffected. */}
+        <OrderPhotoStrip orderId={order.id} />
 
         {error ? <Text style={s.error}>{error}</Text> : null}
 
@@ -336,7 +352,7 @@ const s = StyleSheet.create({
   },
   statusTop: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusLabel: { flex: 1, fontFamily: font.bold, fontSize: 17, color: colors.textPrimary },
-  trackLink: { flexDirection: "row", alignItems: "center", gap: 7 },
+  trackLink: { flexDirection: "row", alignItems: "center", flexShrink: 0, gap: 7 },
   trackLabel: { fontFamily: font.semibold, fontSize: 14, color: brand.moonstoneInk },
 
   card: {
@@ -353,13 +369,13 @@ const s = StyleSheet.create({
 
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   rowLabel: { ...type.body, flex: 1, color: brand.onSoftMuted },
-  rowValue: { ...type.body, color: colors.textPrimary },
+  rowValue: { ...type.body, flexShrink: 0, color: colors.textPrimary },
   rowStrong: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
 
   awaitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   awaitingLabel: { ...type.caption, flex: 1, color: brand.onSoftMuted },
   paymentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  paymentLabel: { ...type.caption, color: brand.onSoftMuted },
+  paymentLabel: { ...type.caption, flex: 1, color: brand.onSoftMuted },
 
   primaryButton: {
     backgroundColor: brand.moonstoneInk,

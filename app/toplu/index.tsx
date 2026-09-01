@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { brand, colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
+import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { useAuth } from "@/lib/auth-context";
 import { createTopluOrder } from "@/lib/orders";
 import { TOPLU_DEPOSIT, TOPLU_PICKUP_WINDOW_HOURS } from "@/lib/toplu";
@@ -39,6 +40,7 @@ export default function TopluScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const { session } = useAuth();
+  const copy = useCatalogCopy();
   const theme = serviceTheme.toplu;
 
   const windowOptions = useMemo(() => buildWindow(t("today"), t("tomorrow")), [t]);
@@ -102,7 +104,7 @@ export default function TopluScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <View style={[styles.hero, { backgroundColor: theme.tint }]}>
           <IconBubble name={theme.icon} tint="rgba(255,255,255,0.6)" fg={theme.fg} size={62} />
-          <Text style={styles.heroTitle}>{theme.label}</Text>
+          <Text style={styles.heroTitle}>{copy.label("toplu", theme.label)}</Text>
           <Text style={styles.heroBody}>{t("topluIntro")}</Text>
         </View>
 
@@ -130,7 +132,9 @@ export default function TopluScreen() {
         <Text style={styles.section}>{t("topluPickupWindow")}</Text>
         <Pressable style={styles.selectRow} onPress={() => setPickerOpen(true)}>
           <Ionicons name="time-outline" size={18} color={brand.onSoftMuted} />
-          <Text style={styles.selectValue}>{pickup || "—"}</Text>
+          <Text style={styles.selectValue} numberOfLines={1}>
+            {pickup || "—"}
+          </Text>
           <Ionicons name="chevron-down" size={18} color={brand.onSoftMuted} />
         </Pressable>
 
@@ -164,7 +168,9 @@ export default function TopluScreen() {
               <Text style={styles.depositLabel}>{t("topluDeposit")}</Text>
               <Text style={styles.depositNote}>{t("topluDepositNote")}</Text>
             </View>
-            <Text style={[styles.depositValue, { color: theme.fg }]}>{money(TOPLU_DEPOSIT)}</Text>
+            <Text style={[styles.depositValue, { color: theme.fg }]} numberOfLines={1}>
+              {money(TOPLU_DEPOSIT)}
+            </Text>
           </View>
         </View>
 
@@ -292,10 +298,10 @@ const styles = StyleSheet.create({
     padding: 18,
     marginTop: 24,
   },
-  depositRow: { flexDirection: "row", alignItems: "center" },
+  depositRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   depositLabel: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
   depositNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
-  depositValue: { fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4 },
+  depositValue: { flexShrink: 0, fontFamily: font.extrabold, fontSize: 24, letterSpacing: -0.4 },
   error: { fontFamily: font.regular, fontSize: 13, color: colors.danger, marginTop: 14 },
   footer: {
     paddingHorizontal: 16,

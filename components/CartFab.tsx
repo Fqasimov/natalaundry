@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "@/lib/state/cart";
+import { useAuth } from "@/lib/auth-context";
 import { brand, colors, font } from "@/theme/tokens";
 
 /**
@@ -19,15 +20,23 @@ import { brand, colors, font } from "@/theme/tokens";
  * with them.
  */
 
-/** The home tab. expo-router strips the "(tabs)" group, so index is "/". */
+/**
+ * The home tab. expo-router strips the "(tabs)" group, so index is "/".
+ *
+ * The signed-out welcome screen (app/index.tsx) is *also* "/", so the path
+ * alone cannot tell the two apart and the basket button was appearing over
+ * the welcome screen, offering checkout to someone with no account. The
+ * session is what separates them: welcome only renders when there is none.
+ */
 const HOME = "/";
 
 export function CartFab() {
   const insets = useSafeAreaInsets();
   const { count } = useCart();
+  const { session } = useAuth();
   const pathname = usePathname();
 
-  if (pathname !== HOME) return null;
+  if (!session || pathname !== HOME) return null;
 
   return (
     <Pressable
