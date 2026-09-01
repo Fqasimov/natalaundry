@@ -201,8 +201,20 @@ a real `promo_codes` row.
 
 Laravel's three default stub migrations (`create_users_table`,
 `create_cache_table`, `create_jobs_table`) read `Pending` and must **stay**
-that way — auth lives in Supabase, and running them would put a second `users`
+that way — auth lives in Supabase, and running them puts a second `users`
 table into `public` for PostgREST to expose.
+
+**Never run bare `php artisan migrate`. Always pass `--path`.** This was
+ignored on 2026-09-01 and the three stubs ran, creating eight unwanted tables
+in `public` — `users`, `sessions`, `password_reset_tokens`, `cache`,
+`cache_locks`, `jobs`, `job_batches`, `failed_jobs` — every one with RLS off.
+Repaired by `scripts/migration/repair-stub-migrations.php`. Knowing the rule
+was not enough; the guard has to be in the command.
+
+**A new table arrives with RLS off.** Supabase does not enable it, so
+`wallet_topups` came up world-readable through PostgREST on creation. After
+any migration that adds a table, enable RLS, add its policy, and revoke client
+writes before doing anything else.
 
 Two things worth carrying forward:
 
