@@ -15,9 +15,9 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.service_id' => ['required', 'string'],
-            'items.*.item_id' => ['required', 'string'],
+            'items' => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.service_id' => ['required', 'string', 'max:64'],
+            'items.*.item_id' => ['required', 'string', 'max:64'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
 
             'delivery_tier' => ['required', Rule::in(config('nata.delivery.tiers'))],
@@ -33,7 +33,7 @@ class StoreOrderRequest extends FormRequest
             // Photos are optional. `nullable` rather than `required` so an
             // order with none is a valid request, not a 422; the minimum
             // still tracks config in case the gate is ever reinstated.
-            'item_photos' => ['nullable', 'array', 'min:'.config('nata.required_photos')],
+            'item_photos' => ['nullable', 'array', 'min:'.config('nata.required_photos'), 'max:20'],
             'item_photos.*' => ['string', 'max:2048'],
 
             'promo_code' => ['nullable', 'string', 'max:40'],

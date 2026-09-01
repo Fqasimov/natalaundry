@@ -436,6 +436,23 @@ const az = {
   howStep3Title: "Təmiz paltarlarınızı alın",
   howStep3Body: "Paltarlarınız təmiz və ütülü şəkildə çatdırılacaq.",
   unreadCount: "{count} yeni bildiriş",
+
+  notificationsUntitled: "Sifarişinizlə bağlı yenilik",
+
+  // Nata Balance
+  walletTopUp: "Balansı artır",
+  walletTopUpTitle: "Nata balansını artır",
+  walletTopUpSubtitle: "Məbləği seçin və ya özünüz yazın.",
+  walletTopUpAmount: "Məbləğ",
+  walletTopUpAction: "{amount} artır",
+  walletTopUpBounds: "Ən az {min}, ən çox {max}",
+  walletTopUpPending: "Ödəniş təsdiqlənir…",
+  walletTopUpDone: "Balansınız artırıldı!",
+  walletTopUpFailed: "Balans artırıla bilmədi. Yenidən cəhd edin.",
+  walletPayWith: "Nata balansı",
+  walletPayWithNote: "Balansınız: {balance}",
+  walletInsufficient: "Balans kifayət etmir",
+  walletCancel: "Ləğv et",
 } as const;
 
 export type StringKey = keyof typeof az;
@@ -833,6 +850,23 @@ const ru: Record<StringKey, string> = {
   howStep3Title: "Получите чистые вещи",
   howStep3Body: "Вещи вернутся чистыми и выглаженными.",
   unreadCount: "{count} новых уведомлений",
+
+  notificationsUntitled: "Обновление по вашему заказу",
+
+  // Nata Balance
+  walletTopUp: "Пополнить",
+  walletTopUpTitle: "Пополнить Nata баланс",
+  walletTopUpSubtitle: "Выберите сумму или введите свою.",
+  walletTopUpAmount: "Сумма",
+  walletTopUpAction: "Пополнить на {amount}",
+  walletTopUpBounds: "От {min} до {max}",
+  walletTopUpPending: "Подтверждаем платёж…",
+  walletTopUpDone: "Баланс пополнен!",
+  walletTopUpFailed: "Не удалось пополнить баланс. Попробуйте ещё раз.",
+  walletPayWith: "Nata баланс",
+  walletPayWithNote: "Ваш баланс: {balance}",
+  walletInsufficient: "Недостаточно средств",
+  walletCancel: "Отмена",
 };
 
 const en: Record<StringKey, string> = {
@@ -1228,6 +1262,23 @@ const en: Record<StringKey, string> = {
   howStep3Title: "Get your clean clothes",
   howStep3Body: "Your clothes come back clean and pressed.",
   unreadCount: "{count} new notifications",
+
+  notificationsUntitled: "An update on your order",
+
+  // Nata Balance
+  walletTopUp: "Top up",
+  walletTopUpTitle: "Top up Nata Balance",
+  walletTopUpSubtitle: "Pick an amount or enter your own.",
+  walletTopUpAmount: "Amount",
+  walletTopUpAction: "Top up {amount}",
+  walletTopUpBounds: "Between {min} and {max}",
+  walletTopUpPending: "Confirming your payment…",
+  walletTopUpDone: "Your balance has been topped up!",
+  walletTopUpFailed: "The top-up could not be completed. Please try again.",
+  walletPayWith: "Nata Balance",
+  walletPayWithNote: "Your balance: {balance}",
+  walletInsufficient: "Not enough balance",
+  walletCancel: "Cancel",
 };
 
 export const dictionaries: Record<Language, Record<StringKey, string>> = {

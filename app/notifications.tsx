@@ -18,8 +18,11 @@ import { useI18n } from "@/lib/language-context";
 import {
   fetchNotifications,
   markAllRead,
+  readBody,
+  readPayload,
   type AppNotification,
 } from "@/lib/notifications";
+import { LIFECYCLE_LABEL, type LifecycleState } from "@/lib/lifecycle";
 
 /**
  * The notification inbox.
@@ -75,10 +78,40 @@ export default function NotificationsScreen() {
 
   const unread = (items ?? []).filter((n) => !n.read).length;
 
+  /**
+   * What this notification says, from whichever source actually has it.
+   *
+   * Every step here exists because the one above it can be missing. The live
+   * `notifications` table predates this rebuild and only `id`/`user_id` were
+   * ever confirmed (SCHEMA_NOTES.md), so a row can arrive with no `payload`
+   * and no `body` at all — which is exactly how the inbox ended up listing
+   * rows with no text in them. The last two steps mean a row always says
+   * *something*, even when the message column is one this app has never
+   * heard of.
+   */
   const label = (n: AppNotification): string => {
-    const key = n.payload?.key;
-    if (key) return t(key as never, n.payload?.vars);
-    return n.body ?? "";
+    const payload = readPayload(n);
+
+    // 1. The i18n key, so the message renders in the reader's language.
+    const key = payload?.key;
+    if (key) {
+      const translated = t(key as never, payload?.vars);
+      // translate() echoes the key back when it does not know it; that is not
+      // something to show a customer.
+      if (translated && translated !== key) return translated;
+    }
+
+    // 2. Whatever prose the row carries, under any of the names it might use.
+    const body = readBody(n);
+    if (body) return body;
+
+    // 3. The lifecycle state it refers to, which is itself translated copy.
+    const state = payload?.lifecycle_state as LifecycleState | undefined;
+    if (state && LIFECYCLE_LABEL[state]) return t(LIFECYCLE_LABEL[state]);
+
+    // 4. The row's own title, then a generic line. Never an empty string.
+    if (n.title && n.title.trim() !== "") return n.title;
+    return t("notificationsUntitled");
   };
 
   return (
@@ -109,7 +142,7 @@ export default function NotificationsScreen() {
             </View>
           }
           renderItem={({ item }) => {
-            const orderId = item.payload?.order_id;
+            const orderId = readPayload(item)?.order_id;
             return (
               <Pressable
                 style={[s.card, !item.read && s.cardUnread]}

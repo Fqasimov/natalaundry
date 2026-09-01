@@ -15,7 +15,15 @@ import { apiPost, apiRequest } from "@/lib/api";
  */
 
 /** Mirrors App\Support\PaymentMethod. */
-export const PAYMENT_METHODS = ["card", "cash", "apple_pay", "google_pay"] as const;
+export const PAYMENT_METHODS = [
+  "card",
+  // Nata Balance. Settles entirely in-house — no gateway, no redirect — by
+  // debiting the customer's own wallet inside one locked transaction.
+  "balance",
+  "cash",
+  "apple_pay",
+  "google_pay",
+] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /** Mirrors the values PaymentService writes to orders.payment_status. */
@@ -110,7 +118,9 @@ export async function payForOrder(
     language,
   });
 
-  if (method === "cash" || !data.redirect_url) {
+  // Cash and Nata Balance never leave the app: cash is collected later, and
+  // the balance debit has already happened by the time this returns.
+  if (method === "cash" || method === "balance" || !data.redirect_url) {
     return fetchPaymentState(orderId);
   }
 

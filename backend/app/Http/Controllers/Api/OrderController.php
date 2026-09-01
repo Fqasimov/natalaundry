@@ -91,9 +91,9 @@ class OrderController extends Controller
     public function quote(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.service_id' => ['required', 'string'],
-            'items.*.item_id' => ['required', 'string'],
+            'items' => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.service_id' => ['required', 'string', 'max:64'],
+            'items.*.item_id' => ['required', 'string', 'max:64'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
             'delivery_tier' => ['required', Rule::in(config('nata.delivery.tiers'))],
             'is_outside_city' => ['boolean'],

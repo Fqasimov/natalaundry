@@ -32,6 +32,7 @@ import {
   type PaymentMethod,
 } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/PaymentMethodPicker";
+import { fetchWallet } from "@/lib/wallet";
 import { removeOrderPhoto, uploadOrderPhoto } from "@/lib/uploads";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
 
@@ -53,6 +54,9 @@ export default function SummaryScreen() {
   const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
   const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
+  // Read from the API rather than the profile row the app already has: the
+  // balance is money, and a stale copy would offer a method that then fails.
+  const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,12 +68,26 @@ export default function SummaryScreen() {
         const wallet = walletForPlatform();
         setPayMethods(
           options.methods.filter(
-            (m) => m === "card" || m === "cash" || m === wallet,
+            (m) => m === "card" || m === "cash" || m === "balance" || m === wallet,
           ),
         );
       })
       // Falling back to card + cash is safe: both work without any
       // terminal-specific configuration.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchWallet()
+      .then((w) => {
+        if (! cancelled) setBalance(w.balance);
+      })
+      // A wallet the app cannot read leaves the balance row showing "…" and
+      // selectable; the server still refuses a debit it cannot cover.
       .catch(() => undefined);
     return () => {
       cancelled = true;
@@ -412,6 +430,8 @@ export default function SummaryScreen() {
           value={payMethod}
           onChange={setPayMethod}
           disabled={submitting}
+          balance={balance}
+          amountDue={breakdown.total}
         />
 
         <View style={styles.totalsCard}>

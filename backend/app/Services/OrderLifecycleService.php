@@ -121,28 +121,40 @@ class OrderLifecycleService
      */
     public function transition(Order $order, string $to, ?Profile $actor, string $actorRole, ?string $note = null): Order
     {
-        $from = $order->lifecycle_state ?? OrderLifecycle::ORDER_PLACED;
+        return DB::transaction(function () use ($order, $to, $actor, $actorRole, $note) {
+            // Locked and re-read before anything is validated. The checks used
+            // to run against the instance handed in, which was fetched before
+            // the transaction opened — so two transitions submitted together
+            // both validated against the same stale `from` state and both
+            // applied, moving the order two steps and writing two audit rows
+            // for a single real change.
+            //
+            // Re-locking a row this transaction already holds (claim() calls
+            // in already holding it) is a no-op, so nesting is safe.
+            /** @var Order $locked */
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
 
-        if (! OrderLifecycle::canTransition($from, $to)) {
-            throw new InvalidTransitionException("Cannot move an order from {$from} to {$to}.");
-        }
+            $from = $locked->lifecycle_state ?? OrderLifecycle::ORDER_PLACED;
 
-        if (! OrderLifecycle::actorMay($to, $actorRole)) {
-            throw new ForbiddenActorException("A {$actorRole} may not move an order to {$to}.");
-        }
-
-        // Courier-driven steps belong to the assigned courier only.
-        if ($actorRole === 'courier' && $to !== OrderLifecycle::COURIER_ASSIGNED) {
-            if ($actor === null || $order->courier_id !== $actor->id) {
-                throw new ForbiddenActorException('Only the assigned courier can update this order.');
+            if (! OrderLifecycle::canTransition($from, $to)) {
+                throw new InvalidTransitionException("Cannot move an order from {$from} to {$to}.");
             }
-        }
 
-        if ($actorRole === 'customer' && ($actor === null || $order->user_id !== $actor->id)) {
-            throw new ForbiddenActorException('Only the customer can cancel their own order.');
-        }
+            if (! OrderLifecycle::actorMay($to, $actorRole)) {
+                throw new ForbiddenActorException("A {$actorRole} may not move an order to {$to}.");
+            }
 
-        return DB::transaction(function () use ($order, $from, $to, $actor, $actorRole, $note) {
+            // Courier-driven steps belong to the assigned courier only.
+            if ($actorRole === 'courier' && $to !== OrderLifecycle::COURIER_ASSIGNED) {
+                if ($actor === null || $locked->courier_id !== $actor->id) {
+                    throw new ForbiddenActorException('Only the assigned courier can update this order.');
+                }
+            }
+
+            if ($actorRole === 'customer' && ($actor === null || $locked->user_id !== $actor->id)) {
+                throw new ForbiddenActorException('Only the customer can cancel their own order.');
+            }
+
             $now = Carbon::now();
 
             $changes = [
@@ -157,10 +169,10 @@ class OrderLifecycleService
                 $changes['processing_finished_at'] = $now;
             }
 
-            $order->forceFill($changes)->save();
+            $locked->forceFill($changes)->save();
 
             OrderStatusLog::query()->create([
-                'order_id' => $order->id,
+                'order_id' => $locked->id,
                 'from_state' => $from,
                 'to_state' => $to,
                 'actor_id' => $actor?->id,
@@ -169,9 +181,12 @@ class OrderLifecycleService
                 'created_at' => $now,
             ]);
 
-            $this->notifyCustomer($order, $to, $actor);
+            $this->notifyCustomer($locked, $to, $actor);
 
-            return $order->refresh();
+            // The caller holds the instance it passed in; keep it in step.
+            $order->setRawAttributes($locked->getAttributes(), true);
+
+            return $locked->refresh();
         });
     }
 

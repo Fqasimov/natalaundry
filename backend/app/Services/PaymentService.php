@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Support\PaymentMethod;
+use App\Services\WalletService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -30,6 +31,7 @@ class PaymentService
 {
     public function __construct(
         private readonly KapitalGateway $gateway,
+        private readonly WalletService $wallet = new WalletService,
     ) {}
 
     /**
@@ -62,9 +64,70 @@ class PaymentService
             throw new RuntimeException('This order has nothing to pay.');
         }
 
-        return $method === PaymentMethod::CASH
-            ? $this->startCash($order, $amount)
-            : $this->startGateway($order, $method, $amount, $language);
+        return match (true) {
+            $method === PaymentMethod::CASH => $this->startCash($order, $amount),
+            PaymentMethod::isBalance($method) => $this->startBalance($order, $amount),
+            default => $this->startGateway($order, $method, $amount, $language),
+        };
+    }
+
+    /**
+     * Nata Balance. Settles immediately and entirely in-house.
+     *
+     * The whole thing is one transaction, and WalletService::record() takes a
+     * `SELECT ... FOR UPDATE` on the profile before it reads the balance — so
+     * two checkouts fired at the same moment serialise on that row rather
+     * than both reading the same balance and both spending it. A debit that
+     * would take the balance negative throws there, which rolls this back and
+     * leaves the order unpaid rather than half-paid.
+     *
+     * Note what is deliberately absent: any balance figure from the request.
+     * The amount is the order's own total and the funds are read from the
+     * locked profile row, so a client cannot name either side of the sum.
+     */
+    private function startBalance(Order $order, float $amount): array
+    {
+        $payment = DB::transaction(function () use ($order, $amount) {
+            // Re-read under lock. Without it, two requests could both pass the
+            // 'already paid' check in start() and both debit the wallet.
+            /** @var Order $locked */
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($locked->payment_status === 'paid') {
+                throw new RuntimeException('This order has already been paid.');
+            }
+
+            $this->wallet->debit(
+                $locked->user_id,
+                $amount,
+                'order_payment',
+                'Sifariş '.($locked->order_no ?? substr((string) $locked->id, 0, 8)),
+                $locked->id,
+            );
+
+            $locked->forceFill([
+                'payment_method' => PaymentMethod::BALANCE,
+                'payment_status' => 'paid',
+            ])->save();
+
+            $order->setRawAttributes($locked->getAttributes(), true);
+
+            return Payment::create([
+                'order_id' => $locked->id,
+                'amount' => $amount,
+                'status' => 'paid',
+                'payment_method' => PaymentMethod::BALANCE,
+                'transaction_ref' => null,
+                'created_at' => now(),
+            ]);
+        });
+
+        return [
+            'method' => PaymentMethod::BALANCE,
+            'redirect_url' => null,
+            'payment_id' => (string) $payment->id,
+            'bank_order_id' => null,
+        ];
     }
 
     /**

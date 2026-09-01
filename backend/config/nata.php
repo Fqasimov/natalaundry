@@ -54,6 +54,21 @@ return [
         'pickup_window_hours' => env('NATA_TOPLU_PICKUP_WINDOW_HOURS', 24),
     ],
 
+    /*
+     * Nata Balance — the in-app wallet.
+     *
+     * Top-ups run through the same Kapital hosted page as an order payment.
+     * The bounds are server-side because they are the only thing standing
+     * between the gateway and an arbitrary amount: the client proposes a
+     * figure, this decides whether it is allowed.
+     */
+    'wallet' => [
+        'min_topup' => env('NATA_WALLET_MIN_TOPUP', 5),
+        'max_topup' => env('NATA_WALLET_MAX_TOPUP', 500),
+        // What the top-up sheet offers as one-tap amounts.
+        'topup_presets' => [10, 20, 50, 100],
+    ],
+
     'rewards' => [
         'ttl_days' => 7,
         // Daily bronze box: one free open per calendar day.

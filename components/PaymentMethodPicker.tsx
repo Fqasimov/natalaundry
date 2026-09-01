@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { AppIcon, type IconName } from "@/components/AppIcon";
 import { useI18n } from "@/lib/language-context";
 import type { StringKey } from "@/lib/i18n";
-import { brand, colors, font, radius } from "@/theme/tokens";
+import { brand, colors, font, money, radius } from "@/theme/tokens";
 import type { PaymentMethod } from "@/lib/payments";
 
 /**
@@ -20,6 +20,7 @@ type Presentation = {
 };
 
 const PRESENTATION: Record<PaymentMethod, Presentation> = {
+  balance: { label: "walletPayWith", note: null, icon: "mci:wallet-outline" },
   card: { label: "payMethodCard", note: "payMethodCardNote", icon: "mci:credit-card-outline" },
   cash: { label: "payMethodCash", note: "payMethodCashNote", icon: "mci:cash" },
   apple_pay: { label: "payMethodApple", note: null, icon: "ion:logo-apple" },
@@ -31,11 +32,17 @@ export function PaymentMethodPicker({
   value,
   onChange,
   disabled = false,
+  balance = null,
+  amountDue = 0,
 }: {
   methods: PaymentMethod[];
   value: PaymentMethod | null;
   onChange: (method: PaymentMethod) => void;
   disabled?: boolean;
+  /** Nata Balance, from GET /wallet. Null while it is still loading. */
+  balance?: number | null;
+  /** What this order costs, so the balance row can say whether it covers it. */
+  amountDue?: number;
 }) {
   const { t } = useI18n();
 
@@ -46,18 +53,26 @@ export function PaymentMethodPicker({
         if (!look) return null;
         const chosen = value === method;
 
+        // Nata Balance is offered but not selectable when it cannot cover the
+        // order. The server refuses the debit either way — this only saves the
+        // customer from finding that out at the last step.
+        const isBalance = method === "balance";
+        const shortOfFunds =
+          isBalance && balance !== null && amountDue > 0 && balance < amountDue;
+        const rowDisabled = disabled || shortOfFunds;
+
         return (
           <Pressable
             key={method}
-            disabled={disabled}
+            disabled={rowDisabled}
             onPress={() => onChange(method)}
             accessibilityRole="radio"
-            accessibilityState={{ selected: chosen, disabled }}
+            accessibilityState={{ selected: chosen, disabled: rowDisabled }}
             accessibilityLabel={t(look.label)}
             style={[
               styles.row,
               chosen && styles.rowChosen,
-              disabled && styles.rowDisabled,
+              rowDisabled && styles.rowDisabled,
             ]}
           >
             <View style={[styles.iconWrap, chosen && styles.iconWrapChosen]}>
@@ -69,8 +84,25 @@ export function PaymentMethodPicker({
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>{t(look.label)}</Text>
-              {look.note ? <Text style={styles.note}>{t(look.note)}</Text> : null}
+              <Text style={styles.label} numberOfLines={1}>
+                {t(look.label)}
+              </Text>
+              {isBalance ? (
+                <Text
+                  style={[styles.note, shortOfFunds && styles.noteWarn]}
+                  numberOfLines={1}
+                >
+                  {shortOfFunds
+                    ? t("walletInsufficient")
+                    : balance !== null
+                      ? t("walletPayWithNote", { balance: money(balance) })
+                      : "…"}
+                </Text>
+              ) : look.note ? (
+                <Text style={styles.note} numberOfLines={2}>
+                  {t(look.note)}
+                </Text>
+              ) : null}
             </View>
 
             <View style={[styles.radio, chosen && styles.radioOn]}>
@@ -99,6 +131,7 @@ const styles = StyleSheet.create({
   rowChosen: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
   rowDisabled: { opacity: 0.5 },
   iconWrap: {
+    flexShrink: 0,
     width: 36,
     height: 36,
     borderRadius: 11,
@@ -109,7 +142,9 @@ const styles = StyleSheet.create({
   iconWrapChosen: { backgroundColor: brand.moonstoneInk },
   label: { fontFamily: font.semibold, fontSize: 14.5, color: colors.textPrimary },
   note: { fontFamily: font.regular, fontSize: 12, color: brand.onSoftMuted, marginTop: 2 },
+  noteWarn: { color: colors.danger },
   radio: {
+    flexShrink: 0,
     width: 20,
     height: 20,
     borderRadius: 10,

@@ -172,6 +172,18 @@ class SupabaseSchema
             $table->timestamp('settled_at')->nullable();
         });
 
+        // Owned by this codebase — see the create_wallet_topups migration.
+        Schema::create('wallet_topups', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->index();
+            $table->decimal('amount', 10, 2);
+            $table->string('status', 32)->default('pending');
+            $table->string('payment_method', 32)->nullable();
+            $table->string('transaction_ref')->nullable()->unique();
+            $table->timestamp('settled_at')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
         // Tables this codebase does own (see the gift-box migration).
         Schema::create('rewards', function (Blueprint $table) {
             $table->uuid('id')->primary();

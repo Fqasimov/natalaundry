@@ -6,7 +6,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Pressable,
+  Modal,
+  TextInput,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/AppIcon";
 import { ScreenHeader } from "@/components/ui";
@@ -15,6 +19,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import type { WalletTransaction } from "@/types/database";
+import { fetchWallet, startTopUp, waitForTopUp } from "@/lib/wallet";
+import { BigButton } from "@/components/ui";
 
 // wallet_transactions columns are confirmed via the schema dump, and the
 // running balance itself lives on profiles.wallet_balance (also confirmed)
@@ -39,11 +45,24 @@ const KIND_LABEL: Record<string, string> = {
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [transactions, setTransactions] = useState<WalletTransaction[] | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Top-up bounds come from the server — they are the only thing standing
+  // between the gateway and an arbitrary amount, so the client shows them
+  // rather than inventing its own.
+  const [bounds, setBounds] = useState<{ min: number; max: number; presets: number[] }>({
+    min: 5,
+    max: 500,
+    presets: [10, 20, 50, 100],
+  });
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [topUpBusy, setTopUpBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const userId = session?.user.id ?? null;
 
@@ -74,6 +93,59 @@ export default function WalletScreen() {
     load();
   }, [load]);
 
+  // The ledger and balance are read straight from Supabase above (fast, and
+  // RLS already scopes them). The bounds are an API concern, so they come
+  // from there and a failure just leaves the defaults in place.
+  useEffect(() => {
+    fetchWallet()
+      .then((w) =>
+        setBounds({ min: w.min_topup, max: w.max_topup, presets: w.topup_presets }),
+      )
+      .catch(() => undefined);
+  }, []);
+
+  /**
+   * Opens the bank page for a top-up and settles up afterwards.
+   *
+   * Nothing about the outcome is inferred from the browser closing — the
+   * customer may have paid and swiped it away, or reached a "success" page
+   * that did not settle. The server is asked, exactly as order payment does.
+   */
+  const submitTopUp = async () => {
+    const amount = Number(topUpAmount.replace(",", "."));
+    // Bounded here for the button's sake; the server bounds it again, and
+    // that is the check that counts.
+    if (!Number.isFinite(amount) || amount < bounds.min || amount > bounds.max) return;
+
+    setTopUpBusy(true);
+    setNotice(null);
+    try {
+      const started = await startTopUp(amount, lang);
+      try {
+        await WebBrowser.openAuthSessionAsync(started.redirect_url, "natalaundry://wallet");
+      } catch {
+        // The browser failing to open says nothing about the payment.
+      }
+      const state = await waitForTopUp(started.topup_id);
+      setNotice(state.settled ? t("walletTopUpDone") : t("walletTopUpPending"));
+      setTopUpOpen(false);
+      setTopUpAmount("");
+      await load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : t("walletTopUpFailed"));
+    } finally {
+      setTopUpBusy(false);
+    }
+  };
+
+  // Parsed once. The comma is accepted because an Azerbaijani or Russian
+  // keyboard offers it as the decimal separator.
+  const topUpValue = Number(topUpAmount.replace(",", "."));
+  const topUpValid =
+    Number.isFinite(topUpValue) &&
+    topUpValue >= bounds.min &&
+    topUpValue <= bounds.max;
+
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
@@ -100,9 +172,28 @@ export default function WalletScreen() {
             <View style={s.header}>
               <View style={s.balanceCard}>
                 <Text style={s.balanceLabel}>{t("wallet")}</Text>
-                <Text style={s.balanceValue}>{money(balance ?? 0)}</Text>
+                <Text style={s.balanceValue} numberOfLines={1}>
+                  {money(balance ?? 0)}
+                </Text>
+                <Pressable
+                  style={s.topUpButton}
+                  onPress={() => {
+                    // Preselect the smallest preset so the sheet opens on a
+                    // usable action instead of a disabled zero.
+                    if (topUpAmount === "") {
+                      setTopUpAmount(String(bounds.presets[0] ?? bounds.min));
+                    }
+                    setTopUpOpen(true);
+                  }}
+                >
+                  <AppIcon name="mci:plus" size={17} color={brand.moonstoneInk} />
+                  <Text style={s.topUpLabel} numberOfLines={1}>
+                    {t("walletTopUp")}
+                  </Text>
+                </Pressable>
               </View>
               <Text style={s.intro}>{t("walletIntro")}</Text>
+              {notice ? <Text style={s.notice}>{notice}</Text> : null}
               {error ? <Text style={s.error}>{error}</Text> : null}
             </View>
           }
@@ -138,6 +229,77 @@ export default function WalletScreen() {
           }}
         />
       )}
+
+      <Modal
+        transparent
+        visible={topUpOpen}
+        animationType="fade"
+        onRequestClose={() => setTopUpOpen(false)}
+      >
+        <View style={s.sheetBackdrop}>
+          <View style={[s.sheet, { paddingBottom: insets.bottom + 20 }]}>
+            <Text style={s.sheetTitle}>{t("walletTopUpTitle")}</Text>
+            <Text style={s.sheetBody}>{t("walletTopUpSubtitle")}</Text>
+
+            <View style={s.presetRow}>
+              {bounds.presets.map((preset) => {
+                const active = Number(topUpAmount) === preset;
+                return (
+                  <Pressable
+                    key={preset}
+                    style={[s.preset, active && s.presetActive]}
+                    onPress={() => setTopUpAmount(String(preset))}
+                  >
+                    <Text
+                      style={[s.presetLabel, active && s.presetLabelActive]}
+                      numberOfLines={1}
+                    >
+                      {money(preset)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={s.fieldLabel}>{t("walletTopUpAmount")}</Text>
+            <TextInput
+              style={s.input}
+              keyboardType="decimal-pad"
+              placeholder="0"
+              placeholderTextColor={brand.onSoftMuted}
+              value={topUpAmount}
+              onChangeText={setTopUpAmount}
+            />
+            <Text style={s.bounds}>
+              {t("walletTopUpBounds", {
+                min: money(bounds.min),
+                max: money(bounds.max),
+              })}
+            </Text>
+
+            <BigButton
+              tone="brand"
+              label={
+                // Naming a figure the button will not act on reads as broken;
+                // fall back to the plain verb until the amount is usable.
+                topUpValid
+                  ? t("walletTopUpAction", { amount: money(topUpValue) })
+                  : t("walletTopUp")
+              }
+              loading={topUpBusy}
+              disabled={!topUpValid}
+              onPress={submitTopUp}
+            />
+            <Pressable
+              style={s.sheetCancel}
+              onPress={() => setTopUpOpen(false)}
+              disabled={topUpBusy}
+            >
+              <Text style={s.sheetCancelLabel}>{t("walletCancel")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -156,6 +318,67 @@ const s = StyleSheet.create({
   },
   balanceLabel: { fontFamily: font.medium, fontSize: 13, color: "rgba(255,255,255,0.82)" },
   balanceValue: { fontFamily: font.extrabold, fontSize: 32, color: colors.textInverse },
+  topUpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  topUpLabel: { fontFamily: font.bold, fontSize: 13.5, color: brand.moonstoneInk },
+  notice: {
+    ...type.caption,
+    color: brand.onSoft,
+    backgroundColor: brand.moonstoneSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+
+  sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,69,84,0.5)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: brand.surface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    gap: 10,
+  },
+  sheetTitle: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  sheetBody: { ...type.caption, color: brand.onSoftMuted, marginBottom: 4 },
+  presetRow: { flexDirection: "row", gap: 8 },
+  preset: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 11,
+    paddingHorizontal: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: brand.border,
+    backgroundColor: brand.surfaceAlt,
+  },
+  presetActive: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
+  presetLabel: { fontFamily: font.semibold, fontSize: 13.5, color: brand.onSoftMuted },
+  presetLabelActive: { color: brand.moonstoneInk },
+  fieldLabel: { fontFamily: font.medium, fontSize: 13.5, color: colors.textPrimary, marginTop: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: brand.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontFamily: font.medium,
+    fontSize: 16,
+    color: colors.textPrimary,
+    backgroundColor: brand.surface,
+  },
+  bounds: { ...type.caption, color: brand.onSoftMuted, marginBottom: 6 },
+  sheetCancel: { alignItems: "center", paddingVertical: 12 },
+  sheetCancelLabel: { fontFamily: font.medium, fontSize: 14.5, color: brand.onSoftMuted },
   intro: { ...type.caption, color: brand.onSoftMuted },
   error: {
     ...type.caption,
