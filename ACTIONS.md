@@ -18,10 +18,10 @@ They are ordered by what blocks what. **1 blocks 2 and 7. 7 blocks 8.**
 | 6 | Fix the SPF record | outbound mail deliverability | 5 min |
 | 7 | Deploy the API in `eu-central-1` — [runbook](backend/DEPLOY.md) | every write path | ~1 h |
 | 8 | Repoint `EXPO_PUBLIC_API_URL` before building | any store release | 2 min |
-| 9 | Clear five orders' dead photo URIs — script ready | — | 1 min |
+| ~~9~~ | ~~Clear five orders' dead photo URIs~~ | ✅ done 2026-09-01 | — |
 | 10 | Open the PR | — | 2 min |
 | 11 | Manual click-through | a store release | 2 h |
-| 12 | Revoke trigger `EXECUTE` — proven safe, script ready | — | 1 min |
+| ~~12~~ | ~~Revoke trigger `EXECUTE`~~ | ✅ done 2026-09-01 | — |
 
 ---
 
@@ -315,7 +315,11 @@ laptop.
 
 ---
 
-## 9. Clear five orders' dead photo URIs — one command
+## 9. Clear five orders' dead photo URIs — ✅ DONE 2026-09-01
+
+Applied. Five rows cleared (#7–#11), zero orders left holding device-local URIs,
+and both money totals unchanged: `orders` 15 rows / 630.00, `order_items` 31 rows
+/ 423.00. Kept below as the record of what it was.
 
 **This item was wrong in the first draft and the truth is much smaller.** There
 are no "garment photos" and no catalogue image column: the catalogue lives in
@@ -383,7 +387,21 @@ Walk these, on a real device:
 
 ## 12. The deliberate pass on trigger-function `EXECUTE` grants
 
-**The question is settled. One command is left to run.**
+## ✅ DONE 2026-09-01
+
+Applied to all eleven. Verified afterwards against the **live** grants, not just
+inside the rolled-back experiment:
+
+- public trigger functions still executable by `anon`/`authenticated`: **0**
+- a signup under the new grants still fired `handle_new_user` and created the
+  profile row (run in a transaction and rolled back, so no real user was made)
+- suite still 112/112
+
+Kept below as the record of how it was decided.
+
+---
+
+**The question was settled before applying it.**
 
 The open question was whether Postgres checks `EXECUTE` when a trigger *fires* —
 if it does, revoking breaks signup and every order write.
@@ -431,8 +449,7 @@ both inherit from `PUBLIC`.
 own admin roles. A `REVOKE` from `postgres` on those is a silent no-op, and they
 are not ours to change.
 
-I could not run the apply step myself: it is a write against the production
-database and was blocked, correctly.
+Applied on the project owner's explicit instruction, after the evidence above.
 
 ---
 
