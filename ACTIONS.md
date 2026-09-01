@@ -43,12 +43,29 @@ the region move.
 Supabase → **Frankfurt project** → Project Settings → API:
 
 ```
-SUPABASE_JWT_SECRET=          ← "JWT Secret" (under JWT Settings)
 SUPABASE_SERVICE_ROLE_KEY=    ← "service_role" key, the secret one
 ```
 
-> Every API request is verified with `SUPABASE_JWT_SECRET`. Empty means the API
-> rejects **everyone**, including you, and the error will not say why.
+That is the only one still needed. **`SUPABASE_JWT_SECRET` must stay empty** —
+see below.
+
+> ### Leave `SUPABASE_JWT_SECRET` blank. Filling it in creates a way past your auth.
+>
+> Verified against the live project on 2026-09-01: it publishes an **ES256**
+> JWKS (`kid 54246246…`), so Supabase signs access tokens asymmetrically and
+> `AuthenticateSupabaseToken` verifies them through `SupabaseJwks`, fetched from
+> `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`. **There is no secret to copy,
+> and nothing reads this variable.**
+>
+> The middleware branches on the token's own `alg`: `ES256` goes to the JWKS,
+> `HS256` goes to this secret. So setting it does not add a fallback — it opens
+> a second door. Anyone holding that string could mint an `HS256` token that
+> **your API accepts**, even though Supabase itself would reject it. A secret
+> that Supabase has stopped honouring is still live as far as your own
+> middleware is concerned.
+>
+> A value pasted into a chat transcript, an issue, or a screenshot is exactly
+> that case.
 
 `SUPABASE_ANON_KEY` and `GOOGLE_MAPS_API_KEY` are already filled — copied from
 the root `.env`, which held the Frankfurt values.
