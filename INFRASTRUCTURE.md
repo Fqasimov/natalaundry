@@ -143,24 +143,32 @@ future move is a DNS change rather than a store release.
 
 ---
 
-## 4a. Where this is up to — resume here
+## 4a. The move is done
 
-**Confirmed 2026-08-31 over the Supabase MCP connector:** the second project is
-real. `get_project_url` returned `https://kzfsagccvxjmsbqjdpnb.supabase.co` —
-a ref that appears nowhere in this repository, where every reference is still
-`dzplzvogobqmwaaimkef` (Seoul). That settles a contradiction worth naming: an
-earlier session's notes still listed "create the EU Supabase project" as
-outstanding, and it is not.
+**Completed 2026-08-31.** Seoul → Frankfurt, verified identical: all 19 tables
+row for row, 13 users with their bcrypt hashes, 32 policies, 19 functions, 10
+triggers, RLS everywhere, and both money totals matching to the cent. Nobody
+has to reset a password.
 
-What the ref alone does **not** prove is the region. Nothing was read from the
-project beyond its URL before the connector dropped, so confirm
-`eu-central-1` in the dashboard before treating it as the restore target — and
-before assuming its schema, extensions or policies are in any particular state.
+Measured from Baku, pooler handshake — what every database round trip pays:
 
-**Done:** the Frankfurt project exists. The Seoul dump has been taken and
-verified — 19 tables, 29 policies, 19 functions, 10 triggers, and every row
-count matched the live database, including all 13 users with their bcrypt
-hashes intact.
+| | median |
+|---|---|
+| Seoul | 324 ms |
+| Frankfurt | **88 ms** |
+
+Full account, including four things `pg_dump --no-privileges` did not carry
+and one live security hole the restore briefly opened, in
+[`scripts/migration/MIGRATION_LOG.md`](scripts/migration/MIGRATION_LOG.md).
+
+**What still needs the owner:** the Frankfurt `DB_PASSWORD` in `backend/.env`
+(the one value never in the agent's hands), Auth SMTP pointed at Resend, and
+the API deployed in `eu-central-1` with the missing `api.natalaundry.az` DNS
+record. Everything else is repointed.
+
+The steps below are kept as the record of what was run.
+
+### The original plan, for reference
 
 **The dump does not travel.** `auth.sql` holds password hashes and live
 refresh tokens, so it is gitignored and stays on the machine that made it.

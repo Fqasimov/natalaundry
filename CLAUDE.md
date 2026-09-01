@@ -183,20 +183,42 @@ Key invariants:
 - `is_my_assigned_courier(id)` function source never pulled
 - Edge Functions never checked — if any exist, that's real recoverable source
 
-## Production database — current state (2026-08-27)
+## Production database — current state (2026-09-01)
+
+**The database is in Frankfurt (`eu-central-1`, `kzfsagccvxjmsbqjdpnb`).**
+Moved from Seoul on 2026-08-31; pooler handshake from Baku went 324 ms → 88 ms.
+Verified row for row and confirmed through Laravel on 2026-09-01: 15 orders
+totalling 630.00, 31 `order_items` with `sum(price*quantity)` = 423.00, suite
+112/112. See `scripts/migration/MIGRATION_LOG.md` and `ACTIONS.md`.
+
+Seoul is kept read-only as the rollback until ~2026-09-14, then deleted. **Its
+password has not yet been rotated and was pasted into a chat transcript — treat
+it as public** (`ACTIONS.md` item 5).
 
 Both migrations have been **applied**. `public` holds 19 tables, all with
 RLS enabled, and `rewards` is seeded with the 50-prize pool. ILK20 exists as
 a real `promo_codes` row.
 
+Laravel's three default stub migrations (`create_users_table`,
+`create_cache_table`, `create_jobs_table`) read `Pending` and must **stay**
+that way — auth lives in Supabase, and running them would put a second `users`
+table into `public` for PostgREST to expose.
+
 Two things worth carrying forward:
 
-- **The pooler host moved.** `aws-0-ap-northeast-2.pooler.supabase.com`
-  answers on both ports but rejects this project with
-  `ENOTFOUND tenant/user` — it is a routing failure that happens *before*
-  authentication, so it looks nothing like a bad password. The project lives
-  on `aws-1-*`. If a connection suddenly starts failing that way, check the
-  host prefix before touching credentials.
+- **The pooler fleet is per project, and the two projects are opposite.**
+  A wrong-fleet host answers on both ports but rejects the project with
+  `ENOTFOUND tenant/user` — a routing failure that happens *before*
+  authentication, so it looks nothing like a bad password.
+
+  | project | fleet |
+  |---|---|
+  | Seoul `dzplzvogobqmwaaimkef` (retired) | `aws-1-ap-northeast-2` |
+  | **Frankfurt `kzfsagccvxjmsbqjdpnb` (live)** | **`aws-0-eu-central-1`** |
+
+  This has now cost time twice, the second time because the `aws-1` prefix was
+  carried across from the old host during the region move. **Check the prefix
+  before touching credentials**, and never assume it survives a project change.
 - **`--pretend` under-reports.** In pretend mode Laravel's `select()`
   returns an empty array, so `Schema::hasTable()` reads false and any block
   guarded by it is silently skipped from the preview. The `orders` ALTER
