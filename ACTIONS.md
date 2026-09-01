@@ -1,475 +1,343 @@
-# What is left to do, and exactly how to do each of it
+# Shipping the update — every step, in order
 
-Written 2026-08-31, after the Seoul → Frankfurt move landed (`85833c9`).
+Last verified 2026-09-01. Target: **100–500 concurrent users**, which needs no
+architecture change — see [Capacity](#capacity) at the end.
 
-Everything here needs a human — a password, a DNS panel, a dashboard toggle, or
-a pair of eyes on a screen. Nothing in this list is code I could write.
+Work top to bottom. **Phases 0–2 must be finished before you build anything**,
+because the build bakes in addresses that must already be live.
 
-They are ordered by what blocks what. **1 blocks 2 and 7. 7 blocks 8.**
-3, 4, 5, 6 are independent and can be done in any order, today.
-
-| # | Action | Blocks | Time |
-|---|---|---|---|
-| ~~1~~ | ~~Set the Frankfurt `DB_PASSWORD`~~ | ✅ done 2026-09-01 | — |
-| ~~2~~ | ~~Verify the API talks to Frankfurt~~ | ✅ done 2026-09-01 | — |
-| 3 | Point Auth SMTP at Resend | signups at volume | 10 min |
-| 4 | Enable leaked-password protection | — | 1 min |
-| 5 | Rotate the Seoul password, freeze the project | — | 5 min |
-| 6 | Fix the SPF record | outbound mail deliverability | 5 min |
-| 7 | Deploy the API in `eu-central-1` — [runbook](backend/DEPLOY.md) | every write path | ~1 h |
-| 8 | Repoint `EXPO_PUBLIC_API_URL` before building | any store release | 2 min |
-| ~~9~~ | ~~Clear five orders' dead photo URIs~~ | ✅ done 2026-09-01 | — |
-| 10 | Open the PR | — | 2 min |
-| 11 | Manual click-through | a store release | 2 h |
-| ~~12~~ | ~~Revoke trigger `EXECUTE`~~ | ✅ done 2026-09-01 | — |
+| Phase | What | Time |
+|---|---|---|
+| 0 | Two secrets, and the Seoul password | 15 min |
+| 1 | Deploy the API | ~1 h |
+| 2 | Email, so signups work | 15 min |
+| 3 | The Seoul → Frankfurt cutover | 20 min |
+| 4 | Build, test, submit | 2–3 h |
+| 5 | After it's live | ongoing |
 
 ---
 
-## 1. Set the Frankfurt `DB_PASSWORD` — ✅ DONE 2026-09-01
+## The thing to understand before starting
 
-Password set by the owner; connection verified. `backend/.env` now reads:
+**Your live App Store app talks to Seoul, not Frankfurt.** The Frankfurt project
+was created on 2026-08-31; the shipped build predates it, and Expo compiles the
+Supabase URL and key into the binary at build time. They cannot be changed
+remotely.
+
+So the migration did not move production — **it made a copy.** Frankfurt has
+received no writes since it was restored. Production moves when users install
+the new build, one by one, over days.
+
+That is what Phase 3 is for, and it is the step most likely to lose data if
+skipped.
+
+---
+
+## Phase 0 — before anything else
+
+### 0.1 Two missing secrets (5 min)
+
+`backend/.env` has two empty values. They are project-scoped and changed with
+the region move.
+
+Supabase → **Frankfurt project** → Project Settings → API:
 
 ```
-DB_HOST=aws-0-eu-central-1.pooler.supabase.com
-DB_PORT=6543
-DB_USERNAME=postgres.kzfsagccvxjmsbqjdpnb
+SUPABASE_JWT_SECRET=          ← "JWT Secret" (under JWT Settings)
+SUPABASE_SERVICE_ROLE_KEY=    ← "service_role" key, the secret one
+```
+
+> Every API request is verified with `SUPABASE_JWT_SECRET`. Empty means the API
+> rejects **everyone**, including you, and the error will not say why.
+
+`SUPABASE_ANON_KEY` and `GOOGLE_MAPS_API_KEY` are already filled — copied from
+the root `.env`, which held the Frankfurt values.
+
+**Check the Maps key.** It came from the client `.env`. If it is restricted to
+iOS/Android apps in Google Cloud, server-side geocoding will fail with it and
+you need a separate server key restricted by IP.
+
+Verify:
+
+```bash
+php scripts/deploy/set-fly-secrets.php
+```
+
+It lists every secret as present or missing and refuses to go on if any is
+missing. It sends nothing without `--apply`.
+
+### 0.2 Reset the Seoul password, and keep it (10 min)
+
+Needed twice over: the old one was pasted into a chat transcript, and Phase 3
+needs a working connection to Seoul.
+
+1. Supabase → **Seoul project** (`dzplzvogobqmwaaimkef`) → Settings → Database →
+   **Reset database password**
+2. Save it in `scripts/migration/seoul.env` (gitignored — never committed):
+
+```
+DB_HOST=aws-1-ap-northeast-2.pooler.supabase.com
+DB_PORT=5432
 DB_DATABASE=postgres
-DB_PASSWORD=          ← set locally, gitignored, never committed
+DB_USERNAME=postgres.dzplzvogobqmwaaimkef
+DB_PASSWORD=<the new one>
 ```
 
-> **The host in the first draft of this file was wrong.** It said `aws-1-`,
-> copied from the Seoul host without checking. The Frankfurt project is on the
-> **`aws-0`** fleet, and the resulting failure was the exact trap described
-> below — `ENOTFOUND tenant/user`, which reads like a rejected password and is
-> not one. Probing all four host/port combinations found `aws-0` on both ports.
-> The password was right the whole time.
+**Note the fleet: Seoul is `aws-1`, Frankfurt is `aws-0`.** They are opposite.
+Getting it wrong gives `FATAL: (ENOTFOUND) tenant/user … not found`, which reads
+exactly like a wrong password and is not one. It has cost time twice already.
 
-> **It is not the Seoul password, even though it is the same Supabase account.**
-> Database passwords are per *project*, not per account — Seoul and Frankfurt are
-> separate Postgres instances with separate `postgres` roles. The username shows
-> it: `postgres.dzplzvogobqmwaaimkef` versus `postgres.kzfsagccvxjmsbqjdpnb`.
-> Same reason the anon key had to be swapped. The only thing the account shares
-> is the dashboard login.
-
-**Steps**
-
-1. **First check whether you already have it.** Supabase makes you set or
-   generate a database password when you create a project, so it may be in your
-   password manager from the day the Frankfurt project was made. If it is, skip
-   to step 3 — no reset needed.
-2. Only if you do not have it: open
-   <https://supabase.com/dashboard/project/kzfsagccvxjmsbqjdpnb/settings/database>
-   → **Reset database password**. Generate a strong one and store it — Supabase
-   will not show it again.
-3. Open `backend/.env` in an editor and put it after `DB_PASSWORD=`.
-   No quotes needed unless it contains `#` or spaces; if it does, wrap it in
-   double quotes.
-4. Save. **Do not commit it** — `backend/.env` is gitignored, and it must stay
-   that way.
-
-> **Port 6543 is deliberate.** That is the *transaction* pooler, which is what a
-> Laravel request should use. Port 5432 is the *session* pooler — needed for
-> `pg_dump`, `psql`, and DDL, but it holds a connection per client and will run
-> you out of connections under real traffic.
+**Do not pause or delete the Seoul project.** It is serving your live app right
+now, and will keep serving every user who has not updated.
 
 ---
 
-## 2. Verify the API actually talks to Frankfurt — ✅ DONE 2026-09-01
+## Phase 1 — deploy the API
 
-All three checks passed. Kept here as the recipe for re-verifying after any
-future move or restore.
+**Nothing else unblocks until this is done.** `EXPO_PUBLIC_API_URL` currently
+points at `http://192.168.0.107:8000` — a laptop on your home Wi-Fi. In a store
+build that is dead twice over: a private address nobody can route to, and plain
+HTTP, which iOS App Transport Security blocks outright.
 
-```bash
-cd backend && php artisan migrate:status
-```
+Full runbook: **[`backend/DEPLOY.md`](backend/DEPLOY.md)**. Summary:
 
-The three project migrations read `Ran`:
-`create_gift_box_tables`, `add_order_lifecycle_tables`,
-`give_courier_locations_subsecond_precision`.
+1. `fly auth login` — yours; I cannot sign in or authorise billing
+2. `fly apps create natalaundry-api` — **not `fly launch`**, which would
+   overwrite the `fly.toml` already written
+3. `php scripts/deploy/set-fly-secrets.php --apply` — pipes secrets from
+   `backend/.env` through stdin, never a command line, never a file
+4. `fly deploy` — builds remotely; **no local Docker needed**
+5. `fly certs add api.natalaundry.az`, then add the `A` and `AAAA` records it
+   prints. **This DNS record does not exist yet.**
 
-> **Three migrations read `Pending`, and that is correct.**
-> `0001_01_01_000000_create_users_table`, `_000001_create_cache_table` and
-> `_000002_create_jobs_table` are Laravel's default stubs. They are unused —
-> auth lives in Supabase `auth.users` + `public.profiles` — and they were
-> `Pending` on Seoul too. **Do not run `php artisan migrate` to "fix" them.**
-> It would create a `users` table in `public`, which PostgREST then exposes
-> like any other, next to the real one.
-
-Then confirm the data arrived intact through Laravel's own eyes, not just
-Postgres's:
+### Verify before moving on
 
 ```bash
-php artisan tinker --execute="echo App\Models\Order::count().' orders, total '.App\Models\Order::sum('total');"
+curl -fsS https://api.natalaundry.az/up
 ```
-
-Expect **15 orders** summing to **630.00** — confirmed. If the total is anything
-else, stop: it would mean the trigger-disable during the restore did not hold,
-and historical rows were rewritten on the way in.
-
-For `order_items`, be precise about which figure you are checking — the two are
-easy to confuse and only one of them is the one recorded at migration time:
-
-| Measure | Value |
-|---|---|
-| rows | 31 |
-| `sum(quantity)` | 45 |
-| `sum(price)` | 312.00 |
-| **`sum(price * quantity)`** | **423.00** ← the figure verified on both sides |
-
 ```bash
-php artisan tinker --execute="print_r(DB::selectOne('select count(*) n, sum(price) sp, sum(price*quantity) spq from public.order_items'));"
+curl -fsS https://api.natalaundry.az/api/catalog | head -c 200
 ```
-
-Then run the suite:
-
 ```bash
-cd backend && php artisan test
+curl -isS https://api.natalaundry.az/api/orders | head -1
 ```
 
-**112 passed, 535 assertions, ~32s.** Safe to run against any environment: the
-tests are pinned to sqlite `:memory:` in `phpunit.xml` and never touch the real
-database.
-
-**If a connection fails with `FATAL: (ENOTFOUND) tenant/user ... not found`:**
-that is **not** the password. It is a routing failure that happens *before*
-authentication — the pooler is saying it does not host this project. Supabase
-runs `aws-0-` and `aws-1-` fleets per region and a project sits on exactly one:
-
-| project | fleet |
-|---|---|
-| Seoul `dzplzvogobqmwaaimkef` | `aws-1-ap-northeast-2` |
-| **Frankfurt `kzfsagccvxjmsbqjdpnb`** | **`aws-0-eu-central-1`** |
-
-**They are opposite, which is the whole trap** — carrying the prefix across from
-the old host is what broke it here, and it has now cost time twice in this
-project. Swap the prefix before touching credentials.
+The third **must return 401**. A `200` means the token middleware is not running
+and every order endpoint is open to the internet. Do not point the app at a
+deployment that answers anything else.
 
 ---
 
-## 3. Point Supabase Auth's SMTP at Resend
+## Phase 2 — email
 
-**Why this is not optional.** Supabase's built-in mailer is rate-limited to a
-handful of messages an hour and is explicitly not for production. It does not
-error visibly — the signup succeeds and the confirmation email simply never
-arrives. On your first busy afternoon you will get support messages, not logs.
+### 2.1 SMTP → Resend (10 min)
 
-Resend is already fully configured for the domain and its DNS is verified.
+**This is a launch blocker, not housekeeping.** Email confirmation is switched on
+— 4 of your 13 accounts never confirmed. Supabase's built-in mailer is capped at
+a few messages an hour and **fails silently**: signup succeeds, the mail never
+arrives, and the user simply cannot get in.
 
-**Steps**
+Resend is already configured for the domain with DNS verified.
 
-1. Get an API key: <https://resend.com/api-keys> → **Create API Key**, scope
-   **Sending access**, domain `natalaundry.az`. Copy it — shown once.
-2. Open <https://supabase.com/dashboard/project/kzfsagccvxjmsbqjdpnb/settings/auth>
-3. Scroll to **SMTP Settings** → enable **Enable Custom SMTP**.
-4. Fill in:
+1. <https://resend.com/api-keys> → create a key, sending access, `natalaundry.az`
+2. Supabase → **Frankfurt** → Authentication → SMTP Settings → enable custom SMTP
+
    | Field | Value |
    |---|---|
-   | Sender email | `noreply@natalaundry.az` |
-   | Sender name | `Nata Laundry` |
+   | Sender | `noreply@natalaundry.az` |
    | Host | `smtp.resend.com` |
    | Port | `465` |
    | Username | `resend` |
-   | Password | *the API key from step 1* |
-5. Save, then **Rate Limits** → raise **emails per hour** from the default (it
-   is pinned low while the built-in mailer is in use).
-6. Test it: sign up a throwaway address in the app and confirm the mail lands.
-   Check <https://resend.com/emails> for the delivery record if it does not.
+   | Password | *the API key* |
+
+3. Raise the **emails per hour** rate limit — it is pinned low while the
+   built-in mailer is in use
+4. Sign up a throwaway address and confirm the mail lands
+
+### 2.2 Leaked-password protection (1 min)
+
+Same Auth settings page → **Prevent use of leaked passwords**. One checkbox.
 
 ---
 
-## 4. Enable leaked-password protection
+## Phase 3 — the cutover
 
-Supabase's own linter flags this, and it is a checkbox. It checks new passwords
-against HaveIBeenPwned's breach corpus at signup.
+Skip this and orders placed by real users in the last days can silently vanish.
 
-1. <https://supabase.com/dashboard/project/kzfsagccvxjmsbqjdpnb/settings/auth>
-2. **Password security** → turn on **Prevent use of leaked passwords**.
-3. While you are there, set **Minimum password length** to at least 8.
+### 3.1 Find out whether it matters
 
----
-
-## 5. Rotate the Seoul password, and freeze the project
-
-The old project's database password was pasted into a chat transcript. Treat it
-as public.
-
-**Steps**
-
-1. <https://supabase.com/dashboard/project/dzplzvogobqmwaaimkef/settings/database>
-   → **Reset database password**. You never need to write the new one down; the
-   point is only to invalidate the old one.
-2. **Do not delete the project.** Keep it for a fortnight, until roughly
-   **14 September 2026**, as your rollback. A migration that verified clean can
-   still surface something a fortnight later, and there is no undo on a deleted
-   project.
-3. Optionally pause it (Settings → General → **Pause project**) to stop it
-   accruing usage. Pausing is reversible; deleting is not.
-4. After the fortnight, and only if nothing has surfaced: delete it.
-
----
-
-## 6. Fix the SPF record
-
-Unrelated to the migration, still outstanding, and it is silently costing you
-deliverability today.
-
-**The problem.** Your MX records point at Google Workspace, but SPF authorises
-only Hostinger. Any mail you send from Google — every reply from a human at
-`@natalaundry.az` — fails SPF and lands in spam or gets rejected outright.
-
-**The fix.** In your DNS panel, edit the `TXT` record on the root (`@`) whose
-value begins `v=spf1`, and set it to exactly:
-
-```
-v=spf1 include:_spf.google.com include:_spf.mail.hostinger.com ~all
+```bash
+php scripts/migration/seoul-delta.php
 ```
 
-**Steps**
+Compares every table in Seoul against Frankfurt and reports what Seoul has that
+Frankfurt does not. Read-only — it writes nothing to either.
 
-1. Open your domain's DNS zone editor (wherever `natalaundry.az` is managed).
-2. Find the existing `TXT` record at `@` starting `v=spf1`. **Edit it — do not
-   add a second one.** Two SPF records is a permanent error: receivers see
-   `permerror` and the domain fails, which is worse than the current state.
-3. Paste the value above. Save.
-4. Wait for TTL, then verify:
-   ```bash
-   nslookup -type=TXT natalaundry.az
-   ```
-   Exactly one `v=spf1` line should come back.
-5. Confirm end to end at <https://www.mail-tester.com> — send it a mail from
-   your Google Workspace address and check SPF passes.
+**If it reports zero new rows**, the split is theoretical and you can proceed
+straight to Phase 4. Given the last order was 2026-08-17 and the last signup
+2026-08-29, this is the likely outcome — but check rather than assume.
 
-> Resend does not need adding here; it sends from a subdomain with its own SPF,
-> already verified.
+### 3.2 If there are new rows
 
----
+Tell me and I will write the sync. It is not a re-run of the migration: it has to
+insert only what is new, keep UUIDs, and not disturb what is already in
+Frankfurt.
 
-## 7. Deploy the API in `eu-central-1`
+**Run it as late as possible** — ideally the day you submit — so the window of
+divergence is as short as it can be.
 
-**This is the largest remaining item and the one that actually matters.**
-The Laravel API is not deployed anywhere. `EXPO_PUBLIC_API_URL` currently points
-at `http://192.168.0.107:8000` — a laptop on your home Wi-Fi. Every write path
-in the app (place order, pay, courier lifecycle, tracking) works only while that
-laptop is on and the phone is on the same network.
+### 3.3 Accept the tail
 
-Put it in `eu-central-1`, same region as the database. The API↔DB hop then costs
-about **1 ms** instead of 88, and only the phone→API leg pays real distance.
+Users on the old build keep writing to Seoul until they update. That is
+unavoidable with a store release. So:
 
-### ▶ The full runbook is [`backend/DEPLOY.md`](backend/DEPLOY.md)
-
-Written out step by step: install, create the app, set the seven secrets, deploy,
-issue the certificate, add the DNS records, repoint the app. Everything that can
-be prepared has been — `backend/Dockerfile` and `backend/fly.toml` are ready, so
-the deploy itself is `fly deploy`. What is left needs an account, a card and your
-DNS panel.
-
-**Four things in the first draft of this section were wrong**, found while
-preparing the files:
-
-- **A `config:cache` in the Dockerfile would have broken the deploy**, in a way
-  that reads as a credentials problem and is not. It resolves every `env()` at
-  *build* time, and `.dockerignore` excludes `.env`, so it baked in `127.0.0.1`,
-  port 5432, database `laravel`, user `root`, empty password, sslmode `prefer` —
-  and those frozen values then *win* over what the platform injects at run time.
-  Verified by building without `.env`: with `DB_HOST` set in the environment,
-  config still reported `127.0.0.1`. Removed, with a comment saying why.
-- **Do not generate a fresh `APP_KEY`.** Reuse the one in `backend/.env`. A new
-  key invalidates every encrypted cookie and signed URL already issued.
-- **No queue worker is needed.** `QUEUE_CONNECTION=sync`; nothing is dispatched
-  to a queue. The earlier note about supervising `queue:work` was wrong.
-- **The health endpoint is `/up`**, Laravel's built-in, already registered — not
-  `/api/health`, which does not exist. It touches no database on purpose, so
-  Postgres being slow can never take the API out of rotation.
-
-**And one thing to know before you call it live:** `KAPITAL_BASE_URL` points at
-`txpgtst.kapitalbank.az` — Kapital's *test* gateway — with their public sandbox
-username. Real payments will not work until the bank issues production
-credentials.
-
-Do **not** put this on the Hostinger base plan: shared PHP hosting has no
-persistent process and cannot run a container.
+- **Keep Seoul running** until adoption is high — weeks, not days
+- Re-run `seoul-delta.php` weekly and sync stragglers
+- Only when it reports nothing for a fortnight is Seoul safe to retire
 
 ---
 
-## 8. Repoint `EXPO_PUBLIC_API_URL` before any build
+## Phase 4 — build and submit
 
-**Do this immediately before building, and check it every time.** A store build
-carrying `http://192.168.0.107:8000` is a dead app for every user — and on iOS
-it will not even connect, because ATS blocks plain HTTP.
+### 4.1 Repoint the app
 
-In `.env`:
+In the **root** `.env`:
 
 ```
 EXPO_PUBLIC_API_URL=https://api.natalaundry.az
 ```
 
-Then verify it actually got baked in — Expo inlines these at build time, so a
-stale cache is a real failure mode:
+**No trailing slash** — `lib/api.ts` appends `/api` itself. Also confirm
+`EXPO_PUBLIC_SUPABASE_URL` is the Frankfurt one (it is).
+
+**Set these in the EAS build secrets too.** Expo inlines them at build time; the
+local file does not travel with an EAS build.
+
+### 4.2 Clear the cache
 
 ```bash
 npx expo start --clear
 ```
 
-and confirm a write path (place an order) reaches the deployed API, not the
-laptop.
+A stale cache baking the old LAN address into the bundle is a real failure mode,
+and one you would only discover after review.
 
----
+### 4.3 Walk it on a real device
 
-## 9. Clear five orders' dead photo URIs — ✅ DONE 2026-09-01
-
-Applied. Five rows cleared (#7–#11), zero orders left holding device-local URIs,
-and both money totals unchanged: `orders` 15 rows / 630.00, `order_items` 31 rows
-/ 423.00. Kept below as the record of what it was.
-
-**This item was wrong in the first draft and the truth is much smaller.** There
-are no "garment photos" and no catalogue image column: the catalogue lives in
-`lib/catalog.ts` / `backend/config/catalog.php` and uses icons, not photographs.
-
-What actually exists is five *orders* whose `item_photos` hold paths like
-
-```
-file:///Users/farid/Library/Developer/CoreSimulator/Devices/…/photo.jpg
-```
-
-— iOS Simulator paths from mid-August, three photos each, orders #7 to #11.
-
-**It is not a live bug.** `lib/uploads.ts` already uploads to the private
-`order-photos` bucket and stores the returned path, and
-`app/checkout/summary.tsx:127` calls it. These rows predate that fix. The bucket
-holds zero objects simply because no order has been placed through the fixed
-flow yet — which needs the API deployed (item 7).
-
-**Steps**
-
-```bash
-php scripts/migration/clear-legacy-photo-uris.php
-```
-
-Dry run: it lists the five orders and changes nothing. Then:
-
-```bash
-php scripts/migration/clear-legacy-photo-uris.php --apply
-```
-
-Only rows where *every* entry is a device-local URI are cleared. A mixed row —
-one legacy URI beside a real uploaded path — is reported and left alone rather
-than quietly half-emptied. There are none today, but that is the safe behaviour
-if this is ever run again.
-
----
-
-## 10. Open the PR
-
-<https://github.com/Fqasimov/natalaundry/pull/new/feat/payments-auth-rls-ui>
-
-I cannot open it for you — creating it publishes to GitHub on your behalf.
-
----
-
-## 11. Manual click-through
-
-**112 automated tests pass and no human has opened a single screen.** The
-end-to-end test drives the whole journey over HTTP, which proves the API and the
-data are right. It proves nothing about whether a button is reachable, whether
-text is legible on the coastal palette, or whether the map renders.
-
-Walk these, on a real device:
+**146 tests pass and no human has opened a screen.** The suite proves the API and
+the data are right. It says nothing about whether a button is reachable or the
+map draws.
 
 - Sign up → confirm email → sign in
-- Home → service overview → add to order → cart appears **only on home**
-- Checkout → payment → Kapital HPP redirect → return
-- Order detail → live tracking → courier marker moves forward, never backwards
+- Home → service → add to order → cart appears **only on home**
+- Checkout → payment → Kapital redirect → return
+- Order detail → live tracking → **courier marker moves forward, never backwards**
 - Gift box open, spend prize
-- Profile, gifts, toplu
-- Courier app: claim → all nine lifecycle states → GPS pings → deliver
+- Profile, gifts, toplu, Nata Balance top-up
+- Notification inbox — rows must show text, not blanks
+- Courier: claim → nine lifecycle states → GPS → deliver
 
----
+Check it in **all three languages**. Most i18n bugs so far were invisible in
+Azerbaijani.
 
-## 12. The deliberate pass on trigger-function `EXECUTE` grants
+### 4.4 Payments — decide before submitting
 
-## ✅ DONE 2026-09-01
+`KAPITAL_BASE_URL` is `txpgtst.kapitalbank.az`, Kapital's **test** gateway, with
+their public sandbox username. **Card payments will not take real money.**
 
-Applied to all eleven. Verified afterwards against the **live** grants, not just
-inside the rolled-back experiment:
+Cash is a first-class method — 7 of your 15 orders are cash — so you can ship
+cash-only. If you do, **hide the card option** rather than leave it failing
+against a sandbox, which may report success without charging anything.
 
-- public trigger functions still executable by `anon`/`authenticated`: **0**
-- a signup under the new grants still fired `handle_new_user` and created the
-  profile row (run in a transaction and rolled back, so no real user was made)
-- suite still 112/112
+Otherwise: get production credentials from Kapital, set them as secrets, and set
 
-Kept below as the record of how it was decided.
-
----
-
-**The question was settled before applying it.**
-
-The open question was whether Postgres checks `EXECUTE` when a trigger *fires* —
-if it does, revoking breaks signup and every order write.
-
-`scripts/migration/trigger-grants-check.php` answers it with evidence rather than
-argument. Everything runs inside a transaction that is **always rolled back**,
-including the revokes and a real `auth.users` insert; grants are transactional in
-Postgres, so nothing survives. It verifies afterwards that the grants and row
-counts are identical to the start state.
-
-**Result: safe.** A `SECURITY DEFINER` trigger with `EXECUTE` revoked from
-`PUBLIC`, `anon` and `authenticated` still fired on an insert performed **as
-`authenticated`**. Postgres checks `EXECUTE` when a trigger is *created*, not
-when it runs.
-
-> **The first version of that test was not trustworthy and was rewritten.** It
-> inserted as `postgres`, a role privileged enough to sail past a permission
-> check that would stop a real caller. The second attempt — inserting into
-> `orders` as `authenticated` — could never have worked either: `orders` has RLS
-> with **SELECT policies only**, so `authenticated` cannot insert at all, by
-> design, because writes go through the API. The insert would have failed on RLS
-> and said nothing about `EXECUTE`. The version that stands builds its own table
-> and trigger inside the transaction, which isolates the question exactly.
-
-Also confirmed: **nothing calls these functions directly.** No `.rpc()` in the
-app, no direct invocation in the API — so the grant is not load-bearing anywhere
-else.
-
-**Steps**
-
-```bash
-php scripts/migration/trigger-grants-check.php   # optional: re-prove it
-php scripts/migration/revoke-trigger-execute.php # apply
+```
+KAPITAL_CALLBACK_URL=https://api.natalaundry.az/api/payments/callback
 ```
 
-The revoke script is idempotent and verifies through `has_function_privilege`
-rather than trusting that the commands worked — the same check that caught the
-`PUBLIC` inheritance trap during the migration. **`PUBLIC` is revoked first**;
-revoking only `anon`/`authenticated` reports success and changes nothing, because
-both inherit from `PUBLIC`.
+The bank calls that directly, so it must be publicly reachable over HTTPS.
 
-**Scope: the eleven functions in `public`.** The other four —
-`enforce_bucket_name_length`, `protect_delete`, `update_updated_at_column` in
-`storage`, and `subscription_check_filters` in `realtime` — belong to Supabase's
-own admin roles. A `REVOKE` from `postgres` on those is a silent no-op, and they
-are not ours to change.
+### 4.5 Build and submit
 
-Applied on the project owner's explicit instruction, after the evidence above.
+```bash
+npx tsc --noEmit
+```
+```bash
+cd backend && php artisan test
+```
+
+Both must be clean — `tsc` exit 0, 146 tests passing. Then build and submit
+through EAS as usual.
 
 ---
 
-## What I already did, for reference
+## Phase 5 — after it's live
 
-Nothing in this list needs redoing:
+1. **Watch `seoul-delta.php` weekly.** Sync stragglers, retire Seoul only when it
+   has been quiet a fortnight.
+2. **Fix SPF.** Unrelated to the app, still outstanding. Your MX points at Google
+   but SPF authorises only Hostinger, so replies from humans at
+   `@natalaundry.az` fail SPF. **Edit the existing `TXT` record — do not add a
+   second**, which is a permanent error and worse than the current state:
+   ```
+   v=spf1 include:_spf.google.com include:_spf.mail.hostinger.com ~all
+   ```
+3. **Open the PR** —
+   <https://github.com/Fqasimov/natalaundry/pull/new/feat/payments-auth-rls-ui>
 
-- Database moved Seoul → Frankfurt, verified row for row (19 tables, 13 users,
-  13 bcrypt hashes, 32 policies, 19 functions, 10 triggers, both money totals to
-  the cent). Nobody resets a password.
-- Three security regressions the restore introduced, found and closed: full
-  `UPDATE` on `profiles` for `authenticated`; missing `SET search_path` on all 19
-  functions; and `settle_payment_intent` — `SECURITY DEFINER`, credits the
-  wallet, no auth check — becoming callable by `anon`.
-- Signup trigger and `order-photos` bucket recreated (both live outside a
-  `--schema=public` dump).
-- Six missing indexes on hot queries, applied.
-- The courier-marker backwards-jump fixed, at the query, the model, and the
-  column precision.
-- App and API `.env` repointed at Frankfurt.
+---
+
+## Capacity
+
+Measured against the live Frankfurt database, 2026-09-01.
+
+```
+max_connections     60          in use: 14, active: 1
+shared_buffers      224MB       database size: 12MB
+```
+
+**60 connections is the wall**, and it is not 60 users. On port **6543**, the
+transaction pooler, a connection is held only for the length of a query, so
+hundreds of concurrent users share those 60 comfortably. On port **5432** the
+session pooler holds one per client and dies at literally 60. `fly.toml` and
+`backend/.env` are both correctly on 6543 — **keep them there.**
+
+The database is 12MB and fits in `shared_buffers` many times over, so reads are
+served from RAM. Every hot path is indexed; there are no sequential scans where
+it matters. Query counts are flat with data volume, pinned by `QueryBudgetTest`,
+which measures the same endpoint at 5 and 40 orders and asserts the count is
+identical — so there is no N+1 waiting to appear at scale.
+
+**For 100–500 concurrent users: no change needed.** One `shared-cpu-1x` machine
+and the current Supabase tier carry it, provided the API is in Frankfurt.
+
+The catalogue read measures **270 ms median from a laptop in Baku** — of which
+perhaps 2 ms is Postgres and the rest is distance. Deploying the API in Frankfurt
+is what collapses that, because the phone then pays the distance once per
+request instead of once per query.
+
+**What would actually break it** is not user count:
+
+1. The API not deployed — every write fails, at any load
+2. Running the app on port 5432 — dies at 60 users
+3. A skipped cutover — not a crash, but silently wrong data, which is worse
+
+---
+
+## Already done — nothing here needs redoing
+
+- Database moved Seoul → Frankfurt, verified row for row; pooler handshake
+  324 ms → 88 ms
+- Three security regressions the restore introduced, found and closed —
+  including `settle_payment_intent` becoming callable by `anon`
+- `EXECUTE` revoked on all 11 public trigger functions, after proving in a
+  rolled-back transaction that triggers still fire without it
+- Six missing indexes on hot queries
+- The courier-marker backwards-jump, fixed at query, model and column precision
+- `wallet_topups` created and secured; `notifications` given the `title` and
+  `body` columns it was missing — **that was the blank inbox**
+- Eight stray Laravel stub tables dropped after an accidental bare `migrate`,
+  and the ledger corrected
 
 Detail in [`scripts/migration/MIGRATION_LOG.md`](scripts/migration/MIGRATION_LOG.md)
-and [`INFRASTRUCTURE.md`](INFRASTRUCTURE.md).
+and [`backend/DEPLOY.md`](backend/DEPLOY.md).
