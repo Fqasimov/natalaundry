@@ -82,6 +82,20 @@ fly secrets set KAPITAL_PASSWORD="<from .env>"
 Everything else — host, port, username, URLs, the pricing constants — is
 non-secret and already in `fly.toml`.
 
+**What each of them is actually for**, because two of them fail in ways that are
+hard to read:
+
+| Variable | Why it matters |
+|---|---|
+| `APP_KEY` | Encrypted cookies and signed URLs. Use the **existing** one — a new key logs everyone out. |
+| `SUPABASE_JWT_SECRET` | **Every request is verified with this.** Wrong or missing and the API rejects everyone, including you. |
+| `SUPABASE_URL` | The token middleware pins the issuer to `{SUPABASE_URL}/auth/v1`. A mismatch rejects every valid token. |
+| `APP_URL` | The admin console builds its API base from this, and the CSP names it. Get it wrong and the console loads but cannot call the API — which looks like a broken console, not a config error. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side writes that bypass RLS. Never goes near the app. |
+| `SUPABASE_ANON_KEY` | Publishable; the admin console signs staff in with it. |
+| `GOOGLE_MAPS_API_KEY` | Geocoding only. |
+| `KAPITAL_PASSWORD` | Payment gateway. Currently the **test** credential — see below. |
+
 **Check nothing is missing before deploying:**
 
 ```bash
@@ -100,20 +114,29 @@ fly secrets list
 fly deploy
 ```
 
-Then confirm the health endpoint answers over TLS:
+Then run all three checks. They test different things and the third is the one
+that matters most:
 
 ```bash
-curl -i https://natalaundry-api.fly.dev/up
+curl -fsS https://natalaundry-api.fly.dev/up
 ```
 
 `200` means the container is up. It does **not** mean the database works — `/up`
-deliberately touches no database. Test that separately:
+deliberately touches no database.
 
 ```bash
-curl -s https://natalaundry-api.fly.dev/api/catalog | head -c 200
+curl -fsS https://natalaundry-api.fly.dev/api/catalog | head -c 200
 ```
 
-That route reads Postgres. JSON back means the Frankfurt connection is live.
+Reads Postgres. JSON back means the Frankfurt connection is live.
+
+```bash
+curl -isS https://natalaundry-api.fly.dev/api/orders | head -1
+```
+
+**Must be `401`.** A `200` here means the token middleware is not running and
+every order endpoint is open to the internet. Do not point the app at a
+deployment that returns anything else.
 
 ---
 
@@ -153,6 +176,9 @@ In the **project root** `.env`:
 ```
 EXPO_PUBLIC_API_URL=https://api.natalaundry.az
 ```
+
+**No trailing slash** — `lib/api.ts` appends `/api` itself. For real builds this
+also has to be set in the EAS build secrets, not only in the local file.
 
 Expo inlines this at build time, so clear the cache or the old LAN address
 survives into the bundle:
@@ -222,3 +248,12 @@ auth lives in Supabase, and running them would create a second `users` table in
 `public` for PostgREST to expose.
 
 **Rotating `APP_KEY` logs everyone out.** Use the existing one.
+
+**`database/policies/rls.sql` must NOT be run.** An earlier version of this file
+told you to apply it. It is superseded: it names `profiles.avatar_url`, which
+does not exist, and a `GRANT` on a missing column aborts the whole transaction.
+RLS is already enabled on all 19 tables. See `SECURITY.md` and `CLAUDE.md`.
+
+**The reward pool is already seeded.** `php artisan db:seed --class=RewardSeeder`
+is idempotent — it upserts the fifty prizes by `(kind, title, tier)` — but it
+does not need running against Frankfurt, which was restored with the data.
