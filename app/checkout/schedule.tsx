@@ -124,13 +124,15 @@ export default function ScheduleScreen() {
         })}
 
         <Pressable style={styles.noteButton} onPress={() => setNoteOpen(true)}>
-          <Text style={styles.noteButtonLabel}>
+          <Text style={styles.noteButtonLabel} numberOfLines={2}>
             {draft.courierNote ? draft.courierNote : t("addCourierNote")}
           </Text>
         </Pressable>
 
         <View style={styles.repeatRow}>
-          <Text style={styles.repeatLabel}>{t("repeatOrder")}</Text>
+          <Text style={styles.repeatLabel} numberOfLines={2}>
+            {t("repeatOrder")}
+          </Text>
           <Switch
             value={draft.repeatOrder}
             onValueChange={(repeatOrder) => patchDraft({ repeatOrder })}
@@ -240,17 +242,23 @@ const styles = StyleSheet.create({
     backgroundColor: brand.moonstoneSoft,
     borderRadius: radius.md,
     paddingVertical: 16,
+    paddingHorizontal: 16,
     alignItems: "center",
     marginTop: 14,
   },
-  noteButtonLabel: { fontFamily: font.medium, fontSize: 15, color: brand.moonstoneInk },
+  noteButtonLabel: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    textAlign: "center",
+    color: brand.moonstoneInk,
+  },
   repeatRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 20,
   },
-  repeatLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
+  repeatLabel: { flex: 1, marginRight: 12, fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,

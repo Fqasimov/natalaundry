@@ -117,7 +117,7 @@ export default function WalletScreen() {
             return (
               <View style={s.row}>
                 <View style={s.rowText}>
-                  <Text style={s.rowKind}>
+                  <Text style={s.rowKind} numberOfLines={1}>
                     {t((KIND_LABEL[item.kind] ?? "walletKindOther") as never)}
                   </Text>
                   <Text style={s.rowNote}>
@@ -183,7 +183,7 @@ const s = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowKind: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
   rowNote: { ...type.caption, color: brand.onSoftMuted },
-  rowAmount: { fontFamily: font.bold, fontSize: 15 },
+  rowAmount: { flexShrink: 0, fontFamily: font.bold, fontSize: 15 },
   credit: { color: colors.success },
   debit: { color: colors.textPrimary },
 });

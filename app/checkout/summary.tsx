@@ -283,7 +283,10 @@ export default function SummaryScreen() {
                         {t("rewardExpiresIn", { days: reward.days_left })}
                       </Text>
                     </View>
-                    <Text style={[styles.rewardAction, chosen && styles.rewardActionOn]}>
+                    <Text
+                      style={[styles.rewardAction, chosen && styles.rewardActionOn]}
+                      numberOfLines={1}
+                    >
                       {chosen ? t("rewardApplied") : t("rewardApply")}
                     </Text>
                   </Pressable>
@@ -463,7 +466,14 @@ const styles = StyleSheet.create({
   divided: { borderTopWidth: 1, borderTopColor: brand.divider },
   itemName: { fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
   itemUnit: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 2 },
-  lineTotal: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary, minWidth: 62, textAlign: "right" },
+  lineTotal: {
+    flexShrink: 0,
+    fontFamily: font.semibold,
+    fontSize: 15,
+    color: colors.textPrimary,
+    minWidth: 62,
+    textAlign: "right",
+  },
   rewardList: { gap: 8 },
   rewardRow: {
     flexDirection: "row",
@@ -486,7 +496,7 @@ const styles = StyleSheet.create({
   },
   rewardTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
   rewardMeta: { fontFamily: font.regular, fontSize: 11.5, color: brand.onSoftMuted, marginTop: 2 },
-  rewardAction: { fontFamily: font.semibold, fontSize: 12.5, color: brand.onSoftMuted },
+  rewardAction: { flexShrink: 0, fontFamily: font.semibold, fontSize: 12.5, color: brand.onSoftMuted },
   rewardActionOn: { color: brand.moonstoneInk },
   promoRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   promoInput: {
@@ -598,11 +608,11 @@ const styles = StyleSheet.create({
   },
   totalsCard: { backgroundColor: brand.surfaceAlt, borderRadius: radius.lg, padding: 18, marginTop: 22 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
-  totalLabel: { fontFamily: font.regular, fontSize: 15, color: brand.onSoftMuted },
-  totalValue: { fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
+  totalLabel: { flex: 1, marginRight: 12, fontFamily: font.regular, fontSize: 15, color: brand.onSoftMuted },
+  totalValue: { flexShrink: 0, fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
   totalsDivider: { height: 1, backgroundColor: brand.border, marginVertical: 10 },
-  grandLabel: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
-  grandValue: { fontFamily: font.bold, fontSize: 18, color: brand.moonstoneInk },
+  grandLabel: { flex: 1, marginRight: 12, fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  grandValue: { flexShrink: 0, fontFamily: font.bold, fontSize: 18, color: brand.moonstoneInk },
   error: { fontFamily: font.regular, fontSize: 13, color: colors.danger, marginTop: 14 },
   // The order was placed but the money has not arrived — a warning, not a
   // failure, so it must not read like the order was lost.

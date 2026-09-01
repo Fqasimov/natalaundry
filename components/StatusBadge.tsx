@@ -36,7 +36,7 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 
   return (
     <View style={[styles.badge, { backgroundColor: `${tint}1A` }]}>
-      <Text style={[styles.text, { color: tint }]}>
+      <Text style={[styles.text, { color: tint }]} numberOfLines={1}>
         {t((LABEL_KEY[status] ?? "statusPending") as never)}
       </Text>
     </View>
@@ -44,10 +44,14 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 }
 
 const styles = StyleSheet.create({
+  // The badge always sits at the end of a row beside an order number or a
+  // status line. It holds its own width so the text beside it is what wraps,
+  // rather than the badge being squeezed until its label leaves the pill.
   badge: {
     borderRadius: radius.pill,
     paddingHorizontal: 11,
     paddingVertical: 5,
+    flexShrink: 0,
   },
   text: { fontFamily: font.semibold, fontSize: 12 },
 });

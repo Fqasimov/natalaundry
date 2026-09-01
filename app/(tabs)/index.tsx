@@ -43,7 +43,7 @@ const SERVICE_THEME: Record<
   { bg: string; iconBg: string; iconFg: string; fg: string }
 > = {
   dry_cleaning: { bg: brand.lightBlue,      iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
-  ironing:      { bg: brand.aliceBlue,      iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
+  ironing:      { bg: brand.moonstoneSoft,  iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
   shoes:        { bg: brand.timberwolf,     iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
   bedding:      { bg: brand.lightBlueSoft,  iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
   bags:         { bg: brand.timberwolfSoft, iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
@@ -129,10 +129,8 @@ function ServiceIcon({
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t, lang, setLang } = useI18n();
-  const { count } = useCart();
   const { session } = useAuth();
   const { profile } = useProfile();
-
   const { add, setQty, reset } = useCart();
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [ordered, setOrdered] = useState<boolean | null>(null);
@@ -301,12 +299,14 @@ export default function HomeScreen() {
               onPress={() => router.push(`/track/${activeOrder.id}`)}
             >
               <View style={styles.orderTopRow}>
-                <Text style={styles.heroOrderLabel}>{t("activeOrder")}</Text>
-                <Text style={styles.orderNo}>
+                <Text style={styles.heroOrderLabel} numberOfLines={1}>
+                  {t("activeOrder")}
+                </Text>
+                <Text style={styles.orderNo} numberOfLines={1}>
                   {t("orderNo", { no: activeOrder.order_no ?? "—" })}
                 </Text>
               </View>
-              <Text style={styles.orderState}>
+              <Text style={styles.orderState} numberOfLines={2}>
                 {t(LIFECYCLE_LABEL[activeOrder.lifecycle_state] ?? "stateOrderPlaced")}
               </Text>
 
@@ -331,7 +331,9 @@ export default function HomeScreen() {
             <View style={styles.emptyOrderCard}>
               <Ionicons name="cube-outline" size={20} color="rgba(255,255,255,0.9)" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.emptyOrderTitle}>{t("noActiveOrder")}</Text>
+                <Text style={styles.emptyOrderTitle} numberOfLines={1}>
+                  {t("noActiveOrder")}
+                </Text>
                 <Text style={styles.emptyOrderBody}>{t("noActiveOrderBody")}</Text>
               </View>
             </View>
@@ -344,7 +346,9 @@ export default function HomeScreen() {
                 <Ionicons name="refresh" size={20} color={brand.midnight} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.repeatTitle}>⚡ {t("repeatPrevTitle")}</Text>
+                <Text style={styles.repeatTitle} numberOfLines={1}>
+                  ⚡ {t("repeatPrevTitle")}
+                </Text>
                 <Text style={styles.repeatBody} numberOfLines={1}>
                   {t("repeatPrevBody")}
                 </Text>
@@ -354,7 +358,7 @@ export default function HomeScreen() {
                 disabled={repeating}
                 onPress={repeatLastOrder}
               >
-                <Text style={styles.repeatButtonLabel}>
+                <Text style={styles.repeatButtonLabel} numberOfLines={1}>
                   {repeating ? "…" : `${t("repeatPrevAction")} ↺`}
                 </Text>
               </Pressable>
@@ -376,8 +380,12 @@ export default function HomeScreen() {
             >
               <Ionicons name="gift" size={30} color={brand.midnight} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.giftTitle}>🎁 {t("giftBox")}</Text>
-                <Text style={styles.giftSubtitle}>{t("giftBoxSubtitle")}</Text>
+                <Text style={styles.giftTitle} numberOfLines={1}>
+                  🎁 {t("giftBox")}
+                </Text>
+                <Text style={styles.giftSubtitle} numberOfLines={2}>
+                  {t("giftBoxSubtitle")}
+                </Text>
               </View>
               <Ionicons
                 name="chevron-forward"
@@ -409,11 +417,17 @@ export default function HomeScreen() {
                     size={48}
                   />
                   <View style={styles.popularBadge}>
-                    <Text style={styles.popularLabel}>{t("mostPopular")}</Text>
+                    <Text style={styles.popularLabel} numberOfLines={1}>
+                      {t("mostPopular")}
+                    </Text>
                   </View>
                 </View>
-                <Text style={styles.featureTitle}>{copy.service(feat)}</Text>
-                <Text style={styles.featureTagline}>{copy.tagline(feat)}</Text>
+                <Text style={styles.featureTitle} numberOfLines={2}>
+                  {copy.service(feat)}
+                </Text>
+                <Text style={styles.featureTagline} numberOfLines={3}>
+                  {copy.tagline(feat)}
+                </Text>
               </View>
               <View style={styles.orderRow}>
                 <Text style={styles.orderLabel}>{t("order")}</Text>
@@ -440,7 +454,9 @@ export default function HomeScreen() {
                   size={42}
                 />
                 <View>
-                  <Text style={styles.mediumTitle}>{copy.service(ironing)}</Text>
+                  <Text style={styles.mediumTitle} numberOfLines={2}>
+                    {copy.service(ironing)}
+                  </Text>
                   <View style={styles.baxRow}>
                     <Text style={[styles.baxLabel, { color: ironTheme.fg }]}>{t("view")}</Text>
                     <Ionicons
@@ -465,7 +481,9 @@ export default function HomeScreen() {
                   size={42}
                 />
                 <View>
-                  <Text style={styles.mediumTitle}>{copy.service(shoes)}</Text>
+                  <Text style={styles.mediumTitle} numberOfLines={2}>
+                    {copy.service(shoes)}
+                  </Text>
                   <View style={styles.baxRow}>
                     <Text style={[styles.baxLabel, { color: shoeTheme.fg }]}>{t("view")}</Text>
                     <Ionicons
@@ -494,8 +512,12 @@ export default function HomeScreen() {
               size={46}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.topluTitle}>{copy.label("toplu", serviceTheme.toplu.label)}</Text>
-              <Text style={styles.topluTagline}>{t("topluTagline")}</Text>
+              <Text style={styles.topluTitle} numberOfLines={1}>
+                {copy.label("toplu", serviceTheme.toplu.label)}
+              </Text>
+              <Text style={styles.topluTagline} numberOfLines={2}>
+                {t("topluTagline")}
+              </Text>
             </View>
             <View style={styles.topluDepositPill}>
               <Text style={[styles.topluDepositLabel, { color: SERVICE_THEME.toplu.fg }]}>
@@ -519,16 +541,13 @@ export default function HomeScreen() {
                 size={40}
               />
               <View style={styles.wideText}>
-                <Text style={styles.wideTitle}>{copy.service(bedding)}</Text>
-                <Text style={styles.wideTagline} numberOfLines={1}>
+                <Text style={styles.wideTitle} numberOfLines={2}>
+                  {copy.service(bedding)}
+                </Text>
+                <Text style={styles.wideTagline} numberOfLines={2}>
                   {copy.tagline(bedding)}
                 </Text>
               </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={bedTheme.fg}
-              />
             </PressCard>
 
             {/* Aksesuarlar və Oyuncaqlar */}
@@ -547,15 +566,10 @@ export default function HomeScreen() {
                 <Text style={styles.wideTitle} numberOfLines={2}>
                   {copy.service(bags)}
                 </Text>
-                <Text style={styles.wideTagline} numberOfLines={1}>
+                <Text style={styles.wideTagline} numberOfLines={2}>
                   {copy.tagline(bags)}
                 </Text>
               </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={bagTheme.fg}
-              />
             </PressCard>
           </View>
         </View>
@@ -590,18 +604,8 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Cart FAB */}
-      {count > 0 ? (
-        <Pressable
-          style={[styles.cartFab, { bottom: insets.bottom + 92 }]}
-          onPress={() => router.push("/checkout/schedule")}
-        >
-          <Ionicons name="cart" size={24} color={colors.textInverse} />
-          <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeLabel}>{count}</Text>
-          </View>
-        </Pressable>
-      ) : null}
+      {/* The cart button is the shared <CartFab/> mounted in app/_layout.tsx,
+          which renders on this route only — see that component. */}
     </View>
   );
 }
@@ -788,13 +792,14 @@ const styles = StyleSheet.create({
   },
   orderTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   heroOrderLabel: {
+    flexShrink: 1,
     fontFamily: font.semibold,
     fontSize: 11.5,
     letterSpacing: 0.6,
     textTransform: "uppercase",
     color: brand.onDarkFaint,
   },
-  orderNo: { fontFamily: font.medium, fontSize: 12, color: brand.onDarkFaint },
+  orderNo: { flexShrink: 0, fontFamily: font.medium, fontSize: 12, color: brand.onDarkFaint },
   orderState: {
     fontFamily: font.bold,
     fontSize: 18,
@@ -879,6 +884,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    // Shrinks rather than overflowing: the Russian label is longer than the
+    // gap left beside the 48pt service icon.
+    flexShrink: 1,
   },
   popularLabel: {
     fontFamily: font.bold,
@@ -961,6 +969,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 7,
+    // The price must never be the thing that gives way.
+    flexShrink: 0,
   },
   topluDepositLabel: { fontFamily: font.bold, fontSize: 14 },
 
@@ -969,7 +979,7 @@ const styles = StyleSheet.create({
   wideCard: {
     flex: 1,
     borderRadius: 20,
-    minHeight: 74,
+    minHeight: 88,
   },
   wideContent: {
     paddingHorizontal: 12,
@@ -978,6 +988,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+  // ~100pt once the chevron is gone, which is what the longest single word in
+  // the grid ("Aksesuarlar", "Accessories", "Аксессуары") actually needs.
   wideText: { flex: 1 },
   wideTitle: {
     fontFamily: font.bold,
@@ -992,33 +1004,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ── Cart FAB ──────────────────────────────────────────────────────────────
-  cartFab: {
-    position: "absolute",
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: brand.midnight,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  cartBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: brand.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
-  cartBadgeLabel: { fontFamily: font.bold, fontSize: 11, color: colors.textPrimary },
 });

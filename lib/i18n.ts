@@ -490,7 +490,7 @@ const ru: Record<StringKey, string> = {
   addedToAccount: "добавлено на ваш счёт.",
   alreadyUsed: "Уже использовано!",
   services: "Услуги",
-  mostPopular: "САМОЕ ПОПУЛЯРНОЕ",
+  mostPopular: "ПОПУЛЯРНОЕ",
   view: "Смотреть",
   serviceOverview: "Обзор услуг",
   priceList: "Прайс-лист",

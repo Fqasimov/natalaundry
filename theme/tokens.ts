@@ -87,6 +87,13 @@ export const brand = {
   timberwolfInk: "#6E6859", // Timberwolf pushed to a legible type weight
 
   // Surfaces.
+  //
+  // NOTE: `background` and `aliceBlue` are the same colour. Anything drawn on
+  // the app background must not fill itself with `aliceBlue` — it renders as
+  // no card at all. Two tiles shipped that way (the ironing tile on home, the
+  // signup confirmation panel) before it was caught in a screenshot. Use
+  // `moonstoneSoft`, `lightBlueSoft` or `surfaceAlt` for a soft cool fill that
+  // is actually visible; `aliceBlue` is fine on white or on the hero.
   background: "#E9F1F6", // Alice Blue is the app surface here, not ivory
   surface: "#FFFFFF",
   surfaceAlt: "#DCEAF1",

@@ -81,7 +81,10 @@ export default function OrdersScreen() {
               style={[s.segment, courierTab === key && s.segmentActive]}
               onPress={() => setCourierTab(key)}
             >
-              <Text style={[s.segmentLabel, courierTab === key && s.segmentLabelActive]}>
+              <Text
+                style={[s.segmentLabel, courierTab === key && s.segmentLabelActive]}
+                numberOfLines={1}
+              >
                 {key === "available" ? t("courierAvailable") : t("courierActive")}
               </Text>
             </Pressable>
@@ -112,7 +115,9 @@ export default function OrdersScreen() {
           renderItem={({ item }) => (
             <Pressable style={s.card} onPress={() => router.push(`/order/${item.id}`)}>
               <View style={s.cardTop}>
-                <Text style={s.orderNo}>{t("orderNo", { no: item.order_no ?? "—" })}</Text>
+                <Text style={s.orderNo} numberOfLines={1}>
+                  {t("orderNo", { no: item.order_no ?? "—" })}
+                </Text>
                 <StatusBadge status={item.status} />
               </View>
               <Text style={s.address} numberOfLines={2}>
@@ -153,6 +158,7 @@ const s = StyleSheet.create({
   segment: {
     flex: 1,
     alignItems: "center",
+    paddingHorizontal: 10,
     borderRadius: radius.pill,
     paddingVertical: 9,
     backgroundColor: brand.surfaceAlt,
@@ -173,8 +179,8 @@ const s = StyleSheet.create({
     padding: 16,
     gap: 6,
   },
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  orderNo: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  orderNo: { flexShrink: 1, fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
   address: { ...type.body, color: colors.textSecondary },
   cardBottom: {
     flexDirection: "row",
@@ -182,6 +188,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 2,
   },
-  slot: { ...type.caption, flex: 1, color: colors.textSecondary },
-  total: { fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
+  slot: { ...type.caption, flex: 1, marginRight: 10, color: colors.textSecondary },
+  total: { flexShrink: 0, fontFamily: font.bold, fontSize: 16, color: colors.textPrimary },
 });

@@ -137,7 +137,7 @@ export default function TrackOrderScreen() {
       <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}>
         <View style={s.statusCard}>
           <View style={s.statusRow}>
-            <Text style={s.statusLabel}>
+            <Text style={s.statusLabel} numberOfLines={2}>
               {t(LIFECYCLE_LABEL[current as LifecycleState] ?? "stateOrderPlaced")}
             </Text>
             {live ? (
@@ -232,6 +232,7 @@ const s = StyleSheet.create({
   livePill: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
     gap: 6,
     backgroundColor: colors.successSoft,
     borderRadius: radius.pill,
