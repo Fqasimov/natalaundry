@@ -67,16 +67,21 @@ If that name is taken, change it in `fly.toml` too — the two must match.
 They are encrypted at rest and injected as environment variables at run time —
 never baked into the image, never in the repo.
 
-Read each from your local `backend/.env`:
+One command reads them from `backend/.env` and sends them:
 
 ```bash
-fly secrets set APP_KEY="<from .env>"
-fly secrets set DB_PASSWORD="<the Frankfurt database password>"
-fly secrets set SUPABASE_SERVICE_ROLE_KEY="<from .env>"
-fly secrets set SUPABASE_ANON_KEY="<from .env>"
-fly secrets set GOOGLE_MAPS_API_KEY="<from .env>"
-fly secrets set KAPITAL_PASSWORD="<from .env>"
+php ../scripts/deploy/set-fly-secrets.php --apply
 ```
+
+Run it without `--apply` first: it lists every key as present or missing and
+refuses to send a partial set.
+
+> **Why not `fly secrets set K=V`.** That puts each value in the process list,
+> where anything running on the machine can read it, and into your shell
+> history. The script pipes them into `fly secrets import` through stdin
+> instead, so no value reaches a command line, a temporary file, or the
+> terminal. It also sets `KAPITAL_CALLBACK_URL` to the public URL, which the
+> `.env` value cannot be — the bank calls it from outside.
 
 Everything else — host, port, username, URLs, the pricing constants — is
 non-secret and already in `fly.toml`.
