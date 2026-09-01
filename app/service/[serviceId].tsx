@@ -16,6 +16,7 @@ import {
 import { findService } from "@/lib/catalog";
 import { useCatalogCopy } from "@/lib/catalog-i18n";
 import { useI18n } from "@/lib/language-context";
+import { pluralKey } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
 import { FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
 import { AddButton, BigButton, IconBubble, Pill, ScreenHeader, Stepper } from "@/components/ui";
@@ -41,7 +42,7 @@ import { AppIcon } from "@/components/AppIcon";
 export default function ServiceCatalogueScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { add, setQty, quantityOf, subtotal, count } = useCart();
 
   const activeId = (serviceId as ServiceKey) ?? "dry_cleaning";
@@ -122,7 +123,7 @@ export default function ServiceCatalogueScreen() {
             <Text style={styles.priceSubtitle}>{t("pricePerItem")}</Text>
           </View>
           <Text style={styles.priceCount} numberOfLines={1}>
-            {items.length} {t("products")}
+            {items.length} {t(pluralKey(lang, "products", items.length))}
           </Text>
         </View>
 

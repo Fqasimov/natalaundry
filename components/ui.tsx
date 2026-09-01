@@ -239,6 +239,7 @@ const s = StyleSheet.create({
     maxWidth: "34%",
     height: 44,
     paddingLeft: 8,
+    paddingRight: 4,
     alignItems: "flex-end",
     justifyContent: "center",
   },

@@ -346,10 +346,10 @@ export default function HomeScreen() {
                 <Ionicons name="refresh" size={20} color={brand.midnight} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.repeatTitle} numberOfLines={1}>
+                <Text style={styles.repeatTitle} numberOfLines={2}>
                   ⚡ {t("repeatPrevTitle")}
                 </Text>
-                <Text style={styles.repeatBody} numberOfLines={1}>
+                <Text style={styles.repeatBody} numberOfLines={2}>
                   {t("repeatPrevBody")}
                 </Text>
               </View>

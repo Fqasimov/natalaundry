@@ -79,6 +79,8 @@ const az = {
   expandAll: "Hamısını aç",
   collapseAll: "Bağla",
   products: "məhsul",
+  productsFew: "məhsul",
+  productsOne: "məhsul",
   estimatedPrice: "Təxmini qiymət",
   schedulePickup: "Götürülmə planla",
   cantFindItem: "Əşyanızı tapa bilmirsiniz?",
@@ -235,6 +237,7 @@ const az = {
   rewardChoose: "Hədiyyə seçin",
   rewardNone: "Hədiyyə yoxdur",
   rewardExpiresIn: "{days} gün qalıb",
+  rewardTtlNote: "Mükafatlar {days} gün etibarlıdır.",
 
   // Wallet
   walletNoTransactions: "Hələ əməliyyat yoxdur",
@@ -498,6 +501,8 @@ const ru: Record<StringKey, string> = {
   expandAll: "Раскрыть всё",
   collapseAll: "Свернуть",
   products: "товаров",
+  productsFew: "товара",
+  productsOne: "товар",
   estimatedPrice: "Примерная цена",
   schedulePickup: "Запланировать забор",
   cantFindItem: "Не нашли свою вещь?",
@@ -631,7 +636,7 @@ const ru: Record<StringKey, string> = {
   giftBoxReady: "У вас есть неоткрытая коробка!",
   giftBoxFromOrder: "За заказ {no}",
   giftBoxNone: "Коробка открывается после завершения заказа.",
-  giftBoxOpen: "Открыть коробку",
+  giftBoxOpen: "Открыть",
   giftBoxOpening: "Открываем…",
   giftBoxTapToOpen: "Нажмите, чтобы открыть",
   rewardApply: "Применить к заказу",
@@ -640,6 +645,7 @@ const ru: Record<StringKey, string> = {
   rewardChoose: "Выберите подарок",
   rewardNone: "Без подарка",
   rewardExpiresIn: "Осталось {days} дн.",
+  rewardTtlNote: "Награды действительны {days} дней.",
 
   walletNoTransactions: "Операций пока нет",
   walletIntro: "Баланс можно использовать при оплате заказов.",
@@ -890,6 +896,8 @@ const en: Record<StringKey, string> = {
   expandAll: "Expand all",
   collapseAll: "Collapse",
   products: "items",
+  productsFew: "items",
+  productsOne: "item",
   estimatedPrice: "Estimated price",
   schedulePickup: "Schedule pickup",
   cantFindItem: "Can't find your item?",
@@ -1023,7 +1031,7 @@ const en: Record<StringKey, string> = {
   giftBoxReady: "You have an unopened box!",
   giftBoxFromOrder: "From order {no}",
   giftBoxNone: "Your box unlocks once an order is completed.",
-  giftBoxOpen: "Open the box",
+  giftBoxOpen: "Open",
   giftBoxOpening: "Opening…",
   giftBoxTapToOpen: "Tap to open",
   rewardApply: "Apply to this order",
@@ -1032,6 +1040,7 @@ const en: Record<StringKey, string> = {
   rewardChoose: "Choose a gift",
   rewardNone: "No gift",
   rewardExpiresIn: "{days} days left",
+  rewardTtlNote: "Rewards are valid for {days} days.",
 
   walletNoTransactions: "No transactions yet",
   walletIntro: "Your balance can be used to pay for orders.",
@@ -1239,4 +1248,38 @@ export function translate(
     }
   }
   return out;
+}
+
+/**
+ * Picks the right noun form for a count.
+ *
+ * Russian agrees the noun with the number and needs three forms — 21 товар,
+ * 22 товара, 25 товаров — so a single plural string renders "21 товаров" on
+ * the catalogue header. Azerbaijani has no plural agreement after a numeral
+ * and returns the same word for every count; English needs the singular only
+ * at exactly one.
+ *
+ * Callers pass the *base* key and the two extra forms are derived from it, so
+ * a key only has to opt in by defining `<key>One` and `<key>Few` alongside it.
+ */
+export function pluralKey(
+  lang: Language,
+  base: StringKey,
+  count: number,
+): StringKey {
+  const one = `${base}One` as StringKey;
+  const few = `${base}Few` as StringKey;
+  if (!(one in dictionaries.az)) return base;
+
+  if (lang === "ru") {
+    const mod100 = Math.abs(count) % 100;
+    const mod10 = mod100 % 10;
+    if (mod100 >= 11 && mod100 <= 14) return base;
+    if (mod10 === 1) return one;
+    if (mod10 >= 2 && mod10 <= 4) return few;
+    return base;
+  }
+  if (lang === "en") return Math.abs(count) === 1 ? one : base;
+  // Azerbaijani takes no plural after a numeral.
+  return one;
 }

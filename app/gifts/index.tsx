@@ -182,7 +182,7 @@ export default function GiftBoxScreen() {
                     <Ionicons name="gift" size={24} color={colors.textInverse} />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.boxTitle} numberOfLines={1}>
+                    <Text style={s.boxTitle} numberOfLines={2}>
                       {t("giftBoxReady")}
                     </Text>
                     <Text style={s.boxSub}>
@@ -229,7 +229,7 @@ export default function GiftBoxScreen() {
               })
             )}
 
-            <Text style={s.footnote}>{t("rewardExpiresIn", { days: REWARD_TTL_DAYS })}</Text>
+            <Text style={s.footnote}>{t("rewardTtlNote", { days: REWARD_TTL_DAYS })}</Text>
           </>
         )}
       </ScrollView>
