@@ -33,12 +33,22 @@ if (!is_file($envFile)) {
 const SECRET_KEYS = [
     'APP_KEY',
     'DB_PASSWORD',
-    'SUPABASE_JWT_SECRET',
     'SUPABASE_SERVICE_ROLE_KEY',
     'SUPABASE_ANON_KEY',
     'GOOGLE_MAPS_API_KEY',
     'KAPITAL_PASSWORD',
 ];
+
+/**
+ * Deliberately not sent, and deliberately not merely "optional".
+ *
+ * The project signs access tokens with ES256 and the middleware verifies them
+ * against the published JWKS, so nothing reads SUPABASE_JWT_SECRET. Setting it
+ * does not add a fallback — it opens a second door, because the middleware
+ * branches on the token's own `alg` and an HS256 token signed with that secret
+ * would be accepted even though Supabase itself rejects it.
+ */
+const MUST_STAY_EMPTY = ['SUPABASE_JWT_SECRET'];
 
 $env = [];
 foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
@@ -66,10 +76,29 @@ foreach (SECRET_KEYS as $k) {
         isset($send[$k]) ? sprintf('present (%d chars)', strlen($send[$k])) : 'MISSING');
 }
 
+// The one that must NOT be set. Louder than a missing key, because filling it
+// in weakens auth rather than merely leaving something unconfigured.
+$wrongly = [];
+foreach (MUST_STAY_EMPTY as $k) {
+    printf("  %-28s %s\n", $k,
+        empty($env[$k]) ? 'empty — correct, see DEPLOY.md' : 'SET — must be cleared');
+    if (!empty($env[$k])) {
+        $wrongly[] = $k;
+    }
+}
+
+if ($wrongly) {
+    echo "\n", implode(', ', $wrongly), " is set and must not be.\n";
+    echo "The project signs with ES256 and verifies against its published JWKS, so\n";
+    echo "nothing reads it. Setting it opens a second door: the middleware branches\n";
+    echo "on the token's own alg, so anyone holding that value could mint an HS256\n";
+    echo "token this API accepts even though Supabase rejects it. Clear the line.\n";
+    exit(1);
+}
+
 if ($missing) {
     echo "\n", implode(', ', $missing), " not set in backend/.env.\n";
-    echo "Fill them in before deploying — a missing SUPABASE_JWT_SECRET makes the\n";
-    echo "API reject every request, including yours.\n";
+    echo "Fill them in before deploying.\n";
     exit(1);
 }
 
