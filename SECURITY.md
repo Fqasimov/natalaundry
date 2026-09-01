@@ -267,3 +267,115 @@ carrier NAT, where an IP limit is one limit shared by a neighbourhood.
 - Nothing rotates the staff token; it lives for as long as Supabase says. If
   the console grows beyond a handful of people, that is the next thing to
   look at.
+
+---
+
+## Second pass, adversarial (2026-09-01)
+
+A deliberate attempt to break the app from the outside: replay things, race
+things, name my own numbers, read other people's rows. Most of it bounced —
+the token middleware, the order-scoped lookups and the "server re-prices
+everything" rule are all sound. What follows is what did not bounce.
+
+### 1. Double refund on a bulk count — HIGH, fixed
+
+`OrderService::countBulk()` checked `counted_at !== null` **before** opening
+its transaction, and never locked the order row. Two counts submitted together
+both read `counted_at` as null, both passed the guard, both wrote, and both
+credited the customer's wallet with the deposit difference.
+
+That is real money, minted by pressing a button twice on a slow connection.
+The guard now runs against a `SELECT ... FOR UPDATE` row inside the same
+transaction that writes, so the second attempt sees the first one's effect.
+
+`CLAUDE.md` already said "never check-then-write, and not only for courier
+claims" and named gift boxes and order discounts. This one had been missed.
+
+### 2. The same shape in three more places — fixed
+
+- `OrderService::advance()` — two concurrent calls both read `collecting` and
+  both stepped forward, skipping a state and stamping its timestamps twice.
+- `OrderService::cancel()` — a cancel racing a courier's claim could cancel an
+  order that had just been taken, because `isCancellable()` read a copy
+  fetched before the claim committed.
+- `OrderLifecycleService::transition()` — validated `canTransition()` against
+  the instance handed in, then wrote inside a transaction. Two transitions
+  therefore both validated against the same stale `from` state, applied twice,
+  and wrote two audit rows for one real change. Note that `claim()` in the
+  same file always did this correctly; `transition()` did not.
+
+All four now lock and re-read first. `ConcurrencyGuardTest` pins the property
+by re-running each operation against a deliberately stale instance — which is
+exactly what a second in-flight request holds.
+
+### 3. Unbounded request arrays — MEDIUM, fixed
+
+`items` on order creation and on `orders/quote` had `min:1` and no maximum.
+Every line costs a catalogue resolve plus a row insert inside one transaction,
+so a single request carrying 100,000 lines pins a database connection and
+bloats `order_items`. Capped at 100 lines, 20 photos, and 64 chars per id.
+
+### 4. Amplification through the payment callback — MEDIUM, fixed
+
+`GET /api/payments/callback` is public by necessity — a browser returning from
+the bank carries no Supabase token — and every hit makes an **outbound** call
+to Kapital to re-read the order. It had no rate limit. Anyone could turn one
+cheap unauthenticated request into one bank API call and burn the merchant's
+rate budget from a laptop, with a flood of guessed order ids costing them
+nothing. Now `throttle:public` (30/min/IP), as are `catalog` and
+`payments/methods`. Refunds take a tighter `throttle:money` (10/min).
+
+### 5. CORS was wide open — LOW, fixed
+
+There was no `config/cors.php`, so Laravel's default `allowed_origins => ['*']`
+applied to `api/*`. Not immediately exploitable — this API is bearer-token
+authenticated, not cookie authenticated, so a cross-origin page has no way to
+obtain a token — but it let any site script the API on behalf of anything that
+did hold one. Pinned to `APP_URL` plus whatever `CORS_ALLOWED_ORIGINS` names.
+The mobile app is unaffected either way: CORS is a browser mechanism.
+
+### 6. No response headers on the API — LOW, fixed
+
+`SecurityHeaders` middleware, API group only (the admin console keeps its own
+stricter nonce-based policy). `nosniff`, `X-Frame-Options: DENY`, a
+referrer policy that keeps order ids out of third-party logs, HSTS over HTTPS
+only, `Cache-Control: no-store` because responses carry addresses and phone
+numbers, and a `default-src 'none'` CSP — nothing here returns markup, so
+nothing legitimate is lost.
+
+### What held up under attack
+
+Worth recording, so nobody spends the effort twice:
+
+- **Token verification.** Algorithm taken from a fixed allow-list (`none` is
+  rejected before any key loads), `exp` required rather than merely honoured,
+  and `role`/`aud`/`iss` all pinned — so the anon key that ships in the app
+  bundle cannot be replayed as a user token.
+- **IDOR.** Every order lookup is scoped by `user_id` or `courier_id` in the
+  query itself, not checked afterwards. Photos go through
+  `OrderPhotoService::viewableBy()`. Refunds are admin-only. A top-up status
+  lookup is scoped the same way, which matters because settlement is keyed off
+  the row rather than the requester.
+- **Price tampering.** Order creation re-resolves every line against the
+  server catalogue and payment reads the amount off the order row. There is no
+  request field that can name a charge — including for Nata Balance.
+- **Privilege escalation via the API.** `ProfileController::update` validates
+  down to name/phone/language, so `role` and `wallet_balance` in the body are
+  discarded. Pinned by a test now. Note this is the API path only — the
+  PostgREST path is fenced by the column grant in section 1 above, and Nata
+  Balance depends on that grant continuing to hold.
+
+### Still needs doing by hand
+
+Two migrations are written but **not applied** — both touch production, so
+they are yours to run (`php artisan migrate --pretend` first, and read it as a
+lower bound; see `CLAUDE.md` on why `--pretend` under-reports):
+
+- `2026_09_01_000001_create_wallet_topups_table` — new table, additive.
+- `2026_09_01_000002_ensure_notification_columns` — adds only missing columns
+  to `notifications`, guarded per column, and never drops or rewrites one.
+
+Both need `wallet_topups` fenced the way every other table is: enable RLS and
+revoke the `anon`/`authenticated` grants, exactly as was done by hand for
+Laravel's own `migrations` table. It holds payment references and amounts, and
+PostgREST will expose it the moment it exists.

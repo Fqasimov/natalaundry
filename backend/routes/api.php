@@ -13,17 +13,17 @@ use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
 // The catalogue mirrors the public "Anyone can read active prices" policy.
-Route::get('catalog', [CatalogController::class, 'index']);
+Route::get('catalog', [CatalogController::class, 'index'])->middleware('throttle:public');
 
 // Which payment methods checkout may offer. Public: the answer depends only
 // on server configuration, not on who is asking.
-Route::get('payments/methods', [PaymentController::class, 'methods']);
+Route::get('payments/methods', [PaymentController::class, 'methods'])->middleware('throttle:public');
 
 // Where Kapital Bank redirects the customer's browser after the hosted
 // payment page. Unauthenticated by necessity — a browser coming back from the
 // bank carries no Supabase token — so nothing in the query string is trusted:
 // the handler re-reads the real status from the bank. See PaymentController.
-Route::get('payments/callback', [PaymentController::class, 'callback']);
+Route::get('payments/callback', [PaymentController::class, 'callback'])->middleware('throttle:public');
 
 // Everything else runs against the caller's Supabase access token.
 Route::middleware(['supabase', 'throttle:api'])->group(function () {
@@ -50,7 +50,7 @@ Route::middleware(['supabase', 'throttle:api'])->group(function () {
     // the order the server priced; see PaymentService.
     Route::post('orders/{order}/pay', [PaymentController::class, 'start'])->middleware('throttle:orders');
     Route::get('orders/{order}/payment', [PaymentController::class, 'show']);
-    Route::post('orders/{order}/refund', [PaymentController::class, 'refund']);
+    Route::post('orders/{order}/refund', [PaymentController::class, 'refund'])->middleware('throttle:money');
 
     // Lifecycle: the nine-step collection -> laundry -> delivery flow.
     // 'available' is declared before the {order} routes so the literal
@@ -73,5 +73,9 @@ Route::middleware(['supabase', 'throttle:api'])->group(function () {
     Route::get('gift-boxes', [GiftBoxController::class, 'index']);
     Route::post('gift-boxes/open', [GiftBoxController::class, 'open']);
 
+    // Nata Balance. Top-ups move money, so they take the tighter limiter and
+    // the status route is scoped to the caller's own rows in the controller.
     Route::get('wallet', [WalletController::class, 'index']);
+    Route::post('wallet/topup', [WalletController::class, 'topUp'])->middleware('throttle:money');
+    Route::get('wallet/topup/{topup}', [WalletController::class, 'topUpStatus']);
 });

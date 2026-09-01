@@ -265,24 +265,34 @@ class OrderService
      */
     public function countBulk(Order $order, Profile $courier, float $countedTotal): Order
     {
-        if ($order->service_type !== config('nata.toplu.service_type')) {
-            throw new RuntimeException('Only bulk orders are counted.');
-        }
-        if ($order->courier_id !== $courier->id) {
-            throw new RuntimeException('Only the assigned courier can count this order.');
-        }
-        if ($order->counted_at !== null) {
-            throw new RuntimeException('This order has already been counted.');
-        }
         if ($countedTotal < 0) {
             throw new InvalidArgumentException('A counted total cannot be negative.');
         }
 
         return DB::transaction(function () use ($order, $courier, $countedTotal) {
-            $deposit = (float) $order->deposit_amount;
+            // Every guard below reads the locked row, not the copy handed in.
+            // They used to run before the transaction opened, which made this
+            // a check-then-write: two counts submitted together both saw
+            // counted_at === null, both passed, and both credited the wallet.
+            // The refund is real money, so the read and the write have to be
+            // the same critical section.
+            /** @var Order $locked */
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($locked->service_type !== config('nata.toplu.service_type')) {
+                throw new RuntimeException('Only bulk orders are counted.');
+            }
+            if ($locked->courier_id !== $courier->id) {
+                throw new RuntimeException('Only the assigned courier can count this order.');
+            }
+            if ($locked->counted_at !== null) {
+                throw new RuntimeException('This order has already been counted.');
+            }
+
+            $deposit = (float) $locked->deposit_amount;
             $countedTotal = round($countedTotal, 2);
 
-            $order->forceFill([
+            $locked->forceFill([
                 'counted_total' => $countedTotal,
                 'counted_at' => now(),
                 'counted_by' => $courier->id,
@@ -293,29 +303,43 @@ class OrderService
             // Counted under the deposit — hand the difference straight back.
             if ($countedTotal < $deposit) {
                 app(WalletService::class)->credit(
-                    $order->user_id,
+                    $locked->user_id,
                     $deposit - $countedTotal,
                     'refund',
                     'Toplu sifariş: depozit qalığı',
-                    $order->id,
+                    $locked->id,
                 );
             }
 
-            return $order;
+            // The caller holds the instance it passed in; keep it in step.
+            $order->setRawAttributes($locked->getAttributes(), true);
+
+            return $locked;
         });
     }
 
     /** "Users can cancel their own pending orders." */
     public function cancel(Order $order): Order
     {
-        if (! $order->isCancellable()) {
-            throw new RuntimeException('Only pending orders can be cancelled.');
-        }
+        return DB::transaction(function () use ($order) {
+            /** @var Order $locked */
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
 
-        $order->status = 'cancelled';
-        $order->save();
+            // Re-checked against the locked row: a cancel racing a courier's
+            // claim used to be able to cancel an order that had just been
+            // taken, because the check read a copy fetched before the claim
+            // committed.
+            if (! $locked->isCancellable()) {
+                throw new RuntimeException('Only pending orders can be cancelled.');
+            }
 
-        return $order;
+            $locked->status = 'cancelled';
+            $locked->save();
+
+            $order->setRawAttributes($locked->getAttributes(), true);
+
+            return $locked;
+        });
     }
 
     /** A courier claims an unassigned pending order. */
@@ -350,22 +374,32 @@ class OrderService
     /** Advance an assigned order one step through the flow. */
     public function advance(Order $order, Profile $courier): Order
     {
-        if ($order->courier_id !== $courier->id) {
-            throw new RuntimeException('Only the assigned courier can advance this order.');
-        }
+        return DB::transaction(function () use ($order, $courier) {
+            /** @var Order $locked */
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
 
-        $step = self::STATUS_FLOW[$order->status] ?? null;
-        if (! $step) {
-            throw new RuntimeException("Order cannot advance from [{$order->status}].");
-        }
+            if ($locked->courier_id !== $courier->id) {
+                throw new RuntimeException('Only the assigned courier can advance this order.');
+            }
 
-        $order->status = $step['next'];
-        foreach ($step['stamps'] as $column) {
-            $order->{$column} = now();
-        }
-        $order->save();
+            // Decided from the locked row. Reading the status before the lock
+            // let two concurrent calls both see 'collecting' and both step
+            // forward, skipping a state and stamping its timestamps twice.
+            $step = self::STATUS_FLOW[$locked->status] ?? null;
+            if (! $step) {
+                throw new RuntimeException("Order cannot advance from [{$locked->status}].");
+            }
 
-        return $order;
+            $locked->status = $step['next'];
+            foreach ($step['stamps'] as $column) {
+                $locked->{$column} = now();
+            }
+            $locked->save();
+
+            $order->setRawAttributes($locked->getAttributes(), true);
+
+            return $locked;
+        });
     }
 
     /** Admin approves a pending order so it can be offered to couriers. */

@@ -16,6 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'supabase' => \App\Http\Middleware\AuthenticateSupabaseToken::class,
         ]);
+
+        // API only. The admin console serves HTML and carries its own,
+        // stricter, nonce-based policy in AdminConsoleHeaders — applying this
+        // one globally would overwrite it with a policy that forbids the very
+        // script the console needs.
+        $middleware->api(prepend: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -50,5 +50,21 @@ class AppServiceProvider extends ServiceProvider
         // route, so this has to be generous — it is here to stop a runaway loop
         // or a replay flooding the table, not to pace the normal case.
         RateLimiter::for('tracking', fn (Request $request) => Limit::perMinute(60)->by($key($request)));
+
+        // Unauthenticated endpoints, keyed by IP because that is all there is.
+        //
+        // The payment callback is the one that actually needs this. It is
+        // public by necessity — a browser returning from the bank carries no
+        // token — and every hit makes an *outbound* call to Kapital to
+        // re-read the order. Left open, anyone could turn one cheap request
+        // into one bank API call and burn the merchant's rate budget from a
+        // laptop. The lookup is by bank order id, so a flood of guesses costs
+        // nothing but the calls it triggers.
+        RateLimiter::for('public', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
+
+        // Anything that moves money on its own authority. Deliberately far
+        // tighter than 'api': these are the endpoints worth grinding at, and
+        // no honest client needs to call them often.
+        RateLimiter::for('money', fn (Request $request) => Limit::perMinute(10)->by($key($request)));
     }
 }

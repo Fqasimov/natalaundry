@@ -20,12 +20,16 @@ final class PaymentMethod
     public const APPLE_PAY = 'apple_pay';
     public const GOOGLE_PAY = 'google_pay';
 
+    /** Nata Balance — the customer's own wallet, settled instantly in-house. */
+    public const BALANCE = 'balance';
+
     /** The fixed up-front deposit on a "toplu" bulk order. */
     public const DEPOSIT = 'deposit';
 
     /** Everything a customer may choose at checkout. */
     public const CHECKOUT_METHODS = [
         self::CARD,
+        self::BALANCE,
         self::CASH,
         self::APPLE_PAY,
         self::GOOGLE_PAY,
@@ -46,6 +50,12 @@ final class PaymentMethod
     public static function isWallet(?string $method): bool
     {
         return in_array($method, [self::APPLE_PAY, self::GOOGLE_PAY], true);
+    }
+
+    /** Settled against the customer's Nata Balance, never the gateway. */
+    public static function isBalance(?string $method): bool
+    {
+        return $method === self::BALANCE;
     }
 
     /**
