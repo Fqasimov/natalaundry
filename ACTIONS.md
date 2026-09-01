@@ -39,12 +39,23 @@ DB_DATABASE=postgres
 DB_PASSWORD=          ← empty, deliberately
 ```
 
+> **It is not the Seoul password, even though it is the same Supabase account.**
+> Database passwords are per *project*, not per account — Seoul and Frankfurt are
+> separate Postgres instances with separate `postgres` roles. The username shows
+> it: `postgres.dzplzvogobqmwaaimkef` versus `postgres.kzfsagccvxjmsbqjdpnb`.
+> Same reason the anon key had to be swapped. The only thing the account shares
+> is the dashboard login.
+
 **Steps**
 
-1. Open <https://supabase.com/dashboard/project/kzfsagccvxjmsbqjdpnb/settings/database>
-2. Under **Database password**, click **Reset database password**. Generate a
-   strong one and store it in your password manager — Supabase will not show it
-   again.
+1. **First check whether you already have it.** Supabase makes you set or
+   generate a database password when you create a project, so it may be in your
+   password manager from the day the Frankfurt project was made. If it is, skip
+   to step 3 — no reset needed.
+2. Only if you do not have it: open
+   <https://supabase.com/dashboard/project/kzfsagccvxjmsbqjdpnb/settings/database>
+   → **Reset database password**. Generate a strong one and store it — Supabase
+   will not show it again.
 3. Open `backend/.env` in an editor and put it after `DB_PASSWORD=`.
    No quotes needed unless it contains `#` or spaces; if it does, wrap it in
    double quotes.
