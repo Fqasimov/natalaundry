@@ -1,0 +1,69 @@
+# Nata Laundry API on Fly.io.
+#
+# Region `fra` is Frankfurt — the same city as the Supabase project, which is
+# the entire point. The API↔DB hop drops from the 88 ms the phone pays over the
+# public internet to about 1 ms, so a request making four sequential queries
+# stops paying that distance four times.
+#
+# Nothing secret lives in this file. Secrets go in with `fly secrets set`,
+# which stores them encrypted and injects them at run time — see DEPLOY.md.
+
+app = "natalaundry-api"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Non-secret configuration. Anything here is visible to anyone who can read the
+# repo, so it holds only values that are already public in the mobile app.
+[env]
+  APP_ENV = "production"
+  APP_DEBUG = "false"
+  APP_URL = "https://api.natalaundry.az"
+
+  # Fly collects stdout/stderr; a log file inside an ephemeral container is a
+  # log nobody will ever read.
+  LOG_CHANNEL = "stderr"
+  LOG_LEVEL = "warning"
+
+  DB_CONNECTION = "pgsql"
+  DB_HOST = "aws-0-eu-central-1.pooler.supabase.com"
+  DB_PORT = "6543"
+  DB_DATABASE = "postgres"
+  DB_USERNAME = "postgres.kzfsagccvxjmsbqjdpnb"
+  DB_SSLMODE = "require"
+
+  SUPABASE_URL = "https://kzfsagccvxjmsbqjdpnb.supabase.co"
+
+  # The app is stateless: sessions are cookies, the cache is files on a disk
+  # nobody shares, and the queue is sync. That is what makes it safe to run
+  # more than one machine and to throw them away on redeploy.
+  CACHE_STORE = "file"
+  QUEUE_CONNECTION = "sync"
+  SESSION_DRIVER = "cookie"
+
+[http_service]
+  internal_port = 8080          # matches SERVER_NAME=:8080 in the Dockerfile
+  force_https = true
+  auto_start_machines = true
+
+  # `suspend` rather than `stop`: a suspended machine resumes in well under a
+  # second, so the first customer of the morning does not pay a cold boot.
+  auto_stop_machines = "suspend"
+
+  # Keep one machine always up. Scaling to zero would put a cold start in front
+  # of a payment callback from the bank, which will not retry politely.
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    path = "/up"
+    method = "GET"
+    interval = "30s"
+    timeout = "5s"
+    # Laravel's built-in health endpoint touches no database, so Postgres being
+    # slow can never take the API out of rotation.
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

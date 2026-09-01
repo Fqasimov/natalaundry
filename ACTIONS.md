@@ -16,12 +16,12 @@ They are ordered by what blocks what. **1 blocks 2 and 7. 7 blocks 8.**
 | 4 | Enable leaked-password protection | — | 1 min |
 | 5 | Rotate the Seoul password, freeze the project | — | 5 min |
 | 6 | Fix the SPF record | outbound mail deliverability | 5 min |
-| 7 | Deploy the API in `eu-central-1` | every write path | 2–4 h |
+| 7 | Deploy the API in `eu-central-1` — [runbook](backend/DEPLOY.md) | every write path | ~1 h |
 | 8 | Repoint `EXPO_PUBLIC_API_URL` before building | any store release | 2 min |
-| 9 | Upload the garment photos | the catalogue looking real | 1 h |
+| 9 | Clear five orders' dead photo URIs — script ready | — | 1 min |
 | 10 | Open the PR | — | 2 min |
 | 11 | Manual click-through | a store release | 2 h |
-| 12 | The deliberate pass on trigger `EXECUTE` grants | — | 1 h |
+| 12 | Revoke trigger `EXECUTE` — proven safe, script ready | — | 1 min |
 
 ---
 
@@ -255,36 +255,39 @@ laptop is on and the phone is on the same network.
 Put it in `eu-central-1`, same region as the database. The API↔DB hop then costs
 about **1 ms** instead of 88, and only the phone→API leg pays real distance.
 
-**Where.** Any of these are fine; pick on how much ops you want to own:
-- **Fly.io** `fra` region — closest to "just push a Dockerfile", scales to zero.
-- **Hetzner Cloud** `fsn1`/`nbg1` — cheapest by a wide margin, but you own the
-  OS, the TLS certificates, and the updates.
-- **Railway/Render** EU region — easiest, priciest.
+### ▶ The full runbook is [`backend/DEPLOY.md`](backend/DEPLOY.md)
 
-Do **not** put it on the Hostinger base plan. Shared PHP hosting with no queue
-worker and no persistent process will not run the broadcast/tracking paths.
+Written out step by step: install, create the app, set the seven secrets, deploy,
+issue the certificate, add the DNS records, repoint the app. Everything that can
+be prepared has been — `backend/Dockerfile` and `backend/fly.toml` are ready, so
+the deploy itself is `fly deploy`. What is left needs an account, a card and your
+DNS panel.
 
-**Steps**
+**Four things in the first draft of this section were wrong**, found while
+preparing the files:
 
-1. Provision the host in an `eu-central-1`-adjacent region (Frankfurt).
-2. Set environment variables to match `backend/.env`, with:
-   - `APP_ENV=production`, `APP_DEBUG=false`
-   - `APP_URL=https://api.natalaundry.az`
-   - a fresh `APP_KEY` (`php artisan key:generate --show`)
-   - the same Frankfurt DB values from step 1
-3. Add the DNS record — **this is currently missing entirely**:
-   ```
-   A    api    <host IP>    TTL 300
-   ```
-   (or `CNAME api → <platform hostname>` if the platform gives you one)
-4. Issue TLS for `api.natalaundry.az` — Let's Encrypt via the platform, or
-   Caddy/certbot if self-managed.
-5. Run migrations against production **once**: `php artisan migrate --force`.
-   They are already applied to Frankfurt, so expect "Nothing to migrate."
-6. Start a queue worker as a supervised process — not `php artisan queue:work`
-   in a shell that dies with your SSH session.
-7. Verify: `curl https://api.natalaundry.az/api/health` (or any public route)
-   returns 200 over HTTPS with a valid certificate.
+- **A `config:cache` in the Dockerfile would have broken the deploy**, in a way
+  that reads as a credentials problem and is not. It resolves every `env()` at
+  *build* time, and `.dockerignore` excludes `.env`, so it baked in `127.0.0.1`,
+  port 5432, database `laravel`, user `root`, empty password, sslmode `prefer` —
+  and those frozen values then *win* over what the platform injects at run time.
+  Verified by building without `.env`: with `DB_HOST` set in the environment,
+  config still reported `127.0.0.1`. Removed, with a comment saying why.
+- **Do not generate a fresh `APP_KEY`.** Reuse the one in `backend/.env`. A new
+  key invalidates every encrypted cookie and signed URL already issued.
+- **No queue worker is needed.** `QUEUE_CONNECTION=sync`; nothing is dispatched
+  to a queue. The earlier note about supervising `queue:work` was wrong.
+- **The health endpoint is `/up`**, Laravel's built-in, already registered — not
+  `/api/health`, which does not exist. It touches no database on purpose, so
+  Postgres being slow can never take the API out of rotation.
+
+**And one thing to know before you call it live:** `KAPITAL_BASE_URL` points at
+`txpgtst.kapitalbank.az` — Kapital's *test* gateway — with their public sandbox
+username. Real payments will not work until the bank issues production
+credentials.
+
+Do **not** put this on the Hostinger base plan: shared PHP hosting has no
+persistent process and cannot run a container.
 
 ---
 
@@ -312,20 +315,42 @@ laptop.
 
 ---
 
-## 9. Upload the garment photos
+## 9. Clear five orders' dead photo URIs — one command
 
-Every photo in the catalogue is stored as a `file://` URI pointing at a path on
-the device that uploaded it. On every other device those render as nothing.
+**This item was wrong in the first draft and the truth is much smaller.** There
+are no "garment photos" and no catalogue image column: the catalogue lives in
+`lib/catalog.ts` / `backend/config/catalog.php` and uses icons, not photographs.
+
+What actually exists is five *orders* whose `item_photos` hold paths like
+
+```
+file:///Users/farid/Library/Developer/CoreSimulator/Devices/…/photo.jpg
+```
+
+— iOS Simulator paths from mid-August, three photos each, orders #7 to #11.
+
+**It is not a live bug.** `lib/uploads.ts` already uploads to the private
+`order-photos` bucket and stores the returned path, and
+`app/checkout/summary.tsx:127` calls it. These rows predate that fix. The bucket
+holds zero objects simply because no order has been placed through the fixed
+flow yet — which needs the API deployed (item 7).
 
 **Steps**
 
-1. Gather the real images.
-2. Upload each to the `order-photos` Supabase Storage bucket (it exists on
-   Frankfurt — I recreated it with its three policies during the migration).
-3. Update the catalogue rows to the resulting public URLs
-   (`https://kzfsagccvxjmsbqjdpnb.supabase.co/storage/v1/object/public/...`).
-4. If you want, hand me the folder of images and I will write the upload +
-   row-update script — that part I can do.
+```bash
+php scripts/migration/clear-legacy-photo-uris.php
+```
+
+Dry run: it lists the five orders and changes nothing. Then:
+
+```bash
+php scripts/migration/clear-legacy-photo-uris.php --apply
+```
+
+Only rows where *every* entry is a device-local URI are cleared. A mixed row —
+one legacy URI beside a real uploaded path — is reported and left alone rather
+than quietly half-emptied. There are none today, but that is the safe behaviour
+if this is ever run again.
 
 ---
 
@@ -358,21 +383,56 @@ Walk these, on a real device:
 
 ## 12. The deliberate pass on trigger-function `EXECUTE` grants
 
-Left as-is on purpose during the migration, and worth revisiting when nothing
-else is on fire.
+**The question is settled. One command is left to run.**
 
-Trigger functions currently keep `EXECUTE` for `anon` and `authenticated`,
-matching the source. Supabase's linter flags this. Postgres *may* check `EXECUTE`
-when a trigger fires, so revoking blind risks breaking signup — and breaking
-signup to satisfy a lint mid-migration was a bad trade.
+The open question was whether Postgres checks `EXECUTE` when a trigger *fires* —
+if it does, revoking breaks signup and every order write.
+
+`scripts/migration/trigger-grants-check.php` answers it with evidence rather than
+argument. Everything runs inside a transaction that is **always rolled back**,
+including the revokes and a real `auth.users` insert; grants are transactional in
+Postgres, so nothing survives. It verifies afterwards that the grants and row
+counts are identical to the start state.
+
+**Result: safe.** A `SECURITY DEFINER` trigger with `EXECUTE` revoked from
+`PUBLIC`, `anon` and `authenticated` still fired on an insert performed **as
+`authenticated`**. Postgres checks `EXECUTE` when a trigger is *created*, not
+when it runs.
+
+> **The first version of that test was not trustworthy and was rewritten.** It
+> inserted as `postgres`, a role privileged enough to sail past a permission
+> check that would stop a real caller. The second attempt — inserting into
+> `orders` as `authenticated` — could never have worked either: `orders` has RLS
+> with **SELECT policies only**, so `authenticated` cannot insert at all, by
+> design, because writes go through the API. The insert would have failed on RLS
+> and said nothing about `EXECUTE`. The version that stands builds its own table
+> and trigger inside the transaction, which isolates the question exactly.
+
+Also confirmed: **nothing calls these functions directly.** No `.rpc()` in the
+app, no direct invocation in the API — so the grant is not load-bearing anywhere
+else.
 
 **Steps**
 
-1. Write a test that signs up a new user and asserts a `profiles` row appears.
-2. Revoke `EXECUTE` from `PUBLIC`, `anon`, and `authenticated` on the trigger
-   functions — **`PUBLIC` first**; revoking only from `anon`/`authenticated`
-   reports success and changes nothing, because both inherit from `PUBLIC`.
-3. Run the test. If signup still works, keep it. If not, revert and record why.
+```bash
+php scripts/migration/trigger-grants-check.php   # optional: re-prove it
+php scripts/migration/revoke-trigger-execute.php # apply
+```
+
+The revoke script is idempotent and verifies through `has_function_privilege`
+rather than trusting that the commands worked — the same check that caught the
+`PUBLIC` inheritance trap during the migration. **`PUBLIC` is revoked first**;
+revoking only `anon`/`authenticated` reports success and changes nothing, because
+both inherit from `PUBLIC`.
+
+**Scope: the eleven functions in `public`.** The other four —
+`enforce_bucket_name_length`, `protect_delete`, `update_updated_at_column` in
+`storage`, and `subscription_check_filters` in `realtime` — belong to Supabase's
+own admin roles. A `REVOKE` from `postgres` on those is a silent no-op, and they
+are not ours to change.
+
+I could not run the apply step myself: it is a write against the production
+database and was blocked, correctly.
 
 ---
 

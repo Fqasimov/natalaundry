@@ -20,9 +20,25 @@ COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative \
  && php artisan package:discover --ansi
 
-# Config and routes are cached at build time. Views are not: the admin console
-# is a single Blade file and caching it buys nothing.
-RUN php artisan config:cache && php artisan route:cache
+# Routes are cached at build time. Views are not: the admin console is a single
+# Blade file and caching it buys nothing.
+#
+# Config is deliberately NOT cached here, and this is not an oversight.
+# `config:cache` resolves every env() call and freezes the result into the
+# image. .dockerignore excludes .env, so at build time there is nothing to
+# resolve against and config/database.php falls back to its own defaults —
+# host 127.0.0.1, port 5432, database `laravel`, user `root`, empty password,
+# sslmode `prefer`. All six wrong for Supabase.
+#
+# The trap is that the frozen values then WIN over the real ones: config comes
+# from the cache, so the DB_HOST the platform injects at run time is ignored.
+# Verified by building without .env and reading bootstrap/cache/config.php —
+# with DB_HOST set in the environment, config still reported 127.0.0.1.
+#
+# The failure would surface as a connection error against localhost that looks
+# like bad credentials and is not. If you ever add config:cache back, it must
+# run at container START, after the platform has injected the environment.
+RUN php artisan route:cache
 
 # Laravel needs these writable. The app is otherwise stateless — sessions are
 # cookies, the queue is sync, the cache is files — so nothing here needs to
