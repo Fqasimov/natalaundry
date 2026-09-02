@@ -1,5 +1,5 @@
-import { ApiError, apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
+import { courierNextStep, type LifecycleState } from "./lifecycle";
 import type { PaymentMethod } from "@/lib/payments";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
@@ -117,29 +117,60 @@ type NewOrderInput = {
  * someone else's account either.
  */
 export async function createOrder(input: NewOrderInput) {
-  const { data } = await apiPost<{ data: Order }>("orders", {
-    items: input.lines.map((line) => ({
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not_signed_in");
+
+  // No money is sent. subtotal/total are placeholders the triggers overwrite,
+  // and discount/delivery_fee are stripped on insert and then derived from the
+  // catalogue — see supabase/enforce-order-pricing.sql. Sending a figure here
+  // would be ignored, which is the point.
+  const { data: order, error } = await supabase
+    .from("orders")
+    .insert({
+      user_id: user.id,
+      subtotal: 0,
+      total: 0,
+      delivery_tier: input.tier,
+      collection_time: input.collectionTime,
+      delivery_time: input.deliveryTime,
+      address: input.address,
+      address_lat: input.addressLat,
+      address_lng: input.addressLng,
+      notes: input.notes,
+      is_outside_city: input.isOutsideCity,
+      item_photos: input.photos,
+      promo_code: input.promoCode,
+      payment_method: input.paymentMethod,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Prices are placeholders too: enforce_item_price rewrites each one from
+  // service_prices and rejects an unknown or inactive item_id outright.
+  const { error: itemsError } = await supabase.from("order_items").insert(
+    input.lines.map((line) => ({
+      order_id: order.id,
       service_id: line.serviceId,
       item_id: line.itemId,
+      item_name: line.name,
       quantity: line.quantity,
+      price: 0,
     })),
-    delivery_tier: input.tier,
-    collection_time: input.collectionTime,
-    delivery_time: input.deliveryTime,
-    address: input.address,
-    address_lat: input.addressLat,
-    address_lng: input.addressLng,
-    notes: input.notes,
-    is_outside_city: input.isOutsideCity,
-    item_photos: input.photos,
-    promo_code: input.promoCode,
-    // The prize the customer chose to spend. The server checks it is theirs,
-    // unspent and unexpired, and prices it — the app only names it.
-    user_reward_id: input.rewardId,
-    payment_method: input.paymentMethod,
-  });
+  );
 
-  return data;
+  if (itemsError) throw itemsError;
+
+  // Re-read: the totals only exist after the item triggers have run.
+  const { data: priced, error: readError } = await supabase
+    .from("orders")
+    .select()
+    .eq("id", order.id)
+    .single();
+
+  if (readError) throw readError;
+  return priced as Order;
 }
 
 
@@ -159,34 +190,56 @@ type NewTopluOrderInput = {
  * order. `counted_total` stays null until a courier records the count.
  */
 export async function createTopluOrder(input: NewTopluOrderInput) {
-  const { data } = await apiPost<{ data: Order }>("orders/bulk", {
-    collection_time: input.collectionTime,
-    delivery_time: input.deliveryTime,
-    address: input.address,
-    address_lat: input.addressLat,
-    address_lng: input.addressLng,
-    notes: input.notes,
-    is_outside_city: input.isOutsideCity,
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not_signed_in");
 
-  return data;
+  // service_type 'bulk' is what enforce_bulk_deposit keys on: it sets the
+  // deposit, subtotal and total to the published ₼20 and clears any count,
+  // so nothing about the money is decided here.
+  const { data, error } = await supabase
+    .from("orders")
+    .insert({
+      user_id: user.id,
+      service_type: "bulk",
+      subtotal: 0,
+      total: 0,
+      collection_time: input.collectionTime,
+      delivery_time: input.deliveryTime,
+      address: input.address,
+      address_lat: input.addressLat,
+      address_lng: input.addressLng,
+      notes: input.notes,
+      is_outside_city: input.isOutsideCity,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Order;
 }
 
 /**
  * Courier records the counted value of a bulk load.
  *
- * This is the price of the order, so it goes through the API: the server
- * checks that the caller is the assigned courier, that the order is actually a
- * bulk one at a stage where counting makes sense, and that the figure is in
- * range. RLS can say "the assigned courier may update this row"; it cannot say
- * what a sane value for it is.
+ * This is the price of the order, so it goes through `record_bulk_count`
+ * rather than an UPDATE: the function checks the caller is the assigned
+ * courier, that the order is a bulk one, and that the figure is not negative,
+ * then works out the balance owed after the deposit. RLS could say "the
+ * assigned courier may update this row"; it could not say what a sane value
+ * for it is.
+ *
+ * This is the 1.0.2 function, unchanged.
  */
 export async function recordTopluCount(
   orderId: string,
   _courierId: string,
   countedTotal: number
 ) {
-  await apiPost(`orders/${orderId}/count`, { counted_total: countedTotal });
+  const { error } = await supabase.rpc("record_bulk_count", {
+    order_id: orderId,
+    amount: countedTotal,
+  });
+  if (error) throw error;
 }
 
 /**
@@ -241,15 +294,19 @@ export async function fetchMyActiveJob(courierId: string) {
  * @returns true when this courier won the race.
  */
 export async function claimOrderAtomically(orderId: string, _courierId: string): Promise<boolean> {
-  try {
-    await apiPost(`orders/${orderId}/lifecycle/claim`);
-    return true;
-  } catch (e) {
-    // 409 is the ordinary outcome of losing the race, not a failure worth
-    // surfacing as an error. Anything else is.
-    if (e instanceof ApiError && e.status === 409) return false;
-    throw e;
-  }
+  const { error } = await supabase.rpc("transition_order", {
+    p_order: orderId,
+    p_to: "courier_assigned",
+  });
+
+  if (!error) return true;
+
+  // Losing the race is an ordinary outcome, not a failure worth surfacing.
+  // P0001 is the state machine or the offer check refusing; 42501 is a courier
+  // the order was never offered to. Anything else is a real error.
+  if (error.code === "P0001" || error.code === "42501") return false;
+
+  throw error;
 }
 
 /**
@@ -264,15 +321,18 @@ export async function transitionOrder(
   _from: string,
   to: string
 ): Promise<boolean> {
-  try {
-    await apiPost(`orders/${orderId}/lifecycle/transition`, { to });
-    return true;
-  } catch (e) {
-    // 422 is the state machine refusing the move — a double-tap, or a step
-    // this actor may not take. The caller reloads and shows the real state.
-    if (e instanceof ApiError && e.status === 422) return false;
-    throw e;
-  }
+  const { error } = await supabase.rpc("transition_order", {
+    p_order: orderId,
+    p_to: to,
+  });
+
+  if (!error) return true;
+
+  // The state machine refusing the move — a double-tap, or a step this actor
+  // may not take. The caller reloads and shows the real state.
+  if (error.code === "P0001" || error.code === "42501") return false;
+
+  throw error;
 }
 
 /**
@@ -300,31 +360,65 @@ export async function fetchRecentAddresses(userId: string, limit = 8): Promise<s
 }
 
 /**
- * Cancel an order. The server decides whether it is still cancellable —
- * a customer must not be able to cancel a load a courier already collected.
+ * Cancel an order.
+ *
+ * The database decides whether it is still cancellable: `transition_order`
+ * only allows `cancelled` from the four states before a courier has physically
+ * collected, so a customer cannot cancel a load already in the van.
  */
 export async function cancelOrder(orderId: string) {
-  await apiPost(`orders/${orderId}/cancel`);
+  const { error } = await supabase.rpc("transition_order", {
+    p_order: orderId,
+    p_to: "cancelled",
+  });
+  if (error) throw error;
 }
 
 /**
  * Claim a pending, unassigned order (the pre-lifecycle path still used by the
- * order detail screen). The race is settled by a row lock on the server, so
- * two couriers tapping at once produce one winner and one 409.
+ * order detail screen).
+ *
+ * This is the original `claim_order` from the 1.0.2 architecture, kept because
+ * it is better than a bare claim: it requires an entry in `order_offers`, so a
+ * courier can only take an order genuinely offered to them, and it expires the
+ * rival offers in the same transaction. It returns false rather than throwing
+ * when someone else got there first.
  */
 export async function claimOrder(orderId: string, _courierId: string) {
-  await apiPost(`orders/${orderId}/claim`);
+  const { data, error } = await supabase.rpc("claim_order", { p_order_id: orderId });
+  if (error) throw error;
+  return data === true;
 }
 
 /**
  * Advance the job one step.
  *
- * The step itself is chosen by the server from the order's current state, and
- * it checks the caller is the assigned courier first. The previous version
- * wrote the status column directly with no condition beyond the order id, so
- * any caller RLS let through could mark any order delivered.
+ * The step is derived from the order's current state rather than sent, so a
+ * stale screen cannot skip ahead: the sequence is read from the database and
+ * `transition_order` re-checks it under a row lock, along with whether this
+ * caller is allowed to drive that particular step.
  */
 export async function advanceOrderStatus(orderId: string, _currentStatus: OrderStatus) {
-  const { data } = await apiPost<{ data: Order }>(`orders/${orderId}/advance`);
-  return data.status;
+  const { data: current, error: readError } = await supabase
+    .from("orders")
+    .select("lifecycle_state")
+    .eq("id", orderId)
+    .single();
+
+  if (readError) throw readError;
+
+  // The same table the courier's button label comes from, so the action and
+  // the step it performs cannot disagree.
+  const next = courierNextStep(current?.lifecycle_state as LifecycleState | null)?.to;
+  if (!next) {
+    // Nothing left to advance to — delivered, or cancelled.
+    const { data } = await supabase.from("orders").select("status").eq("id", orderId).single();
+    return data?.status as OrderStatus;
+  }
+
+  const { error } = await supabase.rpc("transition_order", { p_order: orderId, p_to: next });
+  if (error) throw error;
+
+  const { data } = await supabase.from("orders").select("status").eq("id", orderId).single();
+  return data?.status as OrderStatus;
 }

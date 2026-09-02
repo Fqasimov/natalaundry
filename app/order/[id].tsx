@@ -265,7 +265,16 @@ export default function OrderDetailScreen() {
           <Pressable
             style={[s.primaryButton, busy && s.disabled]}
             disabled={busy}
-            onPress={() => withBusy(() => claimOrder(order.id, session.user.id))}
+            onPress={() =>
+              withBusy(async () => {
+                // False means another courier got there first. That is an
+                // ordinary outcome rather than an error, so reload and let the
+                // screen show the job as taken instead of leaving a button
+                // that appears to have done nothing.
+                await claimOrder(order.id, session.user.id);
+                await load();
+              })
+            }
           >
             {busy ? (
               <ActivityIndicator color={colors.textInverse} />

@@ -23,8 +23,12 @@ const KAPITAL_PASS = Deno.env.get("KAPITAL_PASSWORD") ?? "";
 const CURRENCY = Deno.env.get("KAPITAL_CURRENCY") ?? "AZN";
 const CALLBACK_URL = Deno.env.get("KAPITAL_CALLBACK_URL") ?? "";
 
-/** Top-ups are the one amount a client names, so they get bounds. */
-const TOPUP_MIN = 1;
+/**
+ * Top-ups are the one amount a client names, so they get bounds.
+ * These mirror `nata.wallet.min_topup` / `max_topup` and lib/wallet.ts; all
+ * three must agree, or the app offers a preset the function then rejects.
+ */
+const TOPUP_MIN = 5;
 const TOPUP_MAX = 500;
 
 const json = (body: unknown, status = 200) =>

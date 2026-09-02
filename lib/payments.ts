@@ -1,14 +1,15 @@
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
-import { apiPost, apiRequest } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Paying for an order.
  *
  * Card and wallet payments run through Kapital Bank's hosted payment page.
  * The app never sees a card number: it opens the bank's page in the system
- * browser, the bank redirects to our API's callback, and that callback — not
- * this file — decides whether the order is paid, by asking the bank directly.
+ * browser, the bank redirects to the `payments-callback` Edge Function, and
+ * that callback — not this file — decides whether the order is paid, by asking
+ * the bank directly with credentials no phone ever holds.
  *
  * No amount is ever sent from here. The server charges what it priced the
  * order at, for the same reason order creation re-prices the basket.
@@ -53,13 +54,14 @@ export type PaymentOptions = {
 /**
  * Which methods checkout may offer.
  *
- * Asked of the server rather than hardcoded: whether wallets appear depends
- * on the merchant terminal's configuration at the bank, which only the
- * backend knows. See config/kapital.php.
+ * Card and cash always work. Wallets depend on the merchant terminal's
+ * configuration at the bank, and there is no longer a server to ask — so they
+ * stay off until someone turns them on deliberately, which is the safe
+ * default: offering Apple Pay on a terminal that does not accept it is a dead
+ * end the customer discovers at the bank's page.
  */
 export async function fetchPaymentOptions(): Promise<PaymentOptions> {
-  const { data } = await apiRequest<{ data: PaymentOptions }>("payments/methods");
-  return data;
+  return { methods: ["card", "cash", "balance"], wallets_enabled: false };
 }
 
 /**
@@ -90,10 +92,28 @@ type PaymentState = {
   stale?: boolean;
 };
 
-/** Current payment state, re-checked against the bank server-side. */
+/**
+ * Current payment state.
+ *
+ * Read from our own row, not asked of the bank. The `payments-callback` Edge
+ * Function is what talks to Kapital: it verifies the payment with our own
+ * credentials and settles the row. So this watches for that settlement to
+ * land, which is why waitForSettlement below polls rather than reading once.
+ */
 export async function fetchPaymentState(orderId: string): Promise<PaymentState> {
-  const { data } = await apiRequest<{ data: PaymentState }>(`orders/${orderId}/payment`);
-  return data;
+  const { data, error } = await supabase
+    .from("orders")
+    .select("payment_status, payment_method")
+    .eq("id", orderId)
+    .single();
+
+  if (error) throw error;
+
+  return {
+    payment_status: (data?.payment_status ?? "pending") as PaymentStatus,
+    payment_method: (data?.payment_method ?? null) as PaymentMethod | null,
+    bank_status: null,
+  };
 }
 
 /**
@@ -113,19 +133,33 @@ export async function payForOrder(
   method: PaymentMethod,
   language: string = "az",
 ): Promise<PaymentState> {
-  const { data } = await apiPost<{ data: StartResult }>(`orders/${orderId}/pay`, {
-    method,
-    language,
-  });
-
-  // Cash and Nata Balance never leave the app: cash is collected later, and
-  // the balance debit has already happened by the time this returns.
-  if (method === "cash" || method === "balance" || !data.redirect_url) {
+  // Cash and Nata Balance never leave the app, and never leave the database
+  // either: pay_order settles both, so the customer never writes
+  // payment_status themselves.
+  if (method === "cash" || method === "balance") {
+    const { error } = await supabase.rpc("pay_order", {
+      p_order: orderId,
+      p_method: method,
+    });
+    if (error) throw error;
     return fetchPaymentState(orderId);
   }
 
+  // Card goes through the Edge Function: it holds the bank credentials, reads
+  // the amount from `orders.total` rather than taking one from here, and gives
+  // the bank a public URL to send the customer back to.
+  const { data, error } = await supabase.functions.invoke<{ data: StartResult & { hpp_url: string } }>(
+    "payments",
+    { body: { action: "order", order_id: orderId, language } },
+  );
+
+  if (error) throw error;
+
+  const redirectUrl = data?.data?.hpp_url;
+  if (!redirectUrl) return fetchPaymentState(orderId);
+
   try {
-    await WebBrowser.openAuthSessionAsync(data.redirect_url, "natalaundry://payment");
+    await WebBrowser.openAuthSessionAsync(redirectUrl, "natalaundry://payment");
   } catch {
     // The browser failing to open tells us nothing about the payment, and on
     // some devices it closes in a way that throws. Fall through to the
