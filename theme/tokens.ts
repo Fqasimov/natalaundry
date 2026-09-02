@@ -114,25 +114,77 @@ export const brand = {
   scrimStrong: "rgba(255,255,255,0.24)",
 } as const;
 
-// Each service carries its own tint through the whole catalogue — the circle
-// selector, the hero banner and the accordion icons all key off it. Icons use
-// MaterialCommunityIcons for the laundry-domain glyphs (washing machine,
-// iron, shoe, purse, basket), matching the service circles in the designs.
+// Each service carries its own colours through the whole app — the home cards,
+// the circle selector, the hero banner and the accordion icons all key off
+// this. Icons use MaterialCommunityIcons for the laundry-domain glyphs
+// (washing machine, iron, shoe, purse, basket).
+//
+// These were the pastels sampled from 1.0.2 — periwinkle, peach, pink — and
+// the home screen carried a second, coastal copy of the same map because the
+// catalogue was outside the restyle at the time. Two maps meant a service
+// looked like one thing on the home screen and another on its own page. The
+// home screen's values won and moved here; there is one map again.
+//
+// `surface` is the card or banner behind the service. `iconBg`/`iconFg` are
+// the circle and its glyph — deliberately not the surface, so an icon sitting
+// on its own card still has contrast. `fg` is the accent for that service's
+// own type, its "Bax →" label and chevron.
+//
+// The palette alternates Timberwolf, Light Blue and Moonstone so that adjacent
+// cards on the home grid never repeat.
 export const serviceTheme = {
   dry_cleaning: {
-    tint: "#E7E6FB",
-    fg: "#5B57D6",
+    surface: "#B2D5E2", // lightBlue
+    iconBg: "#004554", //  midnight
+    iconFg: "#FFFFFF",
+    fg: "#004554",
     label: "Quru Təmizləmə",
     icon: "mci:washing-machine",
   },
-  ironing: { tint: "#FCE6CE", fg: "#E8912A", label: "Ütüləmə", icon: "mci:iron" },
-  shoes: { tint: "#DFDCD9", fg: "#7A6A5C", label: "Ayaqqabı", icon: "mci:shoe-formal" },
-  bedding: { tint: "#CFF0F6", fg: "#2AA5BD", label: "Yataq Dəsti", icon: "mci:bed-king-outline" },
-  bags: { tint: "#FBD2E3", fg: "#DC3D80", label: "Çanta", icon: "mci:purse" },
+  ironing: {
+    surface: "#DCEFF2", // moonstoneSoft
+    iconBg: "#44A6B5", //  moonstone
+    iconFg: "#FFFFFF",
+    fg: "#004554",
+    label: "Ütüləmə",
+    icon: "mci:iron",
+  },
+  shoes: {
+    surface: "#D3D0C8", // timberwolf
+    iconBg: "#004554",
+    iconFg: "#FFFFFF",
+    fg: "#004554",
+    label: "Ayaqqabı",
+    icon: "mci:shoe-formal",
+  },
+  bedding: {
+    surface: "#DCE9F0", // lightBlueSoft
+    iconBg: "#44A6B5",
+    iconFg: "#FFFFFF",
+    fg: "#004554",
+    label: "Yataq Dəsti",
+    icon: "mci:bed-king-outline",
+  },
+  bags: {
+    surface: "#E8E6E0", // timberwolfSoft
+    iconBg: "#004554",
+    iconFg: "#FFFFFF",
+    fg: "#004554",
+    label: "Çanta",
+    icon: "mci:purse",
+  },
   // "Toplu" is a different shape of order: no item picking up front — a
   // deposit is paid, the courier collects and counts, and the real total is
-  // set afterwards. Green sets it apart from the per-item services.
-  toplu: { tint: "#D8F0DE", fg: "#1E8E4E", label: "Toplu", icon: "mci:basket" },
+  // set afterwards. It gets the inverted circle rather than a colour of its
+  // own, which sets it apart without adding a sixth hue.
+  toplu: {
+    surface: "#DCEFF2",
+    iconBg: "#FFFFFF",
+    iconFg: "#004554",
+    fg: "#004554",
+    label: "Toplu",
+    icon: "mci:basket",
+  },
 } as const;
 
 export type ServiceKey = keyof typeof serviceTheme;

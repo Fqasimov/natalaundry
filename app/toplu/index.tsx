@@ -102,8 +102,8 @@ export default function TopluScreen() {
       <ScreenHeader title={t("topluTitle")} />
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.hero, { backgroundColor: theme.tint }]}>
-          <IconBubble name={theme.icon} tint="rgba(255,255,255,0.6)" fg={theme.fg} size={62} />
+        <View style={[styles.hero, { backgroundColor: theme.surface }]}>
+          <IconBubble name={theme.icon} tint={theme.iconBg} fg={theme.iconFg} size={62} />
           <Text style={styles.heroTitle}>{copy.label("toplu", theme.label)}</Text>
           <Text style={styles.heroBody}>{t("topluIntro")}</Text>
         </View>

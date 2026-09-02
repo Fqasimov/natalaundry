@@ -87,8 +87,8 @@ export default function ServiceCatalogueScreen() {
               <Pressable key={key} onPress={() => router.replace(`/service/${key}`)}>
                 <IconBubble
                   name={entryTheme.icon}
-                  tint={entryTheme.tint}
-                  fg={entryTheme.fg}
+                  tint={entryTheme.iconBg}
+                  fg={entryTheme.iconFg}
                   size={56}
                   selected={key === activeId}
                 />
@@ -100,14 +100,14 @@ export default function ServiceCatalogueScreen() {
           <Pressable onPress={() => router.push("/toplu")}>
             <IconBubble
               name={serviceTheme.toplu.icon}
-              tint={serviceTheme.toplu.tint}
-              fg={serviceTheme.toplu.fg}
+              tint={serviceTheme.toplu.iconBg}
+              fg={serviceTheme.toplu.iconFg}
               size={56}
             />
           </Pressable>
         </ScrollView>
 
-        <View style={[styles.heroBanner, { backgroundColor: theme.tint }]}>
+        <View style={[styles.heroBanner, { backgroundColor: theme.surface }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroName}>{copy.label(activeId, theme.label)}</Text>
             <Text style={styles.heroTagline}>{copy.tagline(service)}</Text>

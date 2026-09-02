@@ -36,19 +36,20 @@ import type { Order } from "@/types/database";
 // Moonstone so adjacent cards never repeat. `fg` is the card's own accent, used
 // by its "Bax →" label and chevron.
 //
-// This stays local to the home screen: the global `serviceTheme` still drives
-// the catalogue and checkout screens, which are outside the restyle.
+// This used to be a second copy of the service palette, local to the home
+// screen, while the global `serviceTheme` kept the 1.0.2 pastels for the
+// catalogue. That meant a service looked like one thing here and another on
+// its own page. These values are now the global ones, so the alias is all that
+// is left — every screen reads the same map.
 const SERVICE_THEME: Record<
   string,
   { bg: string; iconBg: string; iconFg: string; fg: string }
-> = {
-  dry_cleaning: { bg: brand.lightBlue,      iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
-  ironing:      { bg: brand.moonstoneSoft,  iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
-  shoes:        { bg: brand.timberwolf,     iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
-  bedding:      { bg: brand.lightBlueSoft,  iconBg: brand.moonstone, iconFg: "#FFFFFF", fg: brand.midnight },
-  bags:         { bg: brand.timberwolfSoft, iconBg: brand.midnight,  iconFg: "#FFFFFF", fg: brand.midnight },
-  toplu:        { bg: brand.moonstoneSoft,  iconBg: "#FFFFFF",       iconFg: brand.midnight, fg: brand.midnight },
-};
+> = Object.fromEntries(
+  Object.entries(serviceTheme).map(([key, s]) => [
+    key,
+    { bg: s.surface, iconBg: s.iconBg, iconFg: s.iconFg, fg: s.fg },
+  ]),
+);
 
 // ─── Animated press card ─────────────────────────────────────────────────────
 function PressCard({
