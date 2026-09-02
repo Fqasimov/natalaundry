@@ -11,6 +11,10 @@ type AuthContextValue = {
     password: string,
     profile: { name: string; phone: string },
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  /** Finish a signup by entering the six-digit code from the e-mail. */
+  verifySignupCode: (email: string, code: string) => Promise<{ error: string | null }>;
+  /** Send the code again, for the one that never arrived. */
+  resendSignupCode: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -73,6 +77,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (profileError) console.warn("profile update after signup", profileError.message);
 
         return { error: null, needsConfirmation: false };
+      },
+      /**
+       * Finish the signup with the code from the e-mail.
+       *
+       * A code rather than a link, because a link has to leave the app to a
+       * browser and come back through a deep link — which is the step that
+       * breaks on a device where the mail app opens links in its own webview.
+       * Typing six digits works everywhere.
+       *
+       * On success Supabase sets email_confirmed_at, which is what the
+       * on_auth_user_confirmed trigger waits for: the profile row is created
+       * at this moment and not before, so an address nobody proved they own
+       * leaves nothing behind.
+       */
+      verifySignupCode: async (email, code) => {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: code.trim(),
+          type: "signup",
+        });
+        return { error: error?.message ?? null };
+      },
+      resendSignupCode: async (email) => {
+        const { error } = await supabase.auth.resend({ type: "signup", email });
+        return { error: error?.message ?? null };
       },
       signOut: async () => {
         await supabase.auth.signOut();

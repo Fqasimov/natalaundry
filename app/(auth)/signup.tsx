@@ -30,7 +30,7 @@ const goBack = () => {
 
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
-  const { signUp } = useAuth();
+  const { signUp, verifySignupCode, resendSignupCode } = useAuth();
   const { t, lang, setLang } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +39,9 @@ export default function SignupScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
@@ -68,6 +71,39 @@ export default function SignupScreen() {
       return;
     }
     router.replace("/(tabs)");
+  };
+
+  /**
+   * Finish the signup with the six-digit code.
+   *
+   * Verifying is what sets email_confirmed_at, and the database waits for that
+   * before creating the profile — so until this succeeds the customer has an
+   * unverified account and nothing else. Getting it right is the whole signup.
+   */
+  const onVerify = async () => {
+    setError(null);
+    if (code.length !== 6) return setError(t("signupCodeLength"));
+
+    setVerifying(true);
+    const { error: verifyError } = await verifySignupCode(email.trim(), code);
+    setVerifying(false);
+
+    if (verifyError) {
+      setError(verifyError);
+      return;
+    }
+
+    // verifyOtp signs them in, so there is a session and the auth guard lets
+    // them through — no second trip to the login screen.
+    router.replace("/(tabs)");
+  };
+
+  const onResend = async () => {
+    setError(null);
+    setResending(true);
+    const { error: resendError } = await resendSignupCode(email.trim());
+    setResending(false);
+    if (resendError) setError(resendError);
   };
 
   return (
@@ -205,20 +241,53 @@ export default function SignupScreen() {
             <Text style={styles.confirmBody}>
               {t("signupConfirmBody", { email: email.trim() })}
             </Text>
-            <Pressable onPress={() => router.replace("/(auth)/login")}>
+
+            <TextInput
+              style={styles.codeInput}
+              value={code}
+              onChangeText={(next) => setCode(next.replace(/[^0-9]/g, "").slice(0, 6))}
+              placeholder="123456"
+              placeholderTextColor={brand.moonstoneInk}
+              keyboardType="number-pad"
+              // The OS fills this straight from the notification, so the
+              // customer never has to leave the app to read their own code.
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              maxLength={6}
+              editable={!verifying}
+            />
+
+            <BigButton
+              label={t("signupVerifyBtn")}
+              tone="brand"
+              onPress={onVerify}
+              loading={verifying}
+              iconRight="checkmark-circle-outline"
+            />
+
+            <Pressable onPress={onResend} disabled={resending} hitSlop={8}>
+              <Text style={styles.confirmLink}>
+                {resending ? t("signupResending") : t("signupResendCode")}
+              </Text>
+            </Pressable>
+
+            <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={8}>
               <Text style={styles.confirmLink}>{t("signupBackToLogin")}</Text>
             </Pressable>
           </View>
         ) : null}
 
-        {/* Sign up button */}
-        <BigButton
-          label={t("signupBtn")}
-          tone="brand"
-          onPress={onSubmit}
-          loading={submitting}
-          iconRight="person-add-outline"
-        />
+        {/* Sign up button — hidden once the code has been sent, so there is one
+            obvious next action rather than two competing ones. */}
+        {confirmSent ? null : (
+          <BigButton
+            label={t("signupBtn")}
+            tone="brand"
+            onPress={onSubmit}
+            loading={submitting}
+            iconRight="person-add-outline"
+          />
+        )}
 
         {/* Login link */}
         <View style={styles.loginRow}>
@@ -329,6 +398,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   confirmLink: { fontFamily: font.semibold, fontSize: 14, color: brand.midnight, marginTop: 4 },
+  // Wide letter spacing and a large size: six digits copied from a
+  // notification are read back one at a time, and a cramped field is where
+  // people mistype them.
+  codeInput: {
+    alignSelf: "stretch",
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: brand.moonstoneInk,
+    backgroundColor: brand.background,
+    fontFamily: font.bold,
+    fontSize: 26,
+    letterSpacing: 8,
+    textAlign: "center",
+    color: brand.midnight,
+  },
   error: {
     fontFamily: font.regular,
     fontSize: 13,

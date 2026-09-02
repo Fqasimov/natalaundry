@@ -198,7 +198,11 @@ const az = {
   signupPasswordShort: "Şifrə ən azı 8 simvol olmalıdır.",
   signupConfirmTitle: "E-poçtunuzu təsdiqləyin",
   signupConfirmBody:
-    "{email} ünvanına təsdiq linki göndərdik. Linkə klikləyəndən sonra daxil ola bilərsiniz.",
+    "{email} ünvanına 6 rəqəmli kod göndərdik. Kodu aşağıya daxil edin.",
+  signupVerifyBtn: "Təsdiqlə",
+  signupCodeLength: "Kod 6 rəqəmdən ibarətdir.",
+  signupResendCode: "Kodu yenidən göndər",
+  signupResending: "Göndərilir…",
   signupBackToLogin: "Girişə qayıt",
 
   leaveAtDoor: "Qapıya qoyun",
@@ -626,7 +630,11 @@ const ru: Record<StringKey, string> = {
   signupPasswordShort: "Пароль должен быть не короче 8 символов.",
   signupConfirmTitle: "Подтвердите почту",
   signupConfirmBody:
-    "Мы отправили ссылку для подтверждения на {email}. Перейдите по ней, чтобы войти.",
+    "Мы отправили 6-значный код на {email}. Введите его ниже.",
+  signupVerifyBtn: "Подтвердить",
+  signupCodeLength: "Код состоит из 6 цифр.",
+  signupResendCode: "Отправить код ещё раз",
+  signupResending: "Отправляем…",
   signupBackToLogin: "Вернуться ко входу",
 
   leaveAtDoor: "Оставьте у двери",
@@ -1038,7 +1046,11 @@ const en: Record<StringKey, string> = {
   signupPasswordShort: "Password must be at least 8 characters.",
   signupConfirmTitle: "Confirm your email",
   signupConfirmBody:
-    "We sent a confirmation link to {email}. Follow it and you can sign in.",
+    "We sent a 6-digit code to {email}. Enter it below.",
+  signupVerifyBtn: "Confirm",
+  signupCodeLength: "The code is 6 digits.",
+  signupResendCode: "Send the code again",
+  signupResending: "Sending…",
   signupBackToLogin: "Back to sign in",
 
   leaveAtDoor: "Leave it at the door",
