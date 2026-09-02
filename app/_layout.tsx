@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -29,13 +29,39 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+  /**
+   * Don't let a font hold the whole app hostage.
+   *
+   * `useFonts` settles to neither loaded nor errored if the asset request
+   * stalls — which happens in Expo Go whenever Metro is slow or the phone
+   * drops off the LAN mid-fetch. The old code returned null until it settled,
+   * so that stall showed as an app frozen on the splash screen with nothing in
+   * the logs to say why.
+   *
+   * After the grace period the app renders anyway, in the system font. Plus
+   * Jakarta Sans swaps in the moment it arrives. Wrong typeface for a second
+   * beats a dead launch, and the AZ glyphs (ə ş ğ ı ç ö ü) survive the
+   * fallback because the system faces cover them.
+   */
+  const [waitedLongEnough, setWaitedLongEnough] = useState(false);
 
-  if (!fontsLoaded && !fontError) {
+  useEffect(() => {
+    const timer = setTimeout(() => setWaitedLongEnough(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const ready = fontsLoaded || !!fontError || waitedLongEnough;
+
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {
+        // Already hidden, or the module is unavailable. Either way the app is
+        // on screen, which is the only thing this call was for.
+      });
+    }
+  }, [ready]);
+
+  if (!ready) {
     return null;
   }
 
