@@ -8,6 +8,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppLogo } from "@/components/AppLogo";
 import { brand, colors, font, radius } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { BigButton } from "@/components/ui";
@@ -30,12 +32,31 @@ const goBack = () => {
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signInWithPassword } = useAuth();
+  const { signInWithPassword, signInWithGoogle } = useAuth();
   const { t, lang, setLang } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  const onGoogle = async () => {
+    setError(null);
+    setGoogleBusy(true);
+    const { error: googleError } = await signInWithGoogle();
+    setGoogleBusy(false);
+
+    if (googleError) {
+      setError(googleError);
+      return;
+    }
+
+    // A cancelled sheet returns no error and no session. Routing on the
+    // session rather than on "no error" keeps a dismissed browser from
+    // pushing an unauthenticated screen that bounces straight back.
+    const { data } = await supabase.auth.getSession();
+    if (data.session) router.replace("/(tabs)");
+  };
 
   const onSubmit = async () => {
     setError(null);
@@ -150,6 +171,43 @@ export default function LoginScreen() {
           iconRight="log-in-outline"
         />
 
+        {/* Forgotten password. Placed under the button rather than beside the
+            field: it is the escape hatch, not a peer of signing in. */}
+        <Pressable
+          onPress={() => router.push("/(auth)/forgot-password")}
+          hitSlop={8}
+          style={styles.forgotWrap}
+        >
+          <Text style={styles.forgotLink}>{t("forgotPassword")}</Text>
+        </Pressable>
+
+        {/* ── Google ──
+            One tap, no password to invent and none to forget — which is most
+            of what the reset flow above exists to rescue. */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>{t("orDivider")}</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable
+          onPress={onGoogle}
+          disabled={googleBusy}
+          style={({ pressed }) => [
+            styles.googleBtn,
+            (pressed || googleBusy) && styles.googleBtnPressed,
+          ]}
+        >
+          {googleBusy ? (
+            <ActivityIndicator color={brand.midnight} />
+          ) : (
+            <>
+              <Ionicons name="logo-google" size={18} color={brand.midnight} />
+              <Text style={styles.googleLabel}>{t("continueWithGoogle")}</Text>
+            </>
+          )}
+        </Pressable>
+
         {/* Sign up link */}
         <View style={styles.signupRow}>
           <Text style={styles.signupText}>{t("noAccount")} </Text>
@@ -246,6 +304,34 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginTop: -4,
   },
+
+  forgotWrap: { alignSelf: "center", marginTop: 12 },
+  forgotLink: {
+    fontFamily: font.semibold,
+    fontSize: 14,
+    color: brand.midnight,
+    textDecorationLine: "underline",
+  },
+
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 18 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: brand.moonstoneSoft },
+  dividerText: { fontFamily: font.medium, fontSize: 13, color: colors.textSecondary },
+
+  // Outlined rather than filled: Google is the alternative, not the primary
+  // action, and two solid buttons stacked would compete for the same eye.
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 15,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: brand.moonstoneInk,
+    backgroundColor: "#fff",
+  },
+  googleBtnPressed: { opacity: 0.7 },
+  googleLabel: { fontFamily: font.semibold, fontSize: 15, color: brand.midnight },
 
   signupRow: {
     flexDirection: "row",
