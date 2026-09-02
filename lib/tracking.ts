@@ -1,4 +1,3 @@
-import { ApiError, apiPost } from "@/lib/api";
 import { supabase } from "./supabase";
 import { isActive, isTracking, type LifecycleState } from "./lifecycle";
 import type { CourierLocation, Order, OrderStatusLog } from "@/types/database";
@@ -8,9 +7,7 @@ import type { CourierLocation, Order, OrderStatusLog } from "@/types/database";
  *
  * Deliberately polling rather than a paid live-tracking product: the courier
  * writes a `courier_locations` row every few seconds while en route and the
- * customer reads the newest one. The Laravel API exposes the same data at
- * /orders/{id}/location for clients that go through it; both read the same
- * table, so the two stay consistent.
+ * customer reads the newest one.
  */
 
 /** How often the customer asks for a fresh fix, in ms. */
@@ -72,10 +69,11 @@ export async function fetchLatestLocation(orderId: string): Promise<CourierLocat
 /**
  * Courier side: push one fix.
  *
- * Through the API, which checks the pinger is the order's assigned courier and
- * that the order is actually in an en-route state — so a loop that failed to
- * stop cannot keep writing rows after delivery, and one courier cannot write
- * positions onto another's job.
+ * Written straight to the table. The two checks the API used to make are now
+ * in the RLS policy, which is a better place for them: the row must name the
+ * caller as its courier, and the order must be one they are assigned to AND in
+ * an en-route state. So a loop that failed to stop cannot keep writing rows
+ * after delivery, and one courier cannot write positions onto another's job.
  */
 export async function pushLocation(input: {
   orderId: string;
@@ -86,21 +84,25 @@ export async function pushLocation(input: {
   speed?: number | null;
   accuracy?: number | null;
 }): Promise<void> {
-  try {
-    await apiPost(`orders/${input.orderId}/location`, {
-      lat: input.lat,
-      lng: input.lng,
-      heading: input.heading ?? null,
-      speed: input.speed ?? null,
-      accuracy: input.accuracy ?? null,
-      recorded_at: new Date().toISOString(),
-    });
-  } catch (e) {
-    // 409 means the order left the en-route states while a ping was in
-    // flight. That is the loop being right on time, not an error.
-    if (e instanceof ApiError && e.status === 409) return;
-    throw e;
-  }
+  const { error } = await supabase.from("courier_locations").insert({
+    order_id: input.orderId,
+    courier_id: input.courierId,
+    lat: input.lat,
+    lng: input.lng,
+    heading: input.heading ?? null,
+    speed: input.speed ?? null,
+    accuracy: input.accuracy ?? null,
+    recorded_at: new Date().toISOString(),
+  });
+
+  if (!error) return;
+
+  // 42501 is the policy refusing the row, which happens when the order left
+  // the en-route states while a ping was in flight. That is the loop being
+  // right on time, not an error worth surfacing to a courier who is driving.
+  if (error.code === "42501") return;
+
+  throw error;
 }
 
 export function isFixStale(location: CourierLocation | null): boolean {
