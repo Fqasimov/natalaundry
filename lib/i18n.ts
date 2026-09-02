@@ -204,6 +204,9 @@ const az = {
   signupResendCode: "Kodu yenidən göndər",
   signupResending: "Göndərilir…",
   signupBackToLogin: "Girişə qayıt",
+  courierLogin: "Kuryer Girişi",
+  courierLoginSubtitle: "İş hesabınıza daxil olun.",
+  loginNotACourier: "Bu hesab kuryer hesabı deyil. Müştəri girişindən istifadə edin.",
 
   orDivider: "və ya",
   continueWithGoogle: "Google ilə davam et",
@@ -654,6 +657,9 @@ const ru: Record<StringKey, string> = {
   signupResendCode: "Отправить код ещё раз",
   signupResending: "Отправляем…",
   signupBackToLogin: "Вернуться ко входу",
+  courierLogin: "Вход для курьера",
+  courierLoginSubtitle: "Войдите в рабочий аккаунт.",
+  loginNotACourier: "Это не аккаунт курьера. Используйте вход для клиента.",
 
   orDivider: "или",
   continueWithGoogle: "Продолжить с Google",
@@ -1088,6 +1094,9 @@ const en: Record<StringKey, string> = {
   signupResendCode: "Send the code again",
   signupResending: "Sending…",
   signupBackToLogin: "Back to sign in",
+  courierLogin: "Courier sign in",
+  courierLoginSubtitle: "Sign in to your work account.",
+  loginNotACourier: "That is not a courier account. Use the customer entrance.",
 
   orDivider: "or",
   continueWithGoogle: "Continue with Google",

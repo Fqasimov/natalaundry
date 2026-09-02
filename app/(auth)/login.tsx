@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppLogo } from "@/components/AppLogo";
@@ -34,6 +34,9 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { signInWithPassword, signInWithGoogle } = useAuth();
   const { t, lang, setLang } = useI18n();
+  // Which entrance they came through. Absent means the customer one, which is
+  // also what a deep link straight to /login gets.
+  const { portal } = useLocalSearchParams<{ portal?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -55,18 +58,62 @@ export default function LoginScreen() {
     // session rather than on "no error" keeps a dismissed browser from
     // pushing an unauthenticated screen that bounces straight back.
     const { data } = await supabase.auth.getSession();
-    if (data.session) router.replace("/(tabs)");
+    if (!data.session) return;
+
+    // The same door check as the password path — a Google account is no more
+    // a courier than any other.
+    const mismatch = await wrongDoor();
+    if (mismatch) {
+      setError(mismatch);
+      return;
+    }
+
+    router.replace("/(tabs)");
+  };
+
+  /**
+   * Does the account match the door they came in through?
+   *
+   * Signing in succeeds first — this is not an access check, it is a check
+   * that the customer is where they meant to be. A staff account arriving via
+   * the customer entrance is fine and lands on the courier dashboard anyway;
+   * the reverse is not, because "Kuryer kimi" would otherwise be a second
+   * front door to the customer app.
+   *
+   * Returns an error string to show, or null to continue.
+   */
+  const wrongDoor = async (): Promise<string | null> => {
+    if (portal !== "courier") return null;
+
+    const { data } = await supabase.from("profiles").select("role").single();
+    const role = data?.role;
+
+    if (role === "courier" || role === "admin") return null;
+
+    // Don't leave them holding a session they did not ask for.
+    await supabase.auth.signOut();
+    return t("loginNotACourier");
   };
 
   const onSubmit = async () => {
     setError(null);
     setSubmitting(true);
     const { error: signInError } = await signInWithPassword(email.trim(), password);
-    setSubmitting(false);
+
     if (signInError) {
+      setSubmitting(false);
       setError(signInError);
       return;
     }
+
+    const mismatch = await wrongDoor();
+    setSubmitting(false);
+
+    if (mismatch) {
+      setError(mismatch);
+      return;
+    }
+
     router.replace("/(tabs)");
   };
 
@@ -107,8 +154,14 @@ export default function LoginScreen() {
         </View>
 
         {/* Title */}
-        <Text style={styles.heroTitle}>{t("customerLogin")}</Text>
-        <Text style={styles.heroSub}>{t("customerLoginSubtitle")}</Text>
+        {/* Say which door this is. A courier told they are signing in as a
+            customer has no way to know the app understood them. */}
+        <Text style={styles.heroTitle}>
+          {portal === "courier" ? t("courierLogin") : t("customerLogin")}
+        </Text>
+        <Text style={styles.heroSub}>
+          {portal === "courier" ? t("courierLoginSubtitle") : t("customerLoginSubtitle")}
+        </Text>
       </LinearGradient>
 
       {/* ── Form area ── */}

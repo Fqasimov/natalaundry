@@ -65,9 +65,13 @@ export default function WelcomeScreen() {
     if (role === "customer") {
       router.push("/(auth)/customer-portal");
     } else {
-      // Couriers sign in with the same credentials screen; their role on the
-      // profile decides which dashboard they land on after authenticating.
-      router.push("/(auth)/login");
+      // The choice is carried through and enforced after authenticating.
+      // It used to be decorative — the same screen for both, and whatever the
+      // profile said decided the destination — so a customer entering their
+      // own credentials under "Kuryer kimi" was signed in as a customer. That
+      // is confusing at best, and it means the courier entrance is really just
+      // a second front door to the customer app.
+      router.push({ pathname: "/(auth)/login", params: { portal: "courier" } });
     }
   };
 
