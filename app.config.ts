@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   name: "Nata Laundry",
   slug: "nata-laundry",
   scheme: "natalaundry",
-  version: "1.0.2",
+  version: "1.0.3",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/images/icon.png",
