@@ -25,7 +25,7 @@ import { LIFECYCLE_LABEL, isTracking, type LifecycleState } from "@/lib/lifecycl
 import {
   advanceOrderStatus,
   cancelOrder,
-  claimOrder,
+  claimOrderAtomically,
   fetchOrder,
   fetchOrderItems,
   recordTopluCount,
@@ -272,7 +272,14 @@ export default function OrderDetailScreen() {
                 // ordinary outcome rather than an error, so reload and let the
                 // screen show the job as taken instead of leaving a button
                 // that appears to have done nothing.
-                await claimOrder(order.id, session.user.id);
+                //
+                // This used to call the legacy `claim_order` RPC while the
+                // courier dashboard claimed through `transition_order`. Two
+                // claim paths with different rules is one too many, and the
+                // legacy one moved `status` without `lifecycle_state`, leaving
+                // the order stuck at 'order_placed' where every following step
+                // was refused.
+                await claimOrderAtomically(order.id, session.user.id);
                 await load();
               })
             }

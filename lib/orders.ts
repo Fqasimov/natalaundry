@@ -393,14 +393,20 @@ export async function cancelOrder(orderId: string) {
 }
 
 /**
- * Claim a pending, unassigned order (the pre-lifecycle path still used by the
- * order detail screen).
+ * The original `claim_order` from the 1.0.2 architecture.
  *
- * This is the original `claim_order` from the 1.0.2 architecture, kept because
- * it is better than a bare claim: it requires an entry in `order_offers`, so a
- * courier can only take an order genuinely offered to them, and it expires the
- * rival offers in the same transaction. It returns false rather than throwing
- * when someone else got there first.
+ * @deprecated Nothing in the app calls this — use `claimOrderAtomically`.
+ *
+ * It is kept only because the RPC still exists in the database and something
+ * outside this repo may call it. Prefer the lifecycle path: this one keys off
+ * `dispatch_state = 'offered'`, which Laravel's broadcast never sets, so under
+ * the current dispatcher it can only ever return false.
+ *
+ * It also used to set `status` without `lifecycle_state`, stranding a claimed
+ * order at 'order_placed' where every following step was refused. Repaired in
+ * supabase/fix-courier-dispatch.sql — but one claim path is still better than
+ * two, so the order detail screen now uses `claimOrderAtomically` as the
+ * courier dashboard already did.
  */
 export async function claimOrder(orderId: string, _courierId: string) {
   const { data, error } = await supabase.rpc("claim_order", { p_order_id: orderId });
