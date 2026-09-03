@@ -1,6 +1,6 @@
 import { ActivityIndicator, View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth-context";
@@ -55,10 +55,18 @@ export default function WelcomeScreen() {
     );
   }
 
-  // Already signed in → go to tabs
+  // Already signed in → go to tabs.
+  //
+  // <Redirect> rather than router.replace(): calling replace() here ran a
+  // navigation *during render*, which updates the router while this component
+  // is still rendering. React reports that as "Cannot update a component while
+  // rendering a different component", and it greeted anyone who opened the app
+  // already signed in — the only path that reaches this branch.
+  //
+  // <Redirect> exists for exactly this: expo-router performs the navigation
+  // after the commit instead of in the middle of it.
   if (session) {
-    router.replace("/(tabs)");
-    return null;
+    return <Redirect href="/(tabs)" />;
   }
 
   const onRolePress = (role: Role) => {
