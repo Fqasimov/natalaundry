@@ -270,9 +270,28 @@ Two things worth carrying forward:
   (`lifecycle_state`, `processing_finished_at`, `promo_code`) never appeared
   in the dry run but did apply for real. Read a `--pretend` as a lower bound,
   not a manifest.
-- **Migrate on port 5432, run the app on 6543.** 6543 is the transaction
-  pooler; Laravel's schema builder needs the session pooler. Put it back
-  afterwards.
+- **Laravel runs on port 5432, not 6543** (corrected 2026-09-03). The earlier
+  advice here — migrate on 5432, run on 6543 — was wrong for this app, and cost
+  a long debugging session.
+
+  On 6543 (the transaction pooler) the admin console's broadcast failed with
+  `SQLSTATE[25P02] current transaction is aborted`. The trap is that the
+  statement Laravel names in that error is never the one that failed: 25P02
+  means an EARLIER statement in the transaction died and everything after it
+  reports this instead. Worse, `DB::listen` logged the real culprit — a plain
+  `update orders set offered_at, lifecycle_state` — as having succeeded.
+
+  What settled it: the identical statement sequence, run over raw SQL on BOTH
+  ports, passes completely (`scripts/migration/probe-broadcast-sequence.js`
+  takes a port argument for exactly this). So it is not the SQL and not the
+  data — it is PDO's prepared statements against the transaction pooler.
+  Moving Laravel to 5432 makes the same broadcast succeed unchanged.
+
+  6543 remains right for the phone app, which talks PostgREST, not PDO.
+
+  Latency is the same on both (~350 ms per round trip from here to Frankfurt),
+  so the pooler is not what makes the board feel slow — the board simply makes
+  several round trips per action.
 - **Laravel creates its own `migrations` table in `public`**, which Supabase
   exposes through PostgREST like any other. It is not named in any policy
   file. RLS was enabled and all grants revoked on it by hand — do the same

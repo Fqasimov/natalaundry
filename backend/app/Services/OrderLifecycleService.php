@@ -227,6 +227,15 @@ class OrderLifecycleService
         Notification::query()->create([
             'id' => (string) Str::uuid(),
             'user_id' => $order->user_id,
+            // `kind` is NOT NULL and was never set, so EVERY notification
+            // insert failed with 23502 — which aborted the surrounding
+            // transaction and made the whole broadcast fail with the useless
+            // "current transaction is aborted" on whatever statement came
+            // next. The lifecycle state is the event, so it is the kind.
+            'kind' => $state,
+            // Also never set, though it exists and the payload carried the id
+            // anyway. A notification about an order should be joinable to it.
+            'order_id' => $order->id,
             'title' => 'Nata Laundry',
             'body' => $body,
             'read' => false,
