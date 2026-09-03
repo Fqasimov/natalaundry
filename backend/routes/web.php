@@ -2,9 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+/*
+ * This app serves two things: a JSON API under /api, and the admin console.
+ * Nothing else has a reason to be at the root, and Laravel's stock welcome
+ * page there reads as "the API is running" to anyone looking for the console.
+ * Send them where they were going.
+ */
+Route::redirect('/', '/admin');
 
 /*
  * The admin console. Served by Laravel rather than shipped in the phone app:

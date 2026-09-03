@@ -289,6 +289,25 @@ export async function fetchOfferedOrders(courierId: string) {
   return (data ?? []) as Order[];
 }
 
+/**
+ * Courier: every job this courier has finished, newest first.
+ *
+ * "Couriers can view assigned orders" keeps working after delivery — the
+ * policy is on courier_id, not on the state — so the history needs no new
+ * policy of its own.
+ */
+export async function fetchCourierHistory(courierId: string, limit = 50) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("courier_id", courierId)
+    .eq("lifecycle_state", "delivered")
+    .order("delivered_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as Order[];
+}
+
 /** Courier: the job I am currently working, if any. */
 export async function fetchMyActiveJob(courierId: string) {
   const { data, error } = await supabase

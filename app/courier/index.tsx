@@ -154,6 +154,19 @@ export default function CourierDashboard() {
             ) : null}
           </Pressable>
         ))}
+
+        {/* The way to the courier's own page. A third tab would have squeezed
+            the two job tabs, which already had to be sized in halves to fit
+            the Russian labels — so this is an icon button beside them. */}
+        <Pressable
+          style={s.profileButton}
+          onPress={() => router.push("/courier/profile")}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={t("courierProfile")}
+        >
+          <Ionicons name="person-outline" size={18} color={brand.onSoftMuted} />
+        </Pressable>
       </View>
 
       {notice ? <Text style={s.notice}>{notice}</Text> : null}
@@ -332,6 +345,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeLabel: { fontFamily: font.bold, fontSize: 11, color: colors.textPrimary },
+  // Fixed width, outside the tabs' flex: it must not steal room from labels
+  // that are already tight in Russian.
+  profileButton: {
+    flexShrink: 0,
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: brand.surfaceAlt,
+  },
   notice: {
     ...type.caption,
     marginHorizontal: 20,

@@ -29,6 +29,29 @@ export function shortDayLabel(date: Date, language: Language): string {
 }
 
 /**
+ * A past date for history lists, e.g. "3 sen 2026".
+ *
+ * Carries the year, which `shortDayLabel` deliberately omits — that one labels
+ * pickable slots in the next few days, where the year is noise and the weekday
+ * is the useful part. In a list of completed jobs it is the other way round.
+ *
+ * Same explicit tables and the same reason: Hermes cannot be trusted to have
+ * Azerbaijani in its ICU data. Returns null for a missing or unparseable
+ * timestamp so callers can decide what to show rather than printing "NaN".
+ */
+export function shortDate(
+  value: string | Date | null | undefined,
+  language: Language
+): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const months = MONTHS[language] ?? MONTHS.az;
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/**
  * The next `count` days as pickable labels: today, tomorrow, then dates.
  *
  * `today` / `tomorrow` come from the caller so they stay in step with the
