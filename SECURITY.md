@@ -80,6 +80,58 @@ must be this project's auth server, and the subject must be a uuid (a malformed
 one reached Postgres as a cast error rather than a lookup miss). Covered by
 `backend/tests/Feature/SupabaseTokenTest.php`.
 
+### The client set its own lifecycle state (2026-09-03)
+
+`strip_client_pricing` and `guard_payment_status` between them meant no money
+could be forged on an order insert — and that was checked. What nobody checked
+was everything *else* a client can name in an INSERT. A signed-in customer
+could file an order carrying:
+
+| column | sent | survived |
+|---|---|---|
+| `lifecycle_state` | `delivered` | **yes** |
+| `dispatch_state` | `assigned` | **yes** |
+| `courier_id` | any user id | **yes** |
+| `approved_at` / `assigned_at` / `delivered_at` | `now()` | **yes** |
+| `status`, `payment_status` | `delivered`, `paid` | no — forced to `pending` |
+| `discount`, `delivery_fee` | `999`, `-50` | no — stripped to 0 |
+
+No money moved, but the order skipped the dispatch queue, named its own
+courier and read as already delivered — and both the courier app and the admin
+console key off `lifecycle_state`, not `status`.
+
+The cause was drift, not a wrong decision. `force_order_pending` sets `status`
+and nothing else because it was written before `lifecycle_state` and
+`dispatch_state` existed; the later migration that added them never extended
+the guard. **A guard names the columns it knew about on the day it was
+written.** Adding a state column means revisiting every trigger that pins state.
+
+Fixed in `supabase/harden-order-insert.sql`, in two independent layers:
+the trigger now resets the whole opening state (exempting `auth.uid() is null`
+server callers and admins, as `guard_payment_status` already did), and the
+column-level INSERT grant on `orders` is narrowed to the sixteen fields the app
+legitimately sends. Either layer alone stops it; both are verified separately
+by `probe-order-tampering.js` (grant layer) and `probe-trigger-layer.js`
+(trigger layer, with grants deliberately held).
+
+The same pass revoked write grants on `service_prices`, `payments`,
+`payment_intents`, `wallet_transactions`, `order_offers`, `customer_details`
+and `notifications`. Those writes were already refused — no policy permitted
+them — so this changed no behaviour. It removes a loaded gun: a single
+permissive policy added later, or one table brought up with RLS off (which is
+how `wallet_topups` shipped world-readable), and a client could have rewritten
+the price list or credited its own wallet. `notifications` keeps
+`UPDATE (read)` only, since marking a message read is all the app does.
+
+`scripts/migration/probe-client-writes.js` pins all of it: 17 attempts, each
+either refused or — for the two the app genuinely performs — allowed.
+
+Two lessons worth keeping. **A grant with no policy behind it is not safety,
+it is a dependency on someone else's mistake not happening.** And when writing
+a probe, check *why* it refused: two of these first reported REFUSED because
+the test SQL named columns that do not exist, which would have passed as
+security while testing nothing.
+
 ### The client set its own prices
 
 There was no API client at all. Checkout inserted into `orders` directly,
