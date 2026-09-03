@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { brand, colors, font, money, radius, serviceTheme } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { useCatalogCopy } from "@/lib/catalog-i18n";
+import { reportError } from "@/lib/errors";
 import { useAuth } from "@/lib/auth-context";
 import { createTopluOrder } from "@/lib/orders";
 import { TOPLU_DEPOSIT, TOPLU_PICKUP_WINDOW_HOURS } from "@/lib/toplu";
@@ -91,7 +92,7 @@ export default function TopluScreen() {
       });
       router.replace(`/order/${order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(reportError("toplu.submit", e));
     } finally {
       setSubmitting(false);
     }

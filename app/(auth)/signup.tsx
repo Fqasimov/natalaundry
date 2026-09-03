@@ -20,6 +20,15 @@ import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { BigButton } from "@/components/ui";
 
+// How many digits the emailed signup code has. This is NOT ours to choose:
+// Supabase generates the code and the length is set per project in
+// Authentication → Sign In / Providers → Email → "Email OTP Length" (6–10).
+// The number here must match that setting, or a valid code is rejected before
+// it is ever sent for verification. The copy and the placeholder are derived
+// from it rather than restating it, so there is one number to change.
+const CODE_LENGTH = 8;
+const CODE_PLACEHOLDER = "123456789012".slice(0, CODE_LENGTH);
+
 // router.back() does nothing when the stack is empty — a deep link or a
 // reload lands here with no history — so fall back to the welcome screen
 // rather than leaving the button dead.
@@ -82,7 +91,8 @@ export default function SignupScreen() {
    */
   const onVerify = async () => {
     setError(null);
-    if (code.length !== 6) return setError(t("signupCodeLength"));
+    if (code.length !== CODE_LENGTH)
+      return setError(t("signupCodeLength", { n: CODE_LENGTH }));
 
     setVerifying(true);
     const { error: verifyError } = await verifySignupCode(email.trim(), code);
@@ -239,21 +249,23 @@ export default function SignupScreen() {
             <Ionicons name="mail-open-outline" size={22} color={brand.midnight} />
             <Text style={styles.confirmTitle}>{t("signupConfirmTitle")}</Text>
             <Text style={styles.confirmBody}>
-              {t("signupConfirmBody", { email: email.trim() })}
+              {t("signupConfirmBody", { email: email.trim(), n: CODE_LENGTH })}
             </Text>
 
             <TextInput
               style={styles.codeInput}
               value={code}
-              onChangeText={(next) => setCode(next.replace(/[^0-9]/g, "").slice(0, 6))}
-              placeholder="123456"
+              onChangeText={(next) =>
+                setCode(next.replace(/[^0-9]/g, "").slice(0, CODE_LENGTH))
+              }
+              placeholder={CODE_PLACEHOLDER}
               placeholderTextColor={brand.moonstoneInk}
               keyboardType="number-pad"
               // The OS fills this straight from the notification, so the
               // customer never has to leave the app to read their own code.
               textContentType="oneTimeCode"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={CODE_LENGTH}
               editable={!verifying}
             />
 

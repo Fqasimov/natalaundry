@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
+import { reportError } from "@/lib/errors";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import {
@@ -65,7 +66,7 @@ export default function CourierDashboard() {
       // switching under the courier mid-session would be disorienting.
       setTab((prev) => (prev === "available" && mine ? "active" : prev));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      setNotice(reportError("courier", e));
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export default function CourierDashboard() {
       await load();
       if (won) setTab("active");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      setNotice(reportError("courier", e));
     } finally {
       setBusy(false);
     }
@@ -109,7 +110,7 @@ export default function CourierDashboard() {
       await transitionOrder(active.id, active.lifecycle_state, next.to);
       await load();
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      setNotice(reportError("courier", e));
     } finally {
       setBusy(false);
     }

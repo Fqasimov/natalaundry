@@ -16,6 +16,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { brand, font, money, radius, type } from "@/theme/tokens";
 import { settingsUi } from "@/components/SettingsScaffold";
 import { useAuth } from "@/lib/auth-context";
+import { reportError } from "@/lib/errors";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import type { Language } from "@/lib/i18n";
@@ -117,7 +118,7 @@ export default function ProfileScreen() {
       setNotice(t("repeatOrderAdded"));
       router.push("/checkout/schedule");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      setNotice(reportError("profile", e));
     } finally {
       setRepeating(false);
     }

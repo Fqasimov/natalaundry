@@ -15,6 +15,7 @@ import { ScreenHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
 import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
+import { reportError } from "@/lib/errors";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import { fetchAvailableOrdersForCourier, fetchMyCourierOrders, fetchMyOrders } from "@/lib/orders";
@@ -52,7 +53,7 @@ export default function OrdersScreen() {
       }
       setOrders(data);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setLoadError(reportError("orders.list", e));
     }
   }, [isCourier, courierTab, session?.user.id]);
 

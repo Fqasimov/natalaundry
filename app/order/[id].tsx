@@ -18,6 +18,7 @@ import { OrderPhotoStrip } from "@/components/OrderPhotoStrip";
 import { brand, colors, font, money, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { isToplu, settleToplu } from "@/lib/toplu";
+import { reportError } from "@/lib/errors";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { LIFECYCLE_LABEL, isTracking, type LifecycleState } from "@/lib/lifecycle";
@@ -71,7 +72,7 @@ export default function OrderDetailScreen() {
       setOrder(o);
       setItems(i);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(reportError("order.detail", e));
     }
   }, [id]);
 
@@ -90,7 +91,7 @@ export default function OrderDetailScreen() {
       await fn();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(reportError("order.detail", e));
     } finally {
       setBusy(false);
     }

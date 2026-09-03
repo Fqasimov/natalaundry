@@ -16,6 +16,7 @@ import { TrackingMap } from "@/components/TrackingMap";
 import { brand, colors, font, radius, type } from "@/theme/tokens";
 import { useI18n } from "@/lib/language-context";
 import { fetchOrder } from "@/lib/orders";
+import { reportError } from "@/lib/errors";
 import {
   fetchLatestLocation,
   fetchOrderTimeline,
@@ -57,7 +58,7 @@ export default function TrackOrderScreen() {
       setOrder(o);
       setLogs(l);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(reportError("track", e));
     }
   }, [id]);
 

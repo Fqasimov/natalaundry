@@ -24,6 +24,7 @@ import { useRewardCopy } from "@/lib/rewards-i18n";
 import { useAuth } from "@/lib/auth-context";
 import { OUTSIDE_CITY_FEE, RECOMMENDED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
+import { reportError } from "@/lib/errors";
 import {
   fetchPaymentOptions,
   payForOrder,
@@ -152,7 +153,10 @@ export default function SummaryScreen() {
     } catch (e) {
       // Photos are optional, so a failed upload must not block checkout —
       // say so and let them carry on or try again.
-      setError(e instanceof Error ? e.message : t("photoUploadFailed"));
+      // Keep the friendly copy on screen — an upload failure is recoverable
+      // and the customer can just carry on — but do not lose the reason.
+      reportError("checkout.photo", e);
+      setError(t("photoUploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -230,7 +234,7 @@ export default function SummaryScreen() {
       reset();
       router.replace(`/order/${order.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(reportError("checkout.submit", e));
     } finally {
       setSubmitting(false);
     }
