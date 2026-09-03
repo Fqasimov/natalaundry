@@ -86,9 +86,34 @@ restoring; only intended source changes should appear.
 
 ## Environment constraints
 
-- **The user's Windows machine has no PHP**, so nothing in
-  `scripts/migration/*.php` and no `php artisan` command runs there. The
-  equivalent checks are the Node scripts alongside them
+- **PHP on the Windows machine had no CA bundle** (fixed 2026-09-03). Neither
+  `curl.cainfo` nor `openssl.cafile` was set in `C:\php84\php.ini`, and the
+  compiled-in default path does not exist on Windows, so **every** HTTPS call
+  from PHP failed with `cURL error 60: unable to get local issuer certificate`.
+
+  The visible symptom was the admin console rejecting every login with
+  "Sessiya bitdi". That is the console's message for a **401**, and a non-admin
+  gets **403** — so the role was never the problem. Laravel could not fetch
+  Supabase's JWKS, so it could not verify the ES256 signature on any token,
+  and `verify()` returned null for everyone.
+
+  Both directives now point at Git for Windows' bundle
+  (`C:\Program Files\Git\mingw64\etc\ssl\certs\ca-bundle.crt`); php.ini was
+  backed up alongside itself first. **Never "fix" this by disabling
+  verification** — that removes the check rather than satisfying it.
+
+  Two things worth carrying: the Laravel log said exactly what was wrong the
+  whole time (`Could not fetch Supabase JWKS`), and `SUPABASE_JWT_SECRET` being
+  empty in `backend/.env` is a red herring — this project issues ES256, whose
+  verification needs no secret. `scripts/migration/probe-jwt-secret.js` settles
+  that question offline by testing the secret against the anon key.
+
+- **PHP is at `C:\php84\php.exe` and is NOT on `PATH`.** Plain `php ...` fails
+  with "not recognized", which was misread here on 2026-09-03 as the machine
+  having no PHP at all — it has been serving the admin console the whole time.
+  Call it by full path: `& C:\php84\php.exe artisan ...`.
+
+  The Node scripts alongside the PHP ones are still the quicker checks
   (`inspect-order-policies.js`, `probe-checkout.js`, `catalog-diff.js`, …),
   which read `backend/.env` themselves and connect over the session pooler on
   5432. They need the `pg` driver, which is deliberately **not** a project
