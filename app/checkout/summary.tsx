@@ -25,6 +25,7 @@ import { useAuth } from "@/lib/auth-context";
 import { OUTSIDE_CITY_FEE, RECOMMENDED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
 import { reportError } from "@/lib/errors";
+import { phase, timed } from "@/lib/perf";
 import {
   fetchPaymentOptions,
   payForOrder,
@@ -186,6 +187,7 @@ export default function SummaryScreen() {
     setSubmitting(true);
     setError(null);
     setPayNotice(null);
+    const submitTimer = phase("checkout.submit");
     try {
       // No money is sent: the server prices the basket itself, so the
       // breakdown above is only what the customer was shown.
@@ -210,9 +212,21 @@ export default function SummaryScreen() {
       // retry from — losing the basket over a declined card would be worse
       // than showing them an order that still needs paying.
       try {
-        const state = await payForOrder(order.id, payMethod, lang);
+        const state = await timed("payForOrder", () =>
+          payForOrder(order.id, payMethod, lang));
+
+        // Only a card can settle *after* we stop looking: the bank redirects
+        // the customer back while its callback is still in flight, so a single
+        // read right then can be too early. Nothing else is like that.
+        //
+        // Cash is `pending` by design — it is collected at the door — and
+        // `balance` has already succeeded or come up short by the time
+        // pay_order returns. Polling either one waits for a value that cannot
+        // change. This used to run for every method: 1.5 + 3 + 4.5 + 6 = 15
+        // seconds added to every cash order, and the answer was then discarded
+        // by the `payMethod !== "cash"` test below.
         const settled =
-          state.payment_status === "pending"
+          payMethod === "card" && state.payment_status === "pending"
             ? await waitForSettlement(order.id)
             : state;
 
@@ -231,6 +245,7 @@ export default function SummaryScreen() {
         setPayNotice(t("payOrderPlacedUnpaid"));
       }
 
+      submitTimer.done();
       reset();
       router.replace(`/order/${order.id}`);
     } catch (e) {

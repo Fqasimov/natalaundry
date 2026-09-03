@@ -207,6 +207,8 @@ const az = {
   courierLogin: "Kuryer Girişi",
   courierLoginSubtitle: "İş hesabınıza daxil olun.",
   loginNotACourier: "Bu hesab kuryer hesabı deyil. Müştəri girişindən istifadə edin.",
+  courierNoSelfSignup:
+    "Kuryer hesabları Nata tərəfindən yaradılır. Hesab üçün rəhbərliklə əlaqə saxlayın.",
 
   orDivider: "və ya",
   continueWithGoogle: "Google ilə davam et",
@@ -660,6 +662,8 @@ const ru: Record<StringKey, string> = {
   courierLogin: "Вход для курьера",
   courierLoginSubtitle: "Войдите в рабочий аккаунт.",
   loginNotACourier: "Это не аккаунт курьера. Используйте вход для клиента.",
+  courierNoSelfSignup:
+    "Аккаунты курьеров создаёт Nata. Обратитесь к руководству, чтобы получить доступ.",
 
   orDivider: "или",
   continueWithGoogle: "Продолжить с Google",
@@ -1097,6 +1101,8 @@ const en: Record<StringKey, string> = {
   courierLogin: "Courier sign in",
   courierLoginSubtitle: "Sign in to your work account.",
   loginNotACourier: "That is not a courier account. Use the customer entrance.",
+  courierNoSelfSignup:
+    "Courier accounts are issued by Nata. Contact the office to get one.",
 
   orDivider: "or",
   continueWithGoogle: "Continue with Google",

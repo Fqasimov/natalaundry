@@ -261,13 +261,32 @@ export default function LoginScreen() {
           )}
         </Pressable>
 
-        {/* Sign up link */}
-        <View style={styles.signupRow}>
-          <Text style={styles.signupText}>{t("noAccount")} </Text>
-          <Pressable onPress={() => router.replace("/(auth)/signup")} hitSlop={8}>
-            <Text style={styles.signupLink}>{t("registerLink")}</Text>
-          </Pressable>
-        </View>
+        {/* Sign up — customers only.
+
+            There is no such thing as registering as a courier. `handle_new_user`
+            hardcodes role 'user' and ignores client metadata, and the column
+            grants on `profiles` deliberately exclude `role`, so a courier
+            account can only be made by staff.
+
+            That is the right design rather than a limitation: the "Couriers can
+            view pending orders" policy keys on profiles.role, so anyone able to
+            sign themselves up as a courier would immediately be able to read
+            every pending order — addresses, times and customer details.
+
+            This link used to drop the `portal` param and send couriers to the
+            customer signup, which then created a customer account and dropped
+            them on the customer dashboard, with no hint that anything was
+            wrong. Say what is actually true instead. */}
+        {portal === "courier" ? (
+          <Text style={styles.signupNote}>{t("courierNoSelfSignup")}</Text>
+        ) : (
+          <View style={styles.signupRow}>
+            <Text style={styles.signupText}>{t("noAccount")} </Text>
+            <Pressable onPress={() => router.replace("/(auth)/signup")} hitSlop={8}>
+              <Text style={styles.signupLink}>{t("registerLink")}</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -397,6 +416,17 @@ const styles = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: 15,
     color: colors.textSecondary,
+  },
+  // The courier door's replacement for the sign-up row: an explanation, not a
+  // link, so it is centred and set as body copy rather than an action.
+  signupNote: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 8,
   },
   signupLink: {
     fontFamily: font.semibold,

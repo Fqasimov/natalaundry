@@ -137,11 +137,23 @@ export async function payForOrder(
   // either: pay_order settles both, so the customer never writes
   // payment_status themselves.
   if (method === "cash" || method === "balance") {
-    const { error } = await supabase.rpc("pay_order", {
+    const { data, error } = await supabase.rpc("pay_order", {
       p_order: orderId,
       p_method: method,
     });
     if (error) throw error;
+
+    // pay_order returns the state it just wrote, so reading the row back is a
+    // second round trip for an answer already in hand. Fall back to the read
+    // only if the shape is not what we expect.
+    const settled = data as { payment_status?: string; payment_method?: string } | null;
+    if (settled?.payment_status) {
+      return {
+        payment_status: settled.payment_status as PaymentStatus,
+        payment_method: (settled.payment_method ?? method) as PaymentMethod,
+        bank_status: null,
+      };
+    }
     return fetchPaymentState(orderId);
   }
 

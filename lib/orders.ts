@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { courierNextStep, type LifecycleState } from "./lifecycle";
 import { priceServiceIdFor } from "./catalog";
+import { timed } from "./perf";
 import type { PaymentMethod } from "@/lib/payments";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
@@ -118,14 +119,20 @@ type NewOrderInput = {
  * someone else's account either.
  */
 export async function createOrder(input: NewOrderInput) {
-  const { data: { user } } = await supabase.auth.getUser();
+  // getSession() reads the stored session; getUser() asks the auth server,
+  // which is a full round trip on a mobile connection before the first write
+  // has even started. The id is only used to fill user_id, and the INSERT
+  // policy checks that against auth.uid() from the token anyway — so a stale
+  // id cannot get an order filed against someone else, it just fails.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error("not_signed_in");
 
   // No money is sent. subtotal/total are placeholders the triggers overwrite,
   // and discount/delivery_fee are stripped on insert and then derived from the
   // catalogue — see supabase/enforce-order-pricing.sql. Sending a figure here
   // would be ignored, which is the point.
-  const { data: order, error } = await supabase
+  const { data: order, error } = await timed("orders.insert", () => supabase
     .from("orders")
     .insert({
       user_id: user.id,
@@ -147,13 +154,14 @@ export async function createOrder(input: NewOrderInput) {
       payment_method: input.paymentMethod,
     })
     .select()
-    .single();
+    .single());
 
   if (error) throw error;
 
   // Prices are placeholders too: enforce_item_price rewrites each one from
   // service_prices and rejects an unknown or inactive item_id outright.
-  const { error: itemsError } = await supabase.from("order_items").insert(
+  const { error: itemsError } = await timed("order_items.insert", () =>
+    supabase.from("order_items").insert(
     input.lines.map((line) => ({
       order_id: order.id,
       // The database's own vocabulary ("dryCleaning"), not the app's routing
@@ -165,16 +173,17 @@ export async function createOrder(input: NewOrderInput) {
       quantity: line.quantity,
       price: 0,
     })),
-  );
+  ));
 
   if (itemsError) throw itemsError;
 
   // Re-read: the totals only exist after the item triggers have run.
-  const { data: priced, error: readError } = await supabase
-    .from("orders")
-    .select()
-    .eq("id", order.id)
-    .single();
+  const { data: priced, error: readError } = await timed("orders.reread", () =>
+    supabase
+      .from("orders")
+      .select()
+      .eq("id", order.id)
+      .single());
 
   if (readError) throw readError;
   return priced as Order;
@@ -197,7 +206,9 @@ type NewTopluOrderInput = {
  * order. `counted_total` stays null until a courier records the count.
  */
 export async function createTopluOrder(input: NewTopluOrderInput) {
-  const { data: { user } } = await supabase.auth.getUser();
+  // Local session read rather than a round trip — see createOrder.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error("not_signed_in");
 
   // service_type 'bulk' is what enforce_bulk_deposit keys on: it sets the
