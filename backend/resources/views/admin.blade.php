@@ -28,16 +28,65 @@
     margin:0; background:var(--bg); color:var(--ink);
     font:15px/1.5 "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
+
+  /* The courier app's language, brought to the desk: ivory ground, white cards
+     that float on a soft shadow rather than sitting inside a hairline border,
+     and the blue used for accents instead of as a slab across the top. The
+     gradient header read as a different product to the phone screens. */
   header {
-    background:linear-gradient(120deg,#3184EC,#1A6AD4); color:#fff;
-    padding:18px 24px; display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface); color:var(--ink);
+    padding:20px 24px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 1px 0 var(--border);
+    position:sticky; top:0; z-index:5;
   }
-  header h1 { margin:0; font-size:19px; letter-spacing:-.3px; }
+  header h1 { margin:0; font-size:22px; letter-spacing:-.4px; font-weight:800; }
   main { max-width:1100px; margin:0 auto; padding:24px; }
-  .card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius); padding:18px; margin-bottom:14px;
+  h2.section {
+    margin:22px 0 12px; font-size:19px; letter-spacing:-.2px;
   }
+  .card {
+    background:var(--surface); border:0;
+    border-radius:var(--radius); padding:18px; margin-bottom:14px;
+    box-shadow:0 3px 12px rgba(27,26,22,.06);
+  }
+
+  /* Today's figures. The coloured left edge is how the design tells tiles
+     apart at a glance without three different card backgrounds. */
+  .stat-row {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:12px; margin-bottom:6px;
+  }
+  .stat {
+    background:var(--surface); border-radius:var(--radius);
+    box-shadow:0 3px 12px rgba(27,26,22,.06);
+    display:flex; overflow:hidden;
+  }
+  .stat .edge { width:4px; flex:none; }
+  .stat .body { padding:14px 16px; }
+  .stat .value { font-size:22px; font-weight:800; letter-spacing:-.4px; }
+  .stat .label { font-size:13px; color:var(--muted); }
+
+  /* Tones as classes, not inline styles.
+     This page sets a strict style-src with a nonce, which blocks the style
+     ATTRIBUTE as well as <style> blocks — so `el.style.background = …` from
+     script is silently dropped and the tiles come out colourless. Anything
+     visual here has to be a class. */
+  .tone-amber  .edge { background:var(--amber); }
+  .tone-amber  .value { color:var(--amber); }
+  .tone-blue   .edge { background:var(--blue); }
+  .tone-blue   .value { color:var(--blue); }
+  .tone-green  .edge { background:var(--green); }
+  .tone-green  .value { color:var(--green); }
+  .tone-indigo .edge { background:#5B57D6; }
+  .tone-indigo .value { color:#5B57D6; }
+
+  /* Small layout helpers, for the same reason: the login and dialog markup
+     used style="…" attributes that the policy has always blocked. */
+  .m0 { margin:0; }
+  .tight { margin:0 0 4px; }
+  .lead { margin:0 0 18px; }
+  .full { width:100%; }
+  .end { justify-content:flex-end; }
   .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
   .grow { flex:1; min-width:0; }
   .muted { color:var(--muted); font-size:13px; }
@@ -77,8 +126,8 @@
 <body>
 
 <div id="login" class="login card">
-  <h2 style="margin:0 0 4px">Nata Laundry</h2>
-  <p class="muted" style="margin:0 0 18px">Admin paneli</p>
+  <h2 class="tight">Nata Laundry</h2>
+  <p class="muted lead">Admin paneli</p>
   <div id="login-error" class="notice err hidden"></div>
   <div class="field">
     <label for="email">E-poçt</label>
@@ -88,28 +137,33 @@
     <label for="password">Şifrə</label>
     <input id="password" type="password" autocomplete="current-password">
   </div>
-  <button id="login-btn" style="width:100%">Daxil ol</button>
+  <button id="login-btn" class="full">Daxil ol</button>
 </div>
 
 <div id="app" class="hidden">
   <header>
     <h1>Sifariş idarəetməsi</h1>
     <div class="row">
-      <span id="feed-status" class="muted" style="color:rgba(255,255,255,.85)"></span>
-      <button class="ghost" id="signout" style="color:#fff;border-color:rgba(255,255,255,.6)">Çıxış</button>
+      <span id="feed-status" class="muted"></span>
+      <button class="ghost" id="signout">Çıxış</button>
     </div>
   </header>
   <main>
     <div id="app-notice" class="notice hidden"></div>
+
+    <h2 class="section">Bugünkü Statistika</h2>
+    <div class="stat-row" id="stats"></div>
+
+    <h2 class="section">Sifarişlər</h2>
     <div id="orders"></div>
   </main>
 </div>
 
 <dialog id="assign">
-  <h3 style="margin:0 0 6px">Kuryerə göndər</h3>
-  <p class="muted" id="assign-order" style="margin:0"></p>
+  <h3 class="tight">Kuryerə göndər</h3>
+  <p class="muted m0" id="assign-order"></p>
   <div class="courier-list" id="courier-list"></div>
-  <div class="row" style="justify-content:flex-end">
+  <div class="row end">
     <button class="ghost" id="assign-cancel">İmtina</button>
     <button id="assign-all">Hamısına göndər</button>
     <button id="assign-selected">Seçilmişlərə göndər</button>
@@ -323,6 +377,42 @@ async function broadcast(courierIds) {
   } catch (e) { notice(e.message); }
 }
 
+/**
+ * Today's figures, counted from the feed already on screen rather than asked
+ * of a second endpoint: the board is the source, so the numbers cannot
+ * disagree with the cards under them.
+ *
+ * Built with textContent throughout, like the rest of this page — never
+ * innerHTML, because every value here came from a customer or a courier.
+ */
+function renderStats(orders) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const isToday = (o) => o.created_at && new Date(o.created_at) >= startOfToday;
+
+  const today = orders.filter(isToday);
+  const awaiting = orders.filter((o) => o.dispatch_state === 'awaiting_admin');
+  const delivered = today.filter((o) => o.lifecycle_state === 'delivered');
+  const revenue = today.reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+  const tiles = [
+    ['amber', String(awaiting.length), 'Təyinat gözləyir'],
+    ['blue', String(today.length), 'Bugünkü sifariş'],
+    ['green', String(delivered.length), 'Çatdırıldı'],
+    ['indigo', '₼' + revenue.toFixed(2), 'Bugünkü dövriyyə'],
+  ];
+
+  const wrap = $('stats');
+  wrap.replaceChildren();
+  tiles.forEach(([tone, value, label]) => {
+    const card = el2('div', '', 'stat tone-' + tone);
+    const body = el2('div', '', 'body');
+    body.append(el2('div', value, 'value'), el2('div', label, 'label'));
+    card.append(el2('div', '', 'edge'), body);
+    wrap.append(card);
+  });
+}
+
 async function loadOrders() {
   const { data } = await api('/admin/orders');
   const wrap = $('orders');
@@ -332,6 +422,7 @@ async function loadOrders() {
   } else {
     data.forEach((order) => wrap.append(orderCard(order)));
   }
+  renderStats(data);
   $('feed-status').textContent = 'Yeniləndi ' + new Date().toLocaleTimeString();
 }
 
