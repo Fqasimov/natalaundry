@@ -308,6 +308,25 @@ export async function fetchCourierHistory(courierId: string, limit = 50) {
   return (data ?? []) as Order[];
 }
 
+/**
+ * Courier: who to call about this job.
+ *
+ * The assigned courier can already read the customer's profile — there is a
+ * policy for it — but the app never showed it, so a courier standing at the
+ * wrong gate had no way to reach the person expecting them. Returns null
+ * rather than throwing if the row is not visible, since a missing phone
+ * number must not take the job screen down with it.
+ */
+export async function fetchOrderCustomer(userId: string) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("name, phone")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) return null;
+  return (data ?? null) as { name: string | null; phone: string | null } | null;
+}
+
 /** Courier: the job I am currently working, if any. */
 export async function fetchMyActiveJob(courierId: string) {
   const { data, error } = await supabase

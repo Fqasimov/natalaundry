@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,12 +21,14 @@ import {
   claimOrderAtomically,
   fetchMyActiveJob,
   fetchOfferedOrders,
+  fetchOrderCustomer,
+  fetchOrderItems,
   transitionOrder,
 } from "@/lib/orders";
 import { LIFECYCLE_LABEL, courierNextStep, isTracking } from "@/lib/lifecycle";
 import { useLocationBroadcast } from "@/lib/use-location-broadcast";
 import { hasCoordinates, openNavigation } from "@/lib/navigation-links";
-import type { Order } from "@/types/database";
+import type { Order, OrderItem } from "@/types/database";
 
 type Tab = "available" | "active";
 
@@ -50,6 +53,10 @@ export default function CourierDashboard() {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // What the job actually consists of, and who to call about it. Both were
+  // missing entirely: the courier saw an address and a total and nothing else.
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [customer, setCustomer] = useState<{ name: string | null; phone: string | null } | null>(null);
 
   const courierId = session?.user.id ?? null;
 
@@ -62,6 +69,20 @@ export default function CourierDashboard() {
       ]);
       setOffered(jobs);
       setActive(mine);
+
+      if (mine) {
+        // Not fatal if either fails — the job itself is still workable, so a
+        // missing item list must not blank the screen.
+        const [lines, who] = await Promise.all([
+          fetchOrderItems(mine.id).catch(() => [] as OrderItem[]),
+          fetchOrderCustomer(mine.user_id).catch(() => null),
+        ]);
+        setItems(lines);
+        setCustomer(who);
+      } else {
+        setItems([]);
+        setCustomer(null);
+      }
       // Land on whichever tab has something to do, but only on first load —
       // switching under the courier mid-session would be disorienting.
       setTab((prev) => (prev === "available" && mine ? "active" : prev));
@@ -223,6 +244,51 @@ export default function CourierDashboard() {
             </Text>
             <Text style={s.address}>{active.address ?? "—"}</Text>
 
+            {/* Who to call. The assigned courier has always been allowed to
+                read this — there is a policy for it — but the screen never
+                showed it, so a courier at the wrong gate had no way to reach
+                the person waiting for them. */}
+            {customer?.name || customer?.phone ? (
+              <View style={s.customerRow}>
+                <View style={s.customerText}>
+                  <Text style={s.jobLabel}>{t("courierJobCustomer")}</Text>
+                  <Text style={s.customerName} numberOfLines={1}>
+                    {customer?.name ?? "—"}
+                  </Text>
+                </View>
+                {customer?.phone ? (
+                  <Pressable
+                    style={s.callButton}
+                    onPress={() => Linking.openURL(`tel:${customer.phone}`)}
+                  >
+                    <Ionicons name="call-outline" size={16} color={colors.textInverse} />
+                    <Text style={s.callLabel}>{t("courierCall")}</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={s.jobLabel}>{t("courierNoPhone")}</Text>
+                )}
+              </View>
+            ) : null}
+
+            {/* What the job actually is. Until now the courier drove to a flat
+                knowing only the total — four shirts and a rug look identical
+                at ₼45. `order_items` was readable by the customer alone; the
+                policy that fixes that is in
+                supabase/courier-can-see-the-job.sql. */}
+            {items.length > 0 ? (
+              <View style={s.items}>
+                <Text style={s.jobLabel}>{t("courierJobItems")}</Text>
+                {items.map((line) => (
+                  <View key={line.id} style={s.itemRow}>
+                    <Text style={s.itemName} numberOfLines={1}>
+                      {line.item_name}
+                    </Text>
+                    <Text style={s.itemQty}>×{line.quantity}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             {/* Location status is shown, not toggled: the loop follows the
                 order's state so there is nothing for the courier to manage. */}
             {isTracking(active.lifecycle_state) ? (
@@ -345,6 +411,31 @@ const s = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeLabel: { fontFamily: font.bold, fontSize: 11, color: colors.textPrimary },
+  jobLabel: { ...type.eyebrow, color: brand.onSoftMuted },
+  customerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 6,
+  },
+  customerText: { flexShrink: 1, gap: 2 },
+  customerName: { ...type.bodyMedium, color: brand.midnight },
+  callButton: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: brand.moonstoneInk,
+  },
+  callLabel: { fontFamily: font.semibold, fontSize: 13, color: colors.textInverse },
+  items: { marginTop: 8, gap: 4 },
+  itemRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  itemName: { ...type.body, color: brand.midnight, flexShrink: 1 },
+  itemQty: { ...type.bodyMedium, color: brand.onSoftMuted },
   // Fixed width, outside the tabs' flex: it must not steal room from labels
   // that are already tight in Russian.
   profileButton: {

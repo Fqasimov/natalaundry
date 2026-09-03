@@ -411,6 +411,11 @@ const az = {
   courierNoAvailable: "Hazırda sizə təklif olunan sifariş yoxdur",
   courierNoActive: "Aktiv tapşırığınız yoxdur",
 
+  courierJobItems: "Əşyalar",
+  courierJobCustomer: "Müştəri",
+  courierCall: "Zəng et",
+  courierNoPhone: "Nömrə yoxdur",
+
   // Courier profile
   courierProfile: "Profil",
   courierProfileTitle: "Kuryer profili",
@@ -875,6 +880,11 @@ const ru: Record<StringKey, string> = {
   courierNoAvailable: "Пока нет предложенных вам заказов",
   courierNoActive: "У вас нет активной задачи",
 
+  courierJobItems: "Вещи",
+  courierJobCustomer: "Клиент",
+  courierCall: "Позвонить",
+  courierNoPhone: "Нет номера",
+
   // Courier profile
   courierProfile: "Профиль",
   courierProfileTitle: "Профиль курьера",
@@ -1334,6 +1344,11 @@ const en: Record<StringKey, string> = {
   courierActive: "Active task",
   courierNoAvailable: "No orders offered to you right now",
   courierNoActive: "You have no active task",
+
+  courierJobItems: "Items",
+  courierJobCustomer: "Customer",
+  courierCall: "Call",
+  courierNoPhone: "No phone number",
 
   // Courier profile
   courierProfile: "Profile",
