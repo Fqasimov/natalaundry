@@ -3,72 +3,95 @@
 /**
  * Fallback catalogue, mirroring lib/catalog.ts in the app.
  *
- * The authoritative source is `public.service_prices`, but only its
- * `service_id` / `item_id` columns are confirmed — the schema dump was
- * truncated before returning a price column. CatalogService prefers the
- * database whenever it exposes a usable price column and falls back to this
- * list otherwise, so pricing is never taken from the client.
+ * Both are now generated from `public.service_prices`, which is the
+ * authority: `enforce_item_price` looks each line up by `item_id` and
+ * refuses anything it does not recognise. An earlier version of this file used
+ * invented ids (`tshirt`, `suit_2pc`) that existed in neither the database
+ * nor a real order, and every checkout failed on its line items because of it.
  *
- * Prices marked "verified" are legible in the 1.0.2 screen recording.
+ * Keys are the app's service keys; the ids inside are the database's.
+ * Regenerate with scripts/migration/gen-catalog-php.js — do not hand-edit.
  */
 return [
     'dry_cleaning' => [
-        'tshirt' => ['name' => 'T-Shirt', 'price' => 7],              // verified
-        'shirt_short' => ['name' => 'Köynək – Qısaqol', 'price' => 7], // verified
-        'shirt_long' => ['name' => 'Köynək – Uzunqol', 'price' => 8],  // verified
-        'sweater' => ['name' => 'Sviter', 'price' => 9],               // verified
-        'trousers' => ['name' => 'Şalvar', 'price' => 10],             // verified
-        'shorts' => ['name' => 'Şort', 'price' => 6],                  // verified
-        'skirt' => ['name' => 'Ətək', 'price' => 10],                  // verified
-        'jacket' => ['name' => 'Pencək', 'price' => 12],
-        'suit_2pc' => ['name' => 'Kostyum (2 hissəli)', 'price' => 20],
-        'suit_3pc' => ['name' => 'Kostyum (3 hissəli)', 'price' => 26],
-        'vest' => ['name' => 'Jilet', 'price' => 8],
-        'dress_simple' => ['name' => 'Sadə don', 'price' => 14],
-        'dress_evening' => ['name' => 'Gecə donu', 'price' => 25],
-        'coat' => ['name' => 'Palto', 'price' => 22],
-        'jacket_winter' => ['name' => 'Qış gödəkçəsi', 'price' => 25],
-        'raincoat' => ['name' => 'Plaş', 'price' => 18],
-        'leather_jacket' => ['name' => 'Dəri gödəkçə', 'price' => 35],
-        'tie' => ['name' => 'Qalstuk', 'price' => 5],
-        'scarf' => ['name' => 'Şərf', 'price' => 6],
-        'gloves' => ['name' => 'Əlcək', 'price' => 5],
-        'hat' => ['name' => 'Papaq', 'price' => 7],
+        'dc-shirt-1' => ['name' => 'T-Shirt', 'price' => 7],
+        'dc-shirt-2' => ['name' => 'Köynək – Qısaqol', 'price' => 7],
+        'dc-shirt-3' => ['name' => 'Köynək – Uzunqol', 'price' => 8],
+        'dc-shirt-4' => ['name' => 'Sviter', 'price' => 9],
+        'dc-suit-1' => ['name' => 'Pencək', 'price' => 12],
+        'dc-suit-2' => ['name' => 'Jilet', 'price' => 7],
+        'dc-suit-3' => ['name' => 'Kostyum (2 hissəli)', 'price' => 20],
+        'dc-suit-4' => ['name' => 'Kostyum (3 hissəli)', 'price' => 25],
+        'dc-bot-1' => ['name' => 'Şalvar', 'price' => 10],
+        'dc-bot-2' => ['name' => 'Şort', 'price' => 6],
+        'dc-bot-3' => ['name' => 'Ətək', 'price' => 10],
+        'dc-dress-1' => ['name' => 'Don', 'price' => 20],
+        'dc-dress-2' => ['name' => 'Gecə donu', 'price' => 30],
+        'dc-outer-1' => ['name' => 'Gödəkçə – Qısa', 'price' => 20],
+        'dc-outer-2' => ['name' => 'Gödəkçə – Uzun', 'price' => 25],
+        'dc-outer-3' => ['name' => 'Dəri gödəkçə', 'price' => 60],
+        'dc-outer-4' => ['name' => 'Palto', 'price' => 25],
+        'dc-outer-5' => ['name' => 'Plaş', 'price' => 25],
+        'dc-outer-6' => ['name' => 'Dublyonka', 'price' => 60],
+        'dc-outer-7' => ['name' => 'Xəz palto – Qısa', 'price' => 55],
+        'dc-outer-8' => ['name' => 'Xəz palto – Uzun', 'price' => 100],
+        'dc-ev-1' => ['name' => 'Corab', 'price' => 2],
+        'dc-ev-2' => ['name' => 'Alt paltarı', 'price' => 4],
+        'dc-ev-3' => ['name' => 'İdman kostyumu', 'price' => 20],
+        'dc-ev-4' => ['name' => 'Pijama', 'price' => 10],
     ],
     'ironing' => [
-        'tshirt' => ['name' => 'T-Shirt', 'price' => 3],
-        'shirt_short' => ['name' => 'Köynək – Qısaqol', 'price' => 3],
-        'shirt_long' => ['name' => 'Köynək – Uzunqol', 'price' => 4],
-        'sweater' => ['name' => 'Sviter', 'price' => 4],
-        'trousers' => ['name' => 'Şalvar', 'price' => 4],
-        'skirt' => ['name' => 'Ətək', 'price' => 4],
-        'shorts' => ['name' => 'Şort', 'price' => 3],
-        'dress_simple' => ['name' => 'Sadə don', 'price' => 6],
-        'dress_evening' => ['name' => 'Gecə donu', 'price' => 10],
+        'ir-shirt-1' => ['name' => 'T-Shirt', 'price' => 4],
+        'ir-shirt-2' => ['name' => 'Köynək – Qısaqol', 'price' => 4],
+        'ir-shirt-3' => ['name' => 'Köynək – Uzunqol', 'price' => 4],
+        'ir-shirt-4' => ['name' => 'Sviter', 'price' => 4],
+        'ir-suit-1' => ['name' => 'Pencək', 'price' => 6],
+        'ir-suit-2' => ['name' => 'Jilet', 'price' => 4],
+        'ir-suit-3' => ['name' => 'Kostyum (2 hissəli)', 'price' => 8],
+        'ir-suit-4' => ['name' => 'Kostyum (3 hissəli)', 'price' => 10],
+        'ir-bot-1' => ['name' => 'Şalvar', 'price' => 4],
+        'ir-bot-2' => ['name' => 'Şort', 'price' => 4],
+        'ir-bot-3' => ['name' => 'Ətək', 'price' => 4],
+        'ir-dress-1' => ['name' => 'Don', 'price' => 6],
+        'ir-dress-2' => ['name' => 'Gecə donu', 'price' => 10],
+        'ir-outer-1' => ['name' => 'Palto', 'price' => 10],
+        'ir-outer-2' => ['name' => 'Plaş', 'price' => 7],
+        'ir-ev-1' => ['name' => 'Pijama', 'price' => 4],
     ],
     'shoes' => [
-        'shoe_fabric' => ['name' => 'Sadə parça ayaqqabı', 'price' => 25],       // verified
-        'shoe_part_leather' => ['name' => 'Qismən dəri ayaqqabı', 'price' => 30], // verified
-        'shoe_full_leather' => ['name' => 'Tam dəri ayaqqabı', 'price' => 35],    // verified
-        'shoe_part_nubuck' => ['name' => 'Qismən nabuk ayaqqabı', 'price' => 35], // verified
-        'shoe_nubuck' => ['name' => 'Nabuk ayaqqabı', 'price' => 40],             // verified
-        'boot' => ['name' => 'Çəkmə', 'price' => 40],                             // verified
+        'sh-1' => ['name' => 'Sadə parça ayaqqabı', 'price' => 25],
+        'sh-2' => ['name' => 'Qismən dəri ayaqqabı', 'price' => 30],
+        'sh-3' => ['name' => 'Tam dəri ayaqqabı', 'price' => 35],
+        'sh-4' => ['name' => 'Qismən nabuk ayaqqabı', 'price' => 35],
+        'sh-5' => ['name' => 'Nabuk ayaqqabı', 'price' => 40],
+        'sh-6' => ['name' => 'Çəkmə', 'price' => 40],
     ],
     'bedding' => [
-        'bedding_single' => ['name' => 'Bir nəfərlik dəst', 'price' => 15],
-        'bedding_double' => ['name' => 'İki nəfərlik dəst', 'price' => 20],
-        'duvet' => ['name' => 'Yorğan', 'price' => 25],
-        'pillow' => ['name' => 'Yastıq', 'price' => 8],
-        'blanket' => ['name' => 'Ədyal', 'price' => 22],
-        'curtain' => ['name' => 'Pərdə', 'price' => 18],
-        'tablecloth' => ['name' => 'Süfrə', 'price' => 12],
-        'towel' => ['name' => 'Dəsmal', 'price' => 5],
+        'hm-bd-1' => ['name' => 'Ədyal – İkinəfərlik', 'price' => 25],
+        'hm-bd-2' => ['name' => 'Yastıq', 'price' => 15],
+        'hm-bd-3' => ['name' => 'Yastıq üzü', 'price' => 5],
+        'hm-bd-4' => ['name' => 'Yastıq örtüyü', 'price' => 15],
+        'hm-bd-5' => ['name' => 'Yataq örtüyü', 'price' => 15],
+        'hm-bd-6' => ['name' => 'Yorğan – Birnəfərlik', 'price' => 25],
+        'hm-bd-7' => ['name' => 'Yorğan – İkinəfərlik', 'price' => 30],
+        'hm-bd-8' => ['name' => 'Yataq ləvazimatı (kq)', 'price' => 6],
+        'hm-bt-1' => ['name' => 'Kiçik dəsmal', 'price' => 5],
+        'hm-bt-2' => ['name' => 'Hamam dəsmalı', 'price' => 9],
+        'hm-lr-1' => ['name' => 'Divan örtüyü', 'price' => 20],
+        'hm-lr-2' => ['name' => 'Kreslo örtüyü', 'price' => 10],
+        'hm-lr-3' => ['name' => 'Süfrə – Böyük', 'price' => 15],
+        'hm-lr-4' => ['name' => 'Süfrə – Kiçik', 'price' => 10],
     ],
     'bags' => [
-        'bag_small' => ['name' => 'Kiçik çanta', 'price' => 20],
-        'bag_medium' => ['name' => 'Orta çanta', 'price' => 28],
-        'bag_large' => ['name' => 'Böyük çanta', 'price' => 35],
-        'backpack' => ['name' => 'Bel çantası', 'price' => 25],
-        'suitcase' => ['name' => 'Çamadan', 'price' => 40],
+        'ac-bg-1' => ['name' => 'Çanta – Qismən dəri', 'price' => 25],
+        'ac-bg-2' => ['name' => 'Çanta – Sadə', 'price' => 20],
+        'ac-bg-3' => ['name' => 'Çanta – Dəri', 'price' => 30],
+        'ac-ac-1' => ['name' => 'Papaq', 'price' => 6],
+        'ac-ac-2' => ['name' => 'Şərf', 'price' => 7],
+        'ac-ac-3' => ['name' => 'Qalstuk', 'price' => 7],
+        'ac-ac-4' => ['name' => 'Əlcək', 'price' => 7],
+        'ac-kd-1' => ['name' => 'Yumşaq oyuncaq – Böyük', 'price' => 30],
+        'ac-kd-2' => ['name' => 'Yumşaq oyuncaq – Kiçik', 'price' => 15],
+        'ac-kd-3' => ['name' => 'Uşaq arabası', 'price' => 30],
     ],
 ];

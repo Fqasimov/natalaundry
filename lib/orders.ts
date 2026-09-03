@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { courierNextStep, type LifecycleState } from "./lifecycle";
+import { priceServiceIdFor } from "./catalog";
 import type { PaymentMethod } from "@/lib/payments";
 import type { Order, OrderItem, OrderStatus } from "@/types/database";
 
@@ -140,6 +141,9 @@ export async function createOrder(input: NewOrderInput) {
       is_outside_city: input.isOutsideCity,
       item_photos: input.photos,
       promo_code: input.promoCode,
+      // Was accepted in NewOrderInput and then silently dropped, so a gift
+      // reward picked at checkout never reached the order at all.
+      reward_id: input.rewardId,
       payment_method: input.paymentMethod,
     })
     .select()
@@ -152,7 +156,10 @@ export async function createOrder(input: NewOrderInput) {
   const { error: itemsError } = await supabase.from("order_items").insert(
     input.lines.map((line) => ({
       order_id: order.id,
-      service_id: line.serviceId,
+      // The database's own vocabulary ("dryCleaning"), not the app's routing
+      // key ("dry_cleaning") — the 31 existing order_items rows are written
+      // that way and one column must not hold two vocabularies.
+      service_id: priceServiceIdFor(line.serviceId),
       item_id: line.itemId,
       item_name: line.name,
       quantity: line.quantity,

@@ -324,10 +324,26 @@ and the admin-only transitions); only the client differs.
 
 ## Still unverified
 
-- **`service_prices` columns.** Only `service_id` and `item_id` came back from
-  the schema dump — it was truncated mid-table. Item prices legible in the
-  video are exact; the rest are marked `unverified` in `lib/catalog.ts` and
-  commented in `backend/config/catalog.php`.
+- ~~**`service_prices` columns.**~~ **Resolved 2026-09-03.** The table was read
+  in full from the live database: 72 rows, `item_id / service_id / name /
+  price / active / updated_at`. `lib/catalog.ts` and
+  `backend/config/catalog.php` are now generated from it (71 sellable items —
+  `bulk-deposit` is the 72nd and has no catalogue entry, since toplu carries no
+  line items), and no price is guessed any more.
+
+  Worth remembering how this was found. The reconstructed catalogue used
+  invented ids (`tshirt`, `suit_2pc`) and a comment in `lib/catalog.ts`
+  asserted they "line up with" `service_prices`. **Zero of the 49 did.**
+  `enforce_item_price` resolves each line by `item_id` and raises on a miss, so
+  every order was created with no items and a ₼0 total — checkout failed at the
+  final step and three such orders reached production. A guess recorded as a
+  fact is worse than a gap: the gap gets checked.
+
+  The two vocabularies are still separate and both are real: the app's own
+  service keys are snake_case (`dry_cleaning`, drives routing and the palette),
+  the database's are camelCase (`dryCleaning`, in `service_prices` and in the
+  31 existing `order_items` rows). `CatalogService.priceServiceId` bridges
+  them; send that to the server, never `serviceId`.
 - **Reward tables.** `orders.reward_id` exists in the live schema but no
   rewards table appeared in the dump (which also omitted the confirmed
   `wallet_transactions`, so it was certainly cut short). The Laravel migration

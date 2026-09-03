@@ -56,7 +56,7 @@ class ApiHardeningTest extends TestCase
         // connection with a single request.
         $items = array_fill(0, 5000, [
             'service_id' => 'dry_cleaning',
-            'item_id' => 'tshirt',
+            'item_id' => 'dc-shirt-1',
             'quantity' => 1,
         ]);
 
@@ -75,7 +75,7 @@ class ApiHardeningTest extends TestCase
         $this->postJson('/api/orders/quote', [
             'items' => array_fill(0, 5000, [
                 'service_id' => 'dry_cleaning',
-                'item_id' => 'tshirt',
+                'item_id' => 'dc-shirt-1',
                 'quantity' => 1,
             ]),
             'delivery_tier' => 'standard',

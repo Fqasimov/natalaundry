@@ -71,61 +71,112 @@ export const CATEGORY_NAME: Record<string, Pair> = {
   outerwear: { ru: "Верхняя одежда", en: "Outerwear" },
   daily_other: { ru: "Повседневное и прочее", en: "Everyday & other" },
   shoes: { ru: "Обувь", en: "Shoes" },
-  bedding: { ru: "Комплекты постельного белья", en: "Bedding sets" },
-  home_textile: { ru: "Домашний текстиль", en: "Home textiles" },
+  bedding: { ru: "Постельные принадлежности", en: "Bedding" },
+  bath: { ru: "Ванная", en: "Bathroom" },
+  living: { ru: "Гостиная", en: "Living room" },
   bags: { ru: "Сумки", en: "Bags" },
+  accessories: { ru: "Аксессуары", en: "Accessories" },
+  kids: { ru: "Детские вещи", en: "Kids' items" },
 };
 
+// Keyed by the real `service_prices.item_id`. The English side is the name the
+// database itself stores, so the app and the admin console call the same thing
+// by the same name.
 export const ITEM_NAME: Record<string, Pair> = {
-  tshirt: { ru: "Футболка", en: "T-shirt" },
-  shirt_short: { ru: "Рубашка — короткий рукав", en: "Shirt – short sleeve" },
-  shirt_long: { ru: "Рубашка — длинный рукав", en: "Shirt – long sleeve" },
-  sweater: { ru: "Свитер", en: "Sweater" },
+  // Dry cleaning
+  "dc-shirt-1": { ru: "Футболка", en: "T-Shirt" },
+  "dc-shirt-2": { ru: "Рубашка — короткий рукав", en: "Short-sleeve Shirt" },
+  "dc-shirt-3": { ru: "Рубашка — длинный рукав", en: "Long-sleeve Shirt" },
+  "dc-shirt-4": { ru: "Свитер", en: "Sweater" },
 
-  jacket: { ru: "Пиджак", en: "Jacket" },
-  suit_2pc: { ru: "Костюм (2 предмета)", en: "Suit (2-piece)" },
-  suit_3pc: { ru: "Костюм (3 предмета)", en: "Suit (3-piece)" },
-  vest: { ru: "Жилет", en: "Waistcoat" },
+  "dc-suit-1": { ru: "Пиджак", en: "Blazer" },
+  "dc-suit-2": { ru: "Жилет", en: "Vest" },
+  "dc-suit-3": { ru: "Костюм (2 предмета)", en: "2-Piece Suit" },
+  "dc-suit-4": { ru: "Костюм (3 предмета)", en: "3-Piece Suit" },
 
-  trousers: { ru: "Брюки", en: "Trousers" },
-  shorts: { ru: "Шорты", en: "Shorts" },
-  skirt: { ru: "Юбка", en: "Skirt" },
+  "dc-bot-1": { ru: "Брюки", en: "Trousers" },
+  "dc-bot-2": { ru: "Шорты", en: "Shorts" },
+  "dc-bot-3": { ru: "Юбка", en: "Skirt" },
 
-  dress_simple: { ru: "Простое платье", en: "Simple dress" },
-  dress_evening: { ru: "Вечернее платье", en: "Evening dress" },
+  "dc-dress-1": { ru: "Платье", en: "Dress" },
+  "dc-dress-2": { ru: "Вечернее платье", en: "Evening Dress" },
 
-  coat: { ru: "Пальто", en: "Coat" },
-  jacket_winter: { ru: "Зимняя куртка", en: "Winter jacket" },
-  raincoat: { ru: "Плащ", en: "Raincoat" },
-  leather_jacket: { ru: "Кожаная куртка", en: "Leather jacket" },
+  "dc-outer-1": { ru: "Куртка — короткая", en: "Short Jacket" },
+  "dc-outer-2": { ru: "Куртка — длинная", en: "Long Jacket" },
+  "dc-outer-3": { ru: "Кожаная куртка", en: "Leather Jacket" },
+  "dc-outer-4": { ru: "Пальто", en: "Coat" },
+  "dc-outer-5": { ru: "Плащ", en: "Trench Coat" },
+  "dc-outer-6": { ru: "Дублёнка", en: "Sheepskin Coat" },
+  "dc-outer-7": { ru: "Шуба — короткая", en: "Short Fur Coat" },
+  "dc-outer-8": { ru: "Шуба — длинная", en: "Long Fur Coat" },
 
-  tie: { ru: "Галстук", en: "Tie" },
-  scarf: { ru: "Шарф", en: "Scarf" },
-  gloves: { ru: "Перчатки", en: "Gloves" },
-  hat: { ru: "Шапка", en: "Hat" },
+  "dc-ev-1": { ru: "Носки", en: "Socks" },
+  "dc-ev-2": { ru: "Нижнее бельё", en: "Underwear" },
+  "dc-ev-3": { ru: "Спортивный костюм", en: "Tracksuit" },
+  "dc-ev-4": { ru: "Пижама", en: "Pajamas" },
 
-  shoe_fabric: { ru: "Тканевая обувь", en: "Fabric shoes" },
-  shoe_part_leather: { ru: "Частично кожаная обувь", en: "Part-leather shoes" },
-  shoe_full_leather: { ru: "Полностью кожаная обувь", en: "Full-leather shoes" },
-  shoe_part_nubuck: { ru: "Частично нубуковая обувь", en: "Part-nubuck shoes" },
-  shoe_nubuck: { ru: "Нубуковая обувь", en: "Nubuck shoes" },
-  boot: { ru: "Сапоги", en: "Boots" },
+  // Ironing
+  "ir-shirt-1": { ru: "Футболка", en: "T-Shirt" },
+  "ir-shirt-2": { ru: "Рубашка — короткий рукав", en: "Short-sleeve Shirt" },
+  "ir-shirt-3": { ru: "Рубашка — длинный рукав", en: "Long-sleeve Shirt" },
+  "ir-shirt-4": { ru: "Свитер", en: "Sweater" },
 
-  bedding_single: { ru: "Односпальный комплект", en: "Single set" },
-  bedding_double: { ru: "Двуспальный комплект", en: "Double set" },
-  duvet: { ru: "Одеяло", en: "Duvet" },
-  pillow: { ru: "Подушка", en: "Pillow" },
-  blanket: { ru: "Плед", en: "Blanket" },
+  "ir-suit-1": { ru: "Пиджак", en: "Blazer" },
+  "ir-suit-2": { ru: "Жилет", en: "Vest" },
+  "ir-suit-3": { ru: "Костюм (2 предмета)", en: "2-Piece Suit" },
+  "ir-suit-4": { ru: "Костюм (3 предмета)", en: "3-Piece Suit" },
 
-  curtain: { ru: "Штора", en: "Curtain" },
-  tablecloth: { ru: "Скатерть", en: "Tablecloth" },
-  towel: { ru: "Полотенце", en: "Towel" },
+  "ir-bot-1": { ru: "Брюки", en: "Trousers" },
+  "ir-bot-2": { ru: "Шорты", en: "Shorts" },
+  "ir-bot-3": { ru: "Юбка", en: "Skirt" },
 
-  bag_small: { ru: "Маленькая сумка", en: "Small bag" },
-  bag_medium: { ru: "Средняя сумка", en: "Medium bag" },
-  bag_large: { ru: "Большая сумка", en: "Large bag" },
-  backpack: { ru: "Рюкзак", en: "Backpack" },
-  suitcase: { ru: "Чемодан", en: "Suitcase" },
+  "ir-dress-1": { ru: "Платье", en: "Dress" },
+  "ir-dress-2": { ru: "Вечернее платье", en: "Evening Dress" },
+
+  "ir-outer-1": { ru: "Пальто", en: "Coat" },
+  "ir-outer-2": { ru: "Плащ", en: "Trench Coat" },
+
+  "ir-ev-1": { ru: "Пижама", en: "Pajamas" },
+
+  // Shoes
+  "sh-1": { ru: "Тканевая обувь", en: "Fabric shoes" },
+  "sh-2": { ru: "Частично кожаная обувь", en: "Partially leather shoes" },
+  "sh-3": { ru: "Полностью кожаная обувь", en: "Full leather shoes" },
+  "sh-4": { ru: "Частично нубуковая обувь", en: "Partially nubuck shoes" },
+  "sh-5": { ru: "Нубуковая обувь", en: "Nubuck shoes" },
+  "sh-6": { ru: "Сапоги", en: "Boots" },
+
+  // Home textiles
+  "hm-bd-1": { ru: "Одеяло — двуспальное", en: "Blanket - Double" },
+  "hm-bd-2": { ru: "Подушка", en: "Pillow" },
+  "hm-bd-3": { ru: "Наволочка", en: "Pillowcase" },
+  "hm-bd-4": { ru: "Чехол для подушки", en: "Pillow cover" },
+  "hm-bd-5": { ru: "Покрывало", en: "Bedspread" },
+  "hm-bd-6": { ru: "Пуховое одеяло — односпальное", en: "Duvet - Single" },
+  "hm-bd-7": { ru: "Пуховое одеяло — двуспальное", en: "Duvet - Double" },
+  "hm-bd-8": { ru: "Постельные принадлежности (кг)", en: "Bedding items (kg)" },
+
+  "hm-bt-1": { ru: "Маленькое полотенце", en: "Small towel" },
+  "hm-bt-2": { ru: "Банное полотенце", en: "Bath towel" },
+
+  "hm-lr-1": { ru: "Чехол для дивана", en: "Sofa cover" },
+  "hm-lr-2": { ru: "Чехол для кресла", en: "Armchair cover" },
+  "hm-lr-3": { ru: "Скатерть — большая", en: "Tablecloth - Large" },
+  "hm-lr-4": { ru: "Скатерть — маленькая", en: "Tablecloth - Small" },
+
+  // Accessories
+  "ac-bg-1": { ru: "Сумка — частично кожаная", en: "Bag - Partially leather" },
+  "ac-bg-2": { ru: "Сумка — простая", en: "Bag - Simple" },
+  "ac-bg-3": { ru: "Сумка — кожаная", en: "Bag - Leather" },
+
+  "ac-ac-1": { ru: "Шапка", en: "Hat" },
+  "ac-ac-2": { ru: "Шарф", en: "Scarf" },
+  "ac-ac-3": { ru: "Галстук", en: "Tie" },
+  "ac-ac-4": { ru: "Перчатки", en: "Gloves" },
+
+  "ac-kd-1": { ru: "Мягкая игрушка — большая", en: "Soft toy - Large" },
+  "ac-kd-2": { ru: "Мягкая игрушка — маленькая", en: "Soft toy - Small" },
+  "ac-kd-3": { ru: "Коляска", en: "Stroller" },
 };
 
 /** Pick the reader's rendering, falling back to the Azerbaijani original. */

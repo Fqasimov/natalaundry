@@ -86,6 +86,14 @@ restoring; only intended source changes should appear.
 
 ## Environment constraints
 
+- **The user's Windows machine has no PHP**, so nothing in
+  `scripts/migration/*.php` and no `php artisan` command runs there. The
+  equivalent checks are the Node scripts alongside them
+  (`inspect-order-policies.js`, `probe-checkout.js`, `catalog-diff.js`, …),
+  which read `backend/.env` themselves and connect over the session pooler on
+  5432. They need the `pg` driver, which is deliberately **not** a project
+  dependency: `npm install pg --no-save`.
+
 - This session is a **remote cloud container**. It cannot reach the user's
   `localhost:8081`, their machine, or any local dev server. Code moves
   between us only through GitHub.
