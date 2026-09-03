@@ -28,6 +28,14 @@ import {
 import { LIFECYCLE_LABEL, courierNextStep, isTracking } from "@/lib/lifecycle";
 import { useLocationBroadcast } from "@/lib/use-location-broadcast";
 import { useCourierAvailability } from "@/lib/courier-availability";
+import * as Location from "expo-location";
+import {
+  fetchRoadRoute,
+  formatDistance,
+  formatDuration,
+  isRoutingConfigured,
+  type Route,
+} from "@/lib/routing";
 import { hasCoordinates, openNavigation } from "@/lib/navigation-links";
 import type { Order, OrderItem } from "@/types/database";
 
@@ -99,6 +107,45 @@ export default function CourierDashboard() {
   }, [load]);
 
   const availability = useCourierAvailability(courierId);
+
+  /**
+   * How far the active job is by road.
+   *
+   * Recomputed when the job changes, not on every position update: a courier
+   * driving there would otherwise spend the daily ORS allowance on a number
+   * that ticks down by 200m at a time, and the useful question is "how far is
+   * this job" rather than "how far am I now".
+   */
+  const [route, setRoute] = useState<Route | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRoute(null);
+
+    const destination = hasCoordinates(active?.address_lat, active?.address_lng)
+      ? { lat: Number(active?.address_lat), lng: Number(active?.address_lng) }
+      : null;
+
+    if (!destination || !isRoutingConfigured()) return;
+
+    (async () => {
+      // Last known position rather than a fresh fix: this is a hint on a card,
+      // not navigation, and waking the GPS for it would cost battery for
+      // precision nobody reads.
+      const position = await Location.getLastKnownPositionAsync().catch(() => null);
+      if (cancelled || !position) return;
+
+      const found = await fetchRoadRoute(
+        { lat: position.coords.latitude, lng: position.coords.longitude },
+        destination,
+      );
+      if (!cancelled) setRoute(found);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active?.id, active?.address_lat, active?.address_lng]);
 
   const broadcast = useLocationBroadcast({
     orderId: active?.id,
@@ -277,6 +324,22 @@ export default function CourierDashboard() {
               {t(LIFECYCLE_LABEL[active.lifecycle_state] ?? "stateOrderPlaced")}
             </Text>
             <Text style={s.address}>{active.address ?? "—"}</Text>
+
+            {/* Road distance, not straight line — across the bay those differ
+                by twenty minutes. Absent when there is no key, no fix or no
+                answer from ORS, which is why it is a plain extra line rather
+                than something the layout depends on. */}
+            {route ? (
+              <View style={s.routeRow}>
+                <Ionicons name="navigate-outline" size={14} color={brand.moonstoneInk} />
+                <Text style={s.routeLabel}>
+                  {t("courierRouteAway", {
+                    distance: formatDistance(route.distanceM),
+                    minutes: formatDuration(route.durationS),
+                  })}
+                </Text>
+              </View>
+            ) : null}
 
             {/* Who to call. The assigned courier has always been allowed to
                 read this — there is a policy for it — but the screen never
@@ -468,6 +531,8 @@ const s = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
+  routeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  routeLabel: { ...type.bodyMedium, color: brand.moonstoneInk },
   jobLabel: { ...type.eyebrow, color: brand.onSoftMuted },
   customerRow: {
     flexDirection: "row",

@@ -411,6 +411,7 @@ const az = {
   courierNoAvailable: "Hazırda sizə təklif olunan sifariş yoxdur",
   courierNoActive: "Aktiv tapşırığınız yoxdur",
 
+  courierRouteAway: "{distance} · təxminən {minutes} dəq yolda",
   courierOnline: "İşdəyəm",
   courierOffline: "İşdə deyiləm",
   courierOnlineHint: "Admin sizə yalnız işdə olduğunuz zaman sifariş göndərə bilər.",
@@ -884,6 +885,7 @@ const ru: Record<StringKey, string> = {
   courierNoAvailable: "Пока нет предложенных вам заказов",
   courierNoActive: "У вас нет активной задачи",
 
+  courierRouteAway: "{distance} · около {minutes} мин в пути",
   courierOnline: "На смене",
   courierOffline: "Не на смене",
   courierOnlineHint: "Админ может назначить вам заказ, только когда вы на смене.",
@@ -1353,6 +1355,7 @@ const en: Record<StringKey, string> = {
   courierNoAvailable: "No orders offered to you right now",
   courierNoActive: "You have no active task",
 
+  courierRouteAway: "{distance} · about {minutes} min away",
   courierOnline: "On shift",
   courierOffline: "Off shift",
   courierOnlineHint: "Dispatch can only assign you orders while you are on shift.",
