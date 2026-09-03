@@ -411,6 +411,10 @@ const az = {
   courierNoAvailable: "Hazırda sizə təklif olunan sifariş yoxdur",
   courierNoActive: "Aktiv tapşırığınız yoxdur",
 
+  courierOnline: "İşdəyəm",
+  courierOffline: "İşdə deyiləm",
+  courierOnlineHint: "Admin sizə yalnız işdə olduğunuz zaman sifariş göndərə bilər.",
+  courierLocationDenied: "Məkan icazəsi yoxdur — xəritədə görünməyəcəksiniz.",
   courierJobItems: "Əşyalar",
   courierJobCustomer: "Müştəri",
   courierCall: "Zəng et",
@@ -880,6 +884,10 @@ const ru: Record<StringKey, string> = {
   courierNoAvailable: "Пока нет предложенных вам заказов",
   courierNoActive: "У вас нет активной задачи",
 
+  courierOnline: "На смене",
+  courierOffline: "Не на смене",
+  courierOnlineHint: "Админ может назначить вам заказ, только когда вы на смене.",
+  courierLocationDenied: "Нет доступа к геолокации — вас не будет на карте.",
   courierJobItems: "Вещи",
   courierJobCustomer: "Клиент",
   courierCall: "Позвонить",
@@ -1345,6 +1353,10 @@ const en: Record<StringKey, string> = {
   courierNoAvailable: "No orders offered to you right now",
   courierNoActive: "You have no active task",
 
+  courierOnline: "On shift",
+  courierOffline: "Off shift",
+  courierOnlineHint: "Dispatch can only assign you orders while you are on shift.",
+  courierLocationDenied: "No location permission — you will not appear on the map.",
   courierJobItems: "Items",
   courierJobCustomer: "Customer",
   courierCall: "Call",

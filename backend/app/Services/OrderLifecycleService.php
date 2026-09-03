@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CourierAssignment;
+use App\Models\CourierDetail;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderStatusLog;
@@ -33,11 +34,20 @@ class OrderLifecycleService
     {
         $this->assertRole($admin, 'admin');
 
+        // "All couriers" means all couriers ON SHIFT. Broadcasting to everyone
+        // on the books sent offers to people who finished hours ago, and an
+        // offer sitting unanswered is work nobody is doing. An explicit
+        // $courierIds list is still honoured as given — an admin naming
+        // someone has overridden the question.
         $couriers = $courierIds
-            ?? Profile::query()->where('role', 'courier')->pluck('id')->all();
+            ?? Profile::query()
+                ->where('role', 'courier')
+                ->whereIn('id', CourierDetail::query()->where('is_active', true)->pluck('id'))
+                ->pluck('id')
+                ->all();
 
         if ($couriers === []) {
-            throw new RuntimeException('No couriers available to broadcast to.');
+            throw new RuntimeException('No couriers on shift to broadcast to.');
         }
 
         return DB::transaction(function () use ($order, $admin, $couriers) {

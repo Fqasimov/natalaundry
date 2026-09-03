@@ -27,6 +27,7 @@ import {
 } from "@/lib/orders";
 import { LIFECYCLE_LABEL, courierNextStep, isTracking } from "@/lib/lifecycle";
 import { useLocationBroadcast } from "@/lib/use-location-broadcast";
+import { useCourierAvailability } from "@/lib/courier-availability";
 import { hasCoordinates, openNavigation } from "@/lib/navigation-links";
 import type { Order, OrderItem } from "@/types/database";
 
@@ -97,10 +98,17 @@ export default function CourierDashboard() {
     load();
   }, [load]);
 
+  const availability = useCourierAvailability(courierId);
+
   const broadcast = useLocationBroadcast({
     orderId: active?.id,
     courierId,
     state: active?.lifecycle_state,
+    // Off shift means off, GPS included. The per-order loop still starts and
+    // stops itself from the lifecycle; this is a second condition on top of
+    // it, not a replacement — a courier who goes offline mid-delivery stops
+    // reporting, which is the point of the switch.
+    enabled: availability.isOnline,
   });
 
   const claim = async (order: Order) => {
@@ -158,6 +166,32 @@ export default function CourierDashboard() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 10 }]}>
+      {/* On shift / off shift. Above the tabs rather than inside them because
+          it governs the whole screen: dispatch only offers work to couriers
+          who are on shift, and the switch is what turns the GPS on and off. */}
+      <Pressable
+        style={[s.shift, availability.isOnline && s.shiftOn]}
+        disabled={availability.busy || availability.loading}
+        onPress={() => availability.setOnline(!availability.isOnline)}
+      >
+        <View style={[s.shiftDot, availability.isOnline && s.shiftDotOn]} />
+        <Text style={[s.shiftLabel, availability.isOnline && s.shiftLabelOn]}>
+          {availability.isOnline ? t("courierOnline") : t("courierOffline")}
+        </Text>
+        {availability.busy ? (
+          <ActivityIndicator
+            size="small"
+            color={availability.isOnline ? colors.textInverse : brand.onSoftMuted}
+          />
+        ) : null}
+      </Pressable>
+
+      <Text style={s.shiftHint}>
+        {availability.status === "denied"
+          ? t("courierLocationDenied")
+          : t("courierOnlineHint")}
+      </Text>
+
       <View style={s.tabs}>
         {(["available", "active"] as Tab[]).map((key) => (
           <Pressable
@@ -411,6 +445,29 @@ const s = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeLabel: { fontFamily: font.bold, fontSize: 11, color: colors.textPrimary },
+  shift: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: radius.pill,
+    backgroundColor: brand.surfaceAlt,
+  },
+  shiftOn: { backgroundColor: colors.success },
+  shiftDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: brand.onSoftMuted },
+  shiftDotOn: { backgroundColor: colors.textInverse },
+  shiftLabel: { fontFamily: font.bold, fontSize: 15, color: brand.onSoftMuted },
+  shiftLabelOn: { color: colors.textInverse },
+  shiftHint: {
+    ...type.caption,
+    color: brand.onSoftMuted,
+    textAlign: "center",
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
   jobLabel: { ...type.eyebrow, color: brand.onSoftMuted },
   customerRow: {
     flexDirection: "row",

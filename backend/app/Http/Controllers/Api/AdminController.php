@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
+use App\Models\CourierDetail;
 use App\Models\Order;
 use App\Models\Profile;
 use App\Support\OrderLifecycle;
@@ -80,11 +81,34 @@ class AdminController extends Controller
             return $guard;
         }
 
+        // Who is on shift, and where they were last seen. The list used to be
+        // every courier on the books with no way to tell an active one from
+        // someone who finished at six, so dispatch broadcast to all of them.
+        // courier_details carries the flag the app now sets.
+        $couriers = Profile::query()
+            ->where('role', 'courier')
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
+        $details = CourierDetail::query()
+            ->whereIn('id', $couriers->pluck('id'))
+            ->get()
+            ->keyBy('id');
+
         return response()->json([
-            'data' => Profile::query()
-                ->where('role', 'courier')
-                ->orderBy('name')
-                ->get(['id', 'name', 'phone']),
+            'data' => $couriers->map(function (Profile $courier) use ($details) {
+                $detail = $details->get($courier->id);
+
+                return [
+                    'id' => $courier->id,
+                    'name' => $courier->name,
+                    'phone' => $courier->phone,
+                    'is_active' => (bool) ($detail->is_active ?? false),
+                    'current_lat' => $detail->current_lat ?? null,
+                    'current_lng' => $detail->current_lng ?? null,
+                    'last_location_update' => $detail->last_location_update ?? null,
+                ];
+            })->values(),
         ]);
     }
 
