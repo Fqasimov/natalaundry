@@ -11,7 +11,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { brand, colors, font, money, radius, type } from "@/theme/tokens";
+import { colors, font, money, radius, type } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
@@ -86,7 +86,7 @@ export default function CourierProfileScreen() {
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={brand.moonstoneInk} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -95,12 +95,9 @@ export default function CourierProfileScreen() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 10 }]}>
+      {/* No back button: this is a tab now, not a pushed screen. */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10} style={s.back}>
-          <Ionicons name="chevron-back" size={22} color={brand.midnight} />
-        </Pressable>
         <Text style={s.headerTitle}>{t("courierProfileTitle")}</Text>
-        <View style={s.back} />
       </View>
 
       {notice ? <Text style={s.notice}>{notice}</Text> : null}
@@ -115,7 +112,7 @@ export default function CourierProfileScreen() {
               await load();
               setRefreshing(false);
             }}
-            tintColor={brand.moonstoneInk}
+            tintColor={colors.primary}
           />
         }
       >
@@ -225,12 +222,12 @@ function Stat({ value, label }: { value: string; label: string }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: brand.background },
+  root: { flex: 1, backgroundColor: colors.background },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: brand.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -240,7 +237,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
   },
   back: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  headerTitle: { ...type.h2, color: brand.midnight },
+  headerTitle: { ...type.h2, color: colors.textPrimary },
   notice: {
     ...type.caption,
     marginHorizontal: 20,
@@ -258,22 +255,22 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: brand.midnight,
+    backgroundColor: colors.textPrimary,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarLabel: { fontFamily: font.bold, fontSize: 22, color: colors.textInverse },
   identityText: { flex: 1 },
-  name: { ...type.h2, color: brand.midnight },
-  sub: { ...type.body, color: brand.onSoftMuted },
+  name: { ...type.h2, color: colors.textPrimary },
+  sub: { ...type.body, color: colors.textSecondary },
 
-  sectionHeading: { ...type.eyebrow, color: brand.onSoftMuted, marginTop: 8 },
+  sectionHeading: { ...type.eyebrow, color: colors.textSecondary, marginTop: 8 },
 
   card: {
-    backgroundColor: brand.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     paddingHorizontal: 14,
   },
   row: {
@@ -283,49 +280,49 @@ const s = StyleSheet.create({
     gap: 12,
     paddingVertical: 13,
   },
-  rowLabel: { ...type.body, color: brand.onSoftMuted },
-  rowValue: { ...type.bodyMedium, color: brand.midnight, flexShrink: 1, textAlign: "right" },
+  rowLabel: { ...type.body, color: colors.textSecondary },
+  rowValue: { ...type.bodyMedium, color: colors.textPrimary, flexShrink: 1, textAlign: "right" },
   rowValueStrong: { fontFamily: font.bold },
-  divider: { height: 1, backgroundColor: brand.divider },
+  divider: { height: 1, backgroundColor: colors.divider },
 
   statRow: { flexDirection: "row", gap: 10 },
   stat: {
     flex: 1,
-    backgroundColor: brand.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     paddingVertical: 14,
     alignItems: "center",
     gap: 2,
   },
-  statValue: { fontFamily: font.extrabold, fontSize: 22, color: brand.midnight },
-  statLabel: { ...type.caption, color: brand.onSoftMuted },
+  statValue: { fontFamily: font.extrabold, fontSize: 22, color: colors.textPrimary },
+  statLabel: { ...type.caption, color: colors.textSecondary },
 
   provisional: {
     ...type.caption,
-    color: brand.onSoftMuted,
-    backgroundColor: brand.moonstoneSoft,
+    color: colors.textSecondary,
+    backgroundColor: colors.primarySoft,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
 
   job: {
-    backgroundColor: brand.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     padding: 14,
     gap: 4,
   },
   jobTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  jobNo: { ...type.bodyMedium, color: brand.midnight },
-  jobEarn: { fontFamily: font.bold, fontSize: 15, color: brand.moonstoneInk },
-  jobAddress: { ...type.body, color: brand.onSoftMuted },
-  jobMeta: { ...type.caption, color: brand.onSoftMuted },
+  jobNo: { ...type.bodyMedium, color: colors.textPrimary },
+  jobEarn: { fontFamily: font.bold, fontSize: 15, color: colors.primary },
+  jobAddress: { ...type.body, color: colors.textSecondary },
+  jobMeta: { ...type.caption, color: colors.textSecondary },
 
-  muted: { ...type.body, color: brand.onSoftMuted, textAlign: "center", paddingVertical: 16 },
+  muted: { ...type.body, color: colors.textSecondary, textAlign: "center", paddingVertical: 16 },
 
   signOut: {
     flexDirection: "row",

@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 import type { Order } from "@/types/database";
 
 /**
@@ -35,6 +36,65 @@ export type CourierStats = {
 
 const startOfToday = (now: Date) =>
   new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+/**
+ * Kilometres between two fixes, on a sphere.
+ *
+ * Good to a few metres at city scale, which is well inside the error the GPS
+ * itself contributes.
+ */
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/**
+ * How far this courier has travelled today, in kilometres.
+ *
+ * Walked from their own `courier_locations` breadcrumbs rather than asked of a
+ * routing service. Three reasons: it is free where a routing call is metered,
+ * it needs no origin to be invented, and it is what actually happened rather
+ * than what a route planner would have suggested.
+ *
+ * Straight lines between consecutive fixes under-read a winding road, but the
+ * tracker records every 25m of movement while en route, so the error is small.
+ * A single jump over 5km is dropped: that is a GPS glitch or a gap while the
+ * app was closed, not a courier teleporting.
+ */
+const IMPLAUSIBLE_JUMP_KM = 5;
+
+export async function fetchDistanceTodayKm(courierId: string): Promise<number> {
+  const since = startOfToday(new Date()).toISOString();
+
+  const { data, error } = await supabase
+    .from("courier_locations")
+    .select("lat, lng, recorded_at, created_at")
+    .eq("courier_id", courierId)
+    .gte("recorded_at", since)
+    .order("recorded_at", { ascending: true });
+
+  if (error || !data || data.length < 2) return 0;
+
+  let km = 0;
+  for (let i = 1; i < data.length; i++) {
+    const from = { lat: Number(data[i - 1].lat), lng: Number(data[i - 1].lng) };
+    const to = { lat: Number(data[i].lat), lng: Number(data[i].lng) };
+    if ([from.lat, from.lng, to.lat, to.lng].some((n) => Number.isNaN(n))) continue;
+
+    const step = haversineKm(from, to);
+    if (step <= IMPLAUSIBLE_JUMP_KM) km += step;
+  }
+  return km;
+}
 
 /** Monday, because the working week here starts on one. */
 const startOfWeek = (now: Date) => {
