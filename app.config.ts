@@ -1,5 +1,21 @@
 import type { ExpoConfig } from "expo/config";
 
+/*
+ * The EAS project this app publishes updates to.
+ *
+ * `eas init` normally writes this into app.json, but it cannot write to a
+ * dynamic config like this one (the same reason `expo install --fix` printed
+ * its plugin list instead of adding it). So it is read from the environment:
+ * run `eas init` once — it needs an Expo login, which is why it is not done
+ * here — and put the id it prints into .env as EAS_PROJECT_ID.
+ *
+ * Until then `updates` is deliberately left off the config entirely rather
+ * than pointed at a malformed URL. A build without it simply has no OTA
+ * capability, which is the honest state; a build with a broken update URL
+ * fails at runtime, on a customer's phone, where nobody is watching.
+ */
+const easProjectId = process.env.EAS_PROJECT_ID;
+
 // Values recovered from the original App Store build (Info.plist / Expo.plist)
 // of Nata Laundry. Secrets (Supabase anon key, Google Maps key) are read from
 // env vars — see .env.example — never hardcode them here.
@@ -82,6 +98,26 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  /*
+   * Over-the-air updates.
+   *
+   * `fingerprint` is the runtime version policy, not `appVersion`. It hashes
+   * the native project — native modules, permissions, SDK version — and an
+   * update is only ever served to a binary whose hash matches. That is the
+   * guard that makes OTA safe to use: the SDK 54 -> 57 upgrade (RN 0.81 ->
+   * 0.86) changed native code, and shipping today's JS to a binary built
+   * before it would crash on launch, remotely, with no way to intervene from
+   * the phone. With this policy such an update simply is not offered, and
+   * those devices wait for a store build instead.
+   *
+   * So the division stands: pricing rules, screens, copy, i18n and business
+   * logic go OTA; anything native needs a new build through the store.
+   *
+   * checkAutomatically is left at its default (on load) and the fallback
+   * timeout is 0, so a cold start never blocks on the network — the update is
+   * fetched in the background and applied on the next launch.
+   */
+  runtimeVersion: { policy: "fingerprint" },
   experiments: {
     typedRoutes: true,
   },
@@ -91,5 +127,13 @@ const config: ExpoConfig = {
     },
   },
 };
+
+if (easProjectId) {
+  config.updates = {
+    url: `https://u.expo.dev/${easProjectId}`,
+    fallbackToCacheTimeout: 0,
+  };
+  config.extra = { ...config.extra, eas: { projectId: easProjectId } };
+}
 
 export default config;
