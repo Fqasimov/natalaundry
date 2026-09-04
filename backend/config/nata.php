@@ -16,16 +16,25 @@ return [
         // Baskets at or above this get the base fee waived.
         'free_threshold' => env('NATA_FREE_DELIVERY_THRESHOLD', 40),
         'base_fee' => env('NATA_BASE_DELIVERY_FEE', 5),
-        'outside_city_fee' => env('NATA_OUTSIDE_CITY_FEE', 5),
 
-        // Surcharge added on top of the base fee, per tier.
-        'tier_surcharge' => [
-            'standard' => 0,
-            'express' => 5,
-            'eco' => 0,
+        /*
+         * What each tier multiplies the PAYABLE TOTAL by (set 2026-09-04 by
+         * the owner). Express is not a delivery surcharge: a ₼40 basket with
+         * free delivery totals ₼40 as standard and ₼80 as express. The
+         * multiplier applies after the discount and after the delivery fee.
+         *
+         * Two tiers went the same day. 'eco' priced identically to standard,
+         * and the outside-city fee lost its slider, so nothing can set the
+         * flag any more and it no longer enters the arithmetic. Orders that
+         * already carry delivery_tier = 'eco' or is_outside_city = true are
+         * untouched — this list only validates new ones.
+         */
+        'tier_multiplier' => [
+            'standard' => 1,
+            'express' => 2,
         ],
 
-        'tiers' => ['standard', 'express', 'eco'],
+        'tiers' => ['standard', 'express'],
     ],
 
     /*

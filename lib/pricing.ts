@@ -5,34 +5,43 @@
 //  * A red note reads "Sifariş 40-dan az olduğu üçün 5 ₼ çatdırılma haqqı
 //    əlavə edilir" — under ₼40, a ₼5 delivery fee applies.
 //  * The upsell modal offers to top the basket up to ₼40 for free delivery.
-//  * Tier cards read: Standart +5.00 ₼, Ekspres (24 saat) +10.00 ₼, Eko +5.00 ₼
-//    while the subtotal was ₼37 (i.e. below the threshold).
 //
-// The tier numbers are therefore modelled as `base fee + tier surcharge`,
-// which reproduces every figure the video shows. One reading the video can't
-// disambiguate is whether Ekspres is instead a flat ₼10 regardless of
-// subtotal; if the real rule turns out to be flat, set EXPRESS_IS_FLAT below.
+// EXPRESS DOUBLES THE ORDER TOTAL (set 2026-09-04 by the owner). It is not a
+// delivery surcharge: a ₼40 basket with free delivery totals ₼40 as standard
+// and ₼80 as express. The 24-hour turnaround is charged as a multiple of the
+// whole job, because that is what it costs to jump the queue — the delivery
+// leg is the same drive either way.
+//
+// The doubling therefore applies AFTER the discount and AFTER the delivery
+// fee, to the figure the customer would otherwise have paid. `deliveryFee`
+// stays the honest cost of the delivery itself (₼0 or ₼5); the extra shows up
+// as `expressSurcharge` so the summary can name it rather than hiding it
+// inside the delivery line. An order row is auditable through
+// `delivery_tier`: total = 2 x (subtotal - discount + delivery_fee).
+//
+// Two tiers were removed the same day:
+//  * "Eko" priced identically to standard — a choice with no consequence.
+//  * The outside-city fee and its slider. Nothing can set the flag any more,
+//    so the fee is gone from the arithmetic. `orders.is_outside_city` is kept
+//    for the orders that already carry it; it no longer affects a new price.
+//
 // The Laravel API mirrors this module and is the source of truth at checkout.
 
 export const FREE_DELIVERY_THRESHOLD = 40;
 export const BASE_DELIVERY_FEE = 5;
-export const OUTSIDE_CITY_FEE = 5;
-export const EXPRESS_IS_FLAT = false;
-export const EXPRESS_FLAT_FEE = 10;
 
-export const DELIVERY_TIERS = ["standard", "express", "eco"] as const;
+export const DELIVERY_TIERS = ["standard", "express"] as const;
 export type DeliveryTier = (typeof DELIVERY_TIERS)[number];
 
-const TIER_SURCHARGE: Record<DeliveryTier, number> = {
-  standard: 0,
-  express: 5,
-  eco: 0,
+/** What the tier multiplies the payable total by. */
+const TIER_MULTIPLIER: Record<DeliveryTier, number> = {
+  standard: 1,
+  express: 2,
 };
 
 export type PriceInput = {
   subtotal: number;
   tier: DeliveryTier;
-  isOutsideCity: boolean;
   discount?: number;
 };
 
@@ -40,38 +49,36 @@ export type PriceBreakdown = {
   subtotal: number;
   deliveryFee: number;
   discount: number;
+  /** What the express tier adds. Zero on standard. */
+  expressSurcharge: number;
   total: number;
   qualifiesForFreeDelivery: boolean;
   amountToFreeDelivery: number;
 };
 
-export function deliveryFeeFor(
-  subtotal: number,
-  tier: DeliveryTier,
-  isOutsideCity = false
-) {
-  if (tier === "express" && EXPRESS_IS_FLAT) {
-    return EXPRESS_FLAT_FEE + (isOutsideCity ? OUTSIDE_CITY_FEE : 0);
-  }
-  const base = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : BASE_DELIVERY_FEE;
-  const outside = isOutsideCity ? OUTSIDE_CITY_FEE : 0;
-  return base + TIER_SURCHARGE[tier] + outside;
+/** The delivery leg alone — unaffected by the tier. */
+export function deliveryFeeFor(subtotal: number) {
+  return subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : BASE_DELIVERY_FEE;
 }
 
 export function priceOrder({
   subtotal,
   tier,
-  isOutsideCity,
   discount = 0,
 }: PriceInput): PriceBreakdown {
-  const deliveryFee = deliveryFeeFor(subtotal, tier, isOutsideCity);
+  const deliveryFee = deliveryFeeFor(subtotal);
   const cappedDiscount = Math.min(discount, subtotal);
-  const total = Math.max(0, subtotal + deliveryFee - cappedDiscount);
+  const payable = Math.max(0, subtotal + deliveryFee - cappedDiscount);
+
+  // Express charges that whole figure a second time.
+  const expressSurcharge = payable * (TIER_MULTIPLIER[tier] - 1);
+
   return {
     subtotal,
     deliveryFee,
     discount: cappedDiscount,
-    total,
+    expressSurcharge,
+    total: payable + expressSurcharge,
     qualifiesForFreeDelivery: subtotal >= FREE_DELIVERY_THRESHOLD,
     amountToFreeDelivery: Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal),
   };

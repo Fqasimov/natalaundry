@@ -36,7 +36,6 @@ export type CheckoutDraft = {
    */
   addressLat: number | null;
   addressLng: number | null;
-  isOutsideCity: boolean;
   promoCode: string;
   /** A won gift-box prize the customer chose to spend on this order. */
   rewardId: string | null;
@@ -61,7 +60,6 @@ const initialDraft: CheckoutDraft = {
   address: "",
   addressLat: null,
   addressLng: null,
-  isOutsideCity: false,
   promoCode: "",
   rewardId: null,
   discount: 0,
@@ -150,10 +148,9 @@ export function CartProvider({ children }: PropsWithChildren) {
       priceOrder({
         subtotal,
         tier: state.draft.tier,
-        isOutsideCity: state.draft.isOutsideCity,
         discount: state.draft.discount,
       }),
-    [subtotal, state.draft.tier, state.draft.isOutsideCity, state.draft.discount]
+    [subtotal, state.draft.tier, state.draft.discount]
   );
 
   const quantityOf = useCallback(

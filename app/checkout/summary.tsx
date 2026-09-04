@@ -22,7 +22,7 @@ import { fetchGiftBoxes, type ActiveReward } from "@/lib/gift-boxes";
 import { REWARD_PRESENTATION } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import { useAuth } from "@/lib/auth-context";
-import { OUTSIDE_CITY_FEE, RECOMMENDED_PHOTOS } from "@/lib/pricing";
+import { RECOMMENDED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
 import { reportError } from "@/lib/errors";
 import { phase, timed } from "@/lib/perf";
@@ -200,7 +200,9 @@ export default function SummaryScreen() {
         addressLat: draft.addressLat,
         addressLng: draft.addressLng,
         notes: draft.courierNote || null,
-        isOutsideCity: draft.isOutsideCity,
+        // The outside-city slider was removed on 2026-09-04; the column stays
+        // for the orders that already carry it, but nothing sets it now.
+        isOutsideCity: false,
         photos: draft.photos,
         promoCode: draft.promoCode || null,
         rewardId: draft.rewardId,
@@ -359,20 +361,6 @@ export default function SummaryScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={brand.onSoftMuted} />
         </Pressable>
-
-        <View style={styles.outsideRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.outsideTitle}>{t("outsideCity")}</Text>
-            <Text style={styles.outsideNote}>
-              {t("outsideCityNote", { fee: money(OUTSIDE_CITY_FEE) })}
-            </Text>
-          </View>
-          <Switch
-            value={draft.isOutsideCity}
-            onValueChange={(isOutsideCity) => patchDraft({ isOutsideCity })}
-            trackColor={{ true: brand.moonstoneInk, false: brand.timberwolf }}
-          />
-        </View>
 
         <View style={styles.photoCard}>
           <View style={styles.photoHeader}>
@@ -580,9 +568,6 @@ const styles = StyleSheet.create({
     color: brand.moonstoneInk,
     marginTop: 3,
   },
-  outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
-  outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   photoCard: {
     backgroundColor: brand.surface,
     borderRadius: radius.lg,

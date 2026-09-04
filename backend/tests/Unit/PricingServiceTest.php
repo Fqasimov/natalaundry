@@ -48,28 +48,60 @@ class PricingServiceTest extends TestCase
         $this->assertSame(0.0, $atThreshold['amount_to_free_delivery']);
     }
 
-    public function test_tier_fees_match_the_cards_in_the_video(): void
+    public function test_express_doubles_the_order_total(): void
     {
-        // With a ₼37 basket the app shows: Standart +5.00, Ekspres +10.00,
-        // Eko +5.00.
-        $subtotal = 37.0;
+        // The owner's own example: a ₼40 basket earns free delivery and totals
+        // ₼40 as standard. Choosing express doubles that to ₼80.
+        $lines = [['price' => 40, 'quantity' => 1]];
 
-        $this->assertSame(5.0, $this->pricing->deliveryFee($subtotal, 'standard'));
-        $this->assertSame(10.0, $this->pricing->deliveryFee($subtotal, 'express'));
-        $this->assertSame(5.0, $this->pricing->deliveryFee($subtotal, 'eco'));
+        $standard = $this->pricing->breakdown($lines, 'standard');
+        $express = $this->pricing->breakdown($lines, 'express');
+
+        $this->assertSame(40.0, $standard['total']);
+        $this->assertSame(80.0, $express['total']);
+        $this->assertSame(40.0, $express['express_surcharge']);
     }
 
-    public function test_express_still_costs_its_surcharge_above_the_threshold(): void
+    public function test_express_leaves_the_delivery_fee_alone(): void
     {
-        $this->assertSame(0.0, $this->pricing->deliveryFee(50, 'standard'));
-        $this->assertSame(5.0, $this->pricing->deliveryFee(50, 'express'));
+        // Express is not a delivery surcharge — it is the same drive. The
+        // delivery line stays honest and the multiple lands in the total.
+        $lines = [['price' => 37, 'quantity' => 1]];
+
+        $express = $this->pricing->breakdown($lines, 'express');
+
+        $this->assertSame(5.0, $express['delivery_fee']);
+        $this->assertSame(42.0, $express['express_surcharge']);
+        $this->assertSame(84.0, $express['total']);
     }
 
-    public function test_outside_city_adds_its_own_fee(): void
+    public function test_express_doubles_what_is_left_after_the_discount(): void
     {
-        // "Şəhərdən kənar üçün 5 ₼ çatdırılma haqqı alınır."
-        $this->assertSame(10.0, $this->pricing->deliveryFee(37, 'standard', true));
-        $this->assertSame(5.0, $this->pricing->deliveryFee(50, 'standard', true));
+        // Discount first, then double the remainder: ₼50 - ₼10 = ₼40 payable
+        // (delivery free at this subtotal), doubled to ₼80. Doubling before
+        // the discount would have charged ₼90.
+        $breakdown = $this->pricing->breakdown(
+            [['price' => 50, 'quantity' => 1]],
+            'express',
+            false,
+            10.0,
+        );
+
+        $this->assertSame(80.0, $breakdown['total']);
+    }
+
+    public function test_standard_adds_no_surcharge(): void
+    {
+        $breakdown = $this->pricing->breakdown([['price' => 37, 'quantity' => 1]], 'standard');
+
+        $this->assertSame(0.0, $breakdown['express_surcharge']);
+        $this->assertSame(42.0, $breakdown['total']);
+    }
+
+    public function test_eco_is_no_longer_a_tier(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->pricing->deliveryFee(37, 'eco');
     }
 
     public function test_discount_never_exceeds_the_subtotal(): void
