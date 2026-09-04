@@ -141,7 +141,7 @@ class QueryBudgetTest extends TestCase
             $order->items()->create([
                 'id' => (string) Str::uuid(),
                 'service_id' => 'dry_cleaning',
-                'item_id' => 'coat',
+                'item_id' => 'dc-outer-4',
                 'item_name' => 'Palto',
                 'price' => 20,
                 'quantity' => 2,

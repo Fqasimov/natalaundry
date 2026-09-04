@@ -2,18 +2,21 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Laravel's scaffold test, repurposed.
+ *
+ * It shipped asserting that `/` returns 200, which stopped being true on
+ * 2026-09-03 when the root was pointed at the admin console — before that,
+ * visiting localhost:8000 landed on the framework's welcome page and looked
+ * like "the API" rather than the product. The redirect is the intended
+ * behaviour, so it is what gets asserted.
+ */
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_the_root_redirects_to_the_admin_console(): void
     {
-        $response = $this->get('/');
-
-        $response->assertStatus(200);
+        $this->get('/')->assertRedirect('/admin');
     }
 }

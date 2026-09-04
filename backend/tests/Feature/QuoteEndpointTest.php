@@ -36,11 +36,11 @@ class QuoteEndpointTest extends TestCase
     public function test_a_quote_is_priced_from_the_catalogue(): void
     {
         $response = $this->postJson('/api/orders/quote', [
-            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 1]],
+            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 1]],
             'delivery_tier' => 'standard',
         ], $this->auth())->assertOk();
 
-        $catalogPrice = (float) config('catalog.dry_cleaning.coat.price');
+        $catalogPrice = (float) config('catalog.dry_cleaning.dc-outer-4.price');
         $this->assertEqualsWithDelta($catalogPrice, (float) $response->json("subtotal"), 0.001);
     }
 
@@ -50,7 +50,7 @@ class QuoteEndpointTest extends TestCase
         $response = $this->postJson('/api/orders/quote', [
             'items' => [[
                 'service_id' => 'dry_cleaning',
-                'item_id' => 'coat',
+                'item_id' => 'dc-outer-4',
                 'quantity' => 1,
                 'price' => 0.01,
             ]],
@@ -64,7 +64,7 @@ class QuoteEndpointTest extends TestCase
     public function test_an_unknown_delivery_tier_is_rejected(): void
     {
         $this->postJson('/api/orders/quote', [
-            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 1]],
+            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 1]],
             'delivery_tier' => 'free_please',
         ], $this->auth())->assertStatus(422);
     }

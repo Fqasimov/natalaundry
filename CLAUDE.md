@@ -142,7 +142,7 @@ restoring; only intended source changes should appear.
 
 ## Project shape
 
-Expo SDK 51 / RN 0.74.5 / expo-router, Supabase (Postgres + RLS + Auth), and
+Expo SDK 57 / RN 0.86.3 / expo-router, Supabase (Postgres + RLS + Auth), and
 a Laravel API over the **same** Postgres. Original source was lost; the app
 was rebuilt from a 66-second screen recording of the shipped 1.0.2 build —
 see `DESIGN_NOTES.md`, which is the authority on palette, copy and pricing
@@ -161,6 +161,22 @@ Key invariants:
 - **Pricing** (`lib/pricing.ts` ↔ `backend/config/nata.php`) is derived from
   the video's own arithmetic (₼37 + ₼5 = ₼42) and pinned by tests. The two
   must stay in sync; the server is the authority at order time.
+
+  **Three** places actually have to agree, not two: the trigger function in
+  the database recomputes every total and silently overwrites whatever Laravel
+  wrote. It is **`recalc_order_total`** that is live — `enforce-order-pricing.sql`
+  in this repo defines `enforce_order_pricing`, an identically-bodied function
+  that no trigger has ever called. Replacing the wrong one applies cleanly,
+  reports success and changes nothing. Check the wiring, never the filename:
+
+  ```sql
+  select tgname, p.proname from pg_trigger g join pg_proc p on p.oid = g.tgfoid
+   where tgrelid = 'public.order_items'::regclass and not tgisinternal;
+  ```
+
+  Express doubles the **payable total** (a ₼40 basket becomes ₼80), after any
+  discount; it is not a delivery surcharge. Eco and the outside-city fee were
+  removed on 2026-09-04. See `supabase/express-doubles-delivery.sql`.
 - **Toplu** is a deposit-now / count-after-pickup order — ₼20 deposit, no
   line items, no photo gate, courier sets the real total. It maps onto
   `deposit_amount` / `counted_total` / `counted_at` / `counted_by`, which

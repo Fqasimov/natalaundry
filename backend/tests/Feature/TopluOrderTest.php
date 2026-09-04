@@ -158,7 +158,7 @@ class TopluOrderTest extends TestCase
         $courier = $this->customer(['role' => 'courier']);
 
         $order = $this->orders->create($customer, [
-            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'sweater', 'quantity' => 1]],
+            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'dc-shirt-4', 'quantity' => 1]],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah',
             'delivery_time' => 'Sabah',

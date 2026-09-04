@@ -76,8 +76,9 @@ class OrderServiceTest extends TestCase
     {
         return array_merge([
             'items' => [
-                ['service_id' => 'dry_cleaning', 'item_id' => 'sweater', 'quantity' => 3],
-                ['service_id' => 'dry_cleaning', 'item_id' => 'trousers', 'quantity' => 1],
+                // Sviter ₼9 x3 + Şalvar ₼10 = ₼37, the video's own basket.
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-shirt-4', 'quantity' => 3],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-bot-1', 'quantity' => 1],
             ],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah, 18:00 - 20:00',
@@ -111,7 +112,7 @@ class OrderServiceTest extends TestCase
         $order = $this->orders->create($this->customer(), $payload);
 
         $this->assertSame('37.00', (string) $order->subtotal);
-        $this->assertSame('Sviter', $order->items->firstWhere('item_id', 'sweater')->item_name);
+        $this->assertSame('Sviter', $order->items->firstWhere('item_id', 'dc-shirt-4')->item_name);
     }
 
     /**
@@ -200,12 +201,18 @@ class OrderServiceTest extends TestCase
         $this->orders->create($this->customer(), $this->payload(['promo_code' => 'NOPE']));
     }
 
-    public function test_outside_city_adds_its_surcharge(): void
+    /**
+     * The outside-city slider was removed on 2026-09-04 and the fee with it.
+     * The column still accepts the flag — plenty of orders already carry it —
+     * but it no longer changes a price. Pinned so a reinstated fee cannot slip
+     * in unnoticed.
+     */
+    public function test_outside_city_no_longer_costs_anything(): void
     {
         $order = $this->orders->create($this->returningCustomer(), $this->payload(['is_outside_city' => true]));
 
-        $this->assertSame('10.00', (string) $order->delivery_fee);
-        $this->assertSame('47.00', (string) $order->total);
+        $this->assertSame('5.00', (string) $order->delivery_fee);
+        $this->assertSame('42.00', (string) $order->total);
     }
 
     /**

@@ -110,6 +110,22 @@ class SupabaseSchema
             $table->unique(['order_id', 'courier_id']);
         });
 
+        /*
+         * The courier's shift state and last known position, keyed by their
+         * profile id. Added to this fixture on 2026-09-04: the admin console's
+         * courier list started reading it when the online/offline toggle
+         * landed, and the table's absence here failed as "no such table"
+         * inside a 500 rather than as anything to do with couriers.
+         */
+        Schema::create('courier_details', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->boolean('is_active')->default(false);
+            $table->decimal('current_lat', 10, 7)->nullable();
+            $table->decimal('current_lng', 10, 7)->nullable();
+            $table->timestamp('last_location_update')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('courier_locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('order_id')->index();

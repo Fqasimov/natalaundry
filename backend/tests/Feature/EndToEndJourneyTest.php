@@ -67,7 +67,7 @@ class EndToEndJourneyTest extends TestCase
         // What the customer is shown before committing.
         $quote = $this->postJson('/api/orders/quote', [
             'items' => [
-                ['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 2],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 2],
             ],
             'delivery_tier' => 'standard',
         ], $this->as($this->customer))->assertOk()->json();
@@ -78,7 +78,7 @@ class EndToEndJourneyTest extends TestCase
         // No prices in the body. The server prices it from its own catalogue.
         $created = $this->postJson('/api/orders', [
             'items' => [
-                ['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 2],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 2],
             ],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah, 10:00 - 12:00',
@@ -298,7 +298,7 @@ class EndToEndJourneyTest extends TestCase
 
         $second = $this->postJson('/api/orders', [
             'items' => [
-                ['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 1],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 1],
             ],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah, 10:00 - 12:00',
@@ -324,7 +324,7 @@ class EndToEndJourneyTest extends TestCase
     public function test_the_admin_console_lists_orders_and_couriers_and_refuses_everyone_else(): void
     {
         $this->postJson('/api/orders', [
-            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'coat', 'quantity' => 1]],
+            'items' => [['service_id' => 'dry_cleaning', 'item_id' => 'dc-outer-4', 'quantity' => 1]],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah, 10:00 - 12:00',
             'delivery_time' => 'Birisi gün, 14:00 - 16:00',
