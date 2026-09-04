@@ -172,6 +172,16 @@ class SupabaseSchema
             $table->timestamp('settled_at')->nullable();
         });
 
+        Schema::create('courier_details', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->boolean('is_active')->default(false);
+            $table->double('current_lat')->nullable();
+            $table->double('current_lng')->nullable();
+            $table->timestamp('last_location_update')->nullable();
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+        });
+
         // Owned by this codebase — see the create_wallet_topups migration.
         Schema::create('wallet_topups', function (Blueprint $table) {
             $table->uuid('id')->primary();

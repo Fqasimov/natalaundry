@@ -76,8 +76,8 @@ class OrderServiceTest extends TestCase
     {
         return array_merge([
             'items' => [
-                ['service_id' => 'dry_cleaning', 'item_id' => 'sweater', 'quantity' => 3],
-                ['service_id' => 'dry_cleaning', 'item_id' => 'trousers', 'quantity' => 1],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-shirt-4', 'quantity' => 3],
+                ['service_id' => 'dry_cleaning', 'item_id' => 'dc-bot-1', 'quantity' => 1],
             ],
             'delivery_tier' => 'standard',
             'collection_time' => 'Sabah, 18:00 - 20:00',
@@ -111,7 +111,7 @@ class OrderServiceTest extends TestCase
         $order = $this->orders->create($this->customer(), $payload);
 
         $this->assertSame('37.00', (string) $order->subtotal);
-        $this->assertSame('Sviter', $order->items->firstWhere('item_id', 'sweater')->item_name);
+        $this->assertSame('Sviter', $order->items->firstWhere('item_id', 'dc-shirt-4')->item_name);
     }
 
     /**

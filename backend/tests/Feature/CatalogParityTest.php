@@ -68,7 +68,7 @@ class CatalogParityTest extends TestCase
         $out = [];
 
         preg_match_all(
-            '/serviceId: "(\w+)",(.*?)(?=\n    serviceId: "|\z)/s',
+            '/serviceId: "([\w-]+)",(.*?)(?=\n    serviceId: "|\z)/s',
             $source,
             $services,
             PREG_SET_ORDER,
@@ -76,7 +76,7 @@ class CatalogParityTest extends TestCase
 
         foreach ($services as [, $serviceId, $body]) {
             preg_match_all(
-                '/itemId: "(\w+)", name: "([^"]*)", price: ([\d.]+)/',
+                '/itemId: "([\w-]+)", name: "([^"]*)", price: ([\d.]+)/',
                 $body,
                 $items,
                 PREG_SET_ORDER,

@@ -68,7 +68,7 @@
 
   /* Tones as classes, not inline styles.
      This page sets a strict style-src with a nonce, which blocks the style
-     ATTRIBUTE as well as <style> blocks — so `el.style.background = …` from
+     ATTRIBUTE as well as style elements — so `el.style.background = …` from
      script is silently dropped and the tiles come out colourless. Anything
      visual here has to be a class. */
   .tone-amber  .edge { background:var(--amber); }
