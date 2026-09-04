@@ -7,8 +7,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import { supabase } from "@/lib/supabase";
+import { isStrongPassword } from "@/lib/password";
+import { PasswordRules } from "@/components/PasswordRules";
 import { BigButton } from "@/components/ui";
 import { brand, font } from "@/theme/tokens";
+import { useErrorAlert } from "@/lib/alerts";
 
 /**
  * Where the reset link lands.
@@ -33,6 +36,8 @@ export default function ResetPasswordScreen() {
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +82,9 @@ export default function ResetPasswordScreen() {
 
   const onSave = async () => {
     setError(null);
-    if (password.length < 8) return setError(t("signupPasswordShort"));
+    // Same rules as signup. A reset that accepts a weaker password than
+    // registration is a way around the policy, not a convenience.
+    if (!isStrongPassword(password)) return setError(t("passwordRules"));
     if (password !== confirm) return setError(t("resetMismatch"));
 
     setSaving(true);
@@ -115,7 +122,9 @@ export default function ResetPasswordScreen() {
               autoComplete="new-password"
               textContentType="newPassword"
               editable={!saving}
+              placeholder={t("passwordPlaceholder")}
             />
+            <PasswordRules password={password} />
 
             <Text style={styles.label}>{t("resetRepeatPassword")}</Text>
             <TextInput
@@ -128,7 +137,7 @@ export default function ResetPasswordScreen() {
               editable={!saving}
             />
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            
 
             <BigButton
               label={t("resetSaveBtn")}

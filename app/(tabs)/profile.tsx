@@ -22,6 +22,7 @@ import { useI18n } from "@/lib/language-context";
 import type { Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
 import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
+import { useErrorAlert } from "@/lib/alerts";
 
 // Profile rebuilt to the structure of the Laravel/React reference build:
 // a header block, then Orders / Membership & balance / Account / Support
@@ -89,6 +90,8 @@ export default function ProfileScreen() {
   const { t, lang } = useI18n();
   const { add, setQty, reset } = useCart();
   const [notice, setNotice] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(notice);
   const [repeating, setRepeating] = useState(false);
 
   // Rebuilds a basket from the last completed order's line items. The items
@@ -170,7 +173,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={s.body}>
-          {notice ? <Text style={s.notice}>{notice}</Text> : null}
+          
 
           <Section title={t("profileSectionOrders")}>
             <Row

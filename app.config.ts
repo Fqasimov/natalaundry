@@ -23,7 +23,11 @@ const config: ExpoConfig = {
   name: "Nata Laundry",
   slug: "nata-laundry",
   scheme: "natalaundry",
-  version: "1.0.3",
+  // 1.1.0, not 1.0.4: this release changes what an order costs (express now
+  // doubles the total), removes two delivery options and moves to a new SDK.
+  // A customer comparing prices with the last version should see a different
+  // minor, and a crash report should not be ambiguous about which build it is.
+  version: "1.1.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/images/icon.png",

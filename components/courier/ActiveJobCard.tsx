@@ -110,11 +110,12 @@ export function ActiveJobCard({
           <Pressable
             style={s.secondary}
             onPress={() =>
-              // preferNative: a courier wants the app that speaks turn-by-turn,
-              // and openNavigation falls back to Google Maps in a browser when
-              // no native handler answers.
+              // Couriers navigate in Google Maps, by instruction — it is what
+              // they already drive with here, and its traffic and address
+              // matching are better in Baku than Apple Maps'. Everywhere else
+              // in the app keeps the platform's own maps app (preferNative),
+              // so this deliberately does NOT pass that flag.
               openNavigation(order.address_lat as number, order.address_lng as number, {
-                preferNative: true,
                 label: order.address ?? undefined,
               })
             }

@@ -37,6 +37,7 @@ import { PaymentMethodPicker } from "@/components/PaymentMethodPicker";
 import { fetchWallet } from "@/lib/wallet";
 import { removeOrderPhoto, uploadOrderPhoto } from "@/lib/uploads";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // "Sifariş xülasəsi" — the final step. Note the hard gate the shipped app
 // enforces: at least three garment photos before the order can be submitted.
@@ -56,6 +57,8 @@ export default function SummaryScreen() {
   const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
   const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(payNotice);
   // Read from the API rather than the profile row the app already has: the
   // balance is money, and a stale copy would offer a method that then fails.
   const [balance, setBalance] = useState<number | null>(null);
@@ -455,7 +458,7 @@ export default function SummaryScreen() {
         </View>
 
         {payNotice ? <Text style={styles.notice}>{payNotice}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>

@@ -15,6 +15,7 @@ import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import { supabase } from "@/lib/supabase";
 import { ScreenHeader } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // Deliberately the quietest screen in the app: a form, on white, with no
 // accent colour competing for the eye. It keeps that restraint, but the greys
@@ -44,6 +45,8 @@ export default function PersonalDetailsScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
 
   useEffect(() => {
     if (profile) {
@@ -118,7 +121,7 @@ export default function PersonalDetailsScreen() {
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
         {saved ? <Text style={styles.saved}>{t("saved")}</Text> : null}
 
         {/* BigButton is tied to the app's colour tones, so this screen uses a

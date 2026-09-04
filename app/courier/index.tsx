@@ -17,12 +17,14 @@ import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { useI18n } from "@/lib/language-context";
 import {
+  claimOrderAtomically,
   fetchCourierHistory,
   fetchMyActiveJob,
   fetchOrderCustomer,
   fetchOrderItems,
   transitionOrder,
 } from "@/lib/orders";
+import { useCourierDispatch } from "@/lib/use-courier-dispatch";
 import { courierNextStep } from "@/lib/lifecycle";
 import { useLocationBroadcast } from "@/lib/use-location-broadcast";
 import { useCourierAvailability } from "@/lib/courier-availability";
@@ -30,6 +32,7 @@ import { fetchDistanceTodayKm, summarise, type CourierStats } from "@/lib/courie
 import { fetchRoadRoute, isRoutingConfigured, type Route } from "@/lib/routing";
 import { reportError } from "@/lib/errors";
 import { ActiveJobCard } from "@/components/courier/ActiveJobCard";
+import { useErrorAlert } from "@/lib/alerts";
 import type { Order, OrderItem } from "@/types/database";
 
 /**
@@ -57,9 +60,17 @@ export default function CourierHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(notice);
 
   const courierId = session?.user.id ?? null;
   const availability = useCourierAvailability(courierId);
+
+  // Offers live here, not on the deliveries tab. A job being offered is the
+  // most time-critical thing a courier can be shown — it is a race against
+  // the other couriers it was broadcast to — so it belongs on the screen they
+  // already have open, arriving by itself.
+  const dispatch = useCourierDispatch(courierId);
 
   const broadcast = useLocationBroadcast({
     orderId: active?.id,
@@ -128,6 +139,24 @@ export default function CourierHome() {
     };
   }, [active?.id, active?.address_lat, active?.address_lng]);
 
+  const claim = async (orderId: string) => {
+    if (!courierId) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const won = await claimOrderAtomically(orderId, courierId);
+      // Losing the race is ordinary, not an error: somebody was faster.
+      if (!won) setNotice(t("orderAlreadyClaimed"));
+      // Both, and in this order: the won job has to appear as the active one,
+      // and it has to stop appearing as an offer.
+      await Promise.all([load(), dispatch.reload()]);
+    } catch (e) {
+      setNotice(reportError("courier.claim", e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const advance = async () => {
     if (!active) return;
     const next = courierNextStep(active.lifecycle_state);
@@ -186,7 +215,7 @@ export default function CourierHome() {
         </View>
       </View>
 
-      {notice ? <Text style={s.notice}>{notice}</Text> : null}
+      
 
       {/* The shift card. Off it is quiet and white; on it turns blue and says
           what it is doing, which is the difference between "a switch" and
@@ -229,6 +258,38 @@ export default function CourierHome() {
           </View>
         ) : null}
       </View>
+
+      {/* New work, pushed here as it is broadcast. Placed above everything
+          else on purpose: it is the only thing on this screen that expires. */}
+      {dispatch.offers.length > 0 ? (
+        <>
+          <View style={s.headingRow}>
+            <Text style={s.section}>{t("courierOfferedHeading")}</Text>
+            <View style={s.count}>
+              <Text style={s.countLabel}>{dispatch.offers.length}</Text>
+            </View>
+          </View>
+          {dispatch.offers.map((order) => (
+            <View key={order.id} style={s.offer}>
+              <View style={s.offerTop}>
+                <Text style={s.offerNo}>{t("orderNo", { no: order.order_no ?? "—" })}</Text>
+                <Text style={s.offerTotal}>{money(order.total)}</Text>
+              </View>
+              <Text style={s.offerAddress} numberOfLines={2}>
+                {order.address ?? "—"}
+              </Text>
+              <Text style={s.offerSlot}>{order.collection_time}</Text>
+              <Pressable
+                style={[s.offerClaim, busy && s.disabled]}
+                disabled={busy}
+                onPress={() => claim(order.id)}
+              >
+                <Text style={s.offerClaimLabel}>{t("claimOrder")}</Text>
+              </Pressable>
+            </View>
+          ))}
+        </>
+      ) : null}
 
       {/* Today */}
       <Text style={s.section}>{t("courierTodayStats")}</Text>
@@ -313,6 +374,44 @@ const s = StyleSheet.create({
     backgroundColor: colors.background,
   },
   body: { paddingHorizontal: 20, gap: 14 },
+
+  // Offered work. Deliberately the loudest card on the screen — an amber
+  // border and the claim button in full primary — because it is the only
+  // thing here that another courier can take away.
+  headingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  count: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 7,
+    borderRadius: radius.pill,
+    backgroundColor: colors.amber,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countLabel: { fontFamily: font.bold, fontSize: 12, color: colors.textInverse },
+  offer: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.amber,
+    padding: 16,
+    gap: 6,
+  },
+  offerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  offerNo: { ...type.caption, color: colors.textSecondary },
+  offerTotal: { fontFamily: font.bold, fontSize: 18, color: colors.textPrimary },
+  offerAddress: { ...type.body, color: colors.textPrimary },
+  offerSlot: { ...type.caption, color: colors.textSecondary },
+  offerClaim: {
+    marginTop: 8,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerClaimLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.textInverse },
+  disabled: { opacity: 0.6 },
 
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   headerText: { flexShrink: 1 },

@@ -12,6 +12,7 @@ import { createTopluOrder } from "@/lib/orders";
 import { TOPLU_DEPOSIT, TOPLU_PICKUP_WINDOW_HOURS } from "@/lib/toplu";
 import { AppIcon } from "@/components/AppIcon";
 import { BigButton, IconBubble, ScreenHeader } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // Pickup slots are constrained to the next 24 hours, which is the promise the
 // bulk service makes ("kuryer 24 saat ərzində gəlir").
@@ -62,6 +63,8 @@ export default function TopluScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
 
   const submit = async () => {
     if (!session?.user.id) return;
@@ -161,7 +164,7 @@ export default function TopluScreen() {
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
