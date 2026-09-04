@@ -275,7 +275,9 @@ export function GiftBoxAnimation({ opening, onRevealed, size = 190, children }: 
 
 const s = StyleSheet.create({
   stage: { alignItems: "center", justifyContent: "center" },
-  fill: { ...StyleSheet.absoluteFillObject },
+  // RN 0.86 dropped StyleSheet.absoluteFillObject; absoluteFill is a
+  // registered style id and cannot be spread, so this is it written out.
+  fill: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
 
   bloom: { position: "absolute", alignItems: "center", justifyContent: "center" },
   bloomRing: { position: "absolute", borderRadius: 999, backgroundColor: BLUE_LIGHT },

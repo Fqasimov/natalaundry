@@ -11,11 +11,8 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/images/icon.png",
-  splash: {
-    image: "./assets/images/splash.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff",
-  },
+  // The legacy top-level `splash` key was removed in SDK 57. The same image,
+  // fit and background now live solely in the expo-splash-screen plugin below.
   assetBundlePatterns: ["**/*"],
   ios: {
     bundleIdentifier: "az.natalaundry.app",
@@ -64,6 +61,12 @@ const config: ExpoConfig = {
     "expo-location",
     "expo-camera",
     "expo-image-picker",
+    // SDK 57 moved these three to explicit config plugins; without them the
+    // prebuild step skips their native setup and fonts/images/status bar
+    // silently fall back to defaults in a dev or production build.
+    "expo-font",
+    "expo-image",
+    "expo-status-bar",
     // Opens the Kapital Bank hosted payment page in a system auth session.
     // Deliberately not an in-app WebView: the customer types card details on
     // that page, and they should be able to see the real address bar and
