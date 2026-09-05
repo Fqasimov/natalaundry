@@ -64,9 +64,25 @@ const config: ExpoConfig = {
       NSMicrophoneUsageDescription: "Allow NataLaundry to access your microphone",
       NSFaceIDUsageDescription: "Allow NataLaundry to access your Face ID biometric data.",
     },
-    config: {
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-    },
+    /*
+     * No `config.googleMapsApiKey` here — iOS renders maps with Apple Maps.
+     *
+     * Setting it is what tells Expo's react-native-maps plugin to wire Google
+     * Maps into the iOS build, and that needs a `react-native-google-maps`
+     * podspec which react-native-maps stopped shipping. 1.27.2 carries only
+     * react-native-maps.podspec, so pod install failed outright:
+     *
+     *   [!] No podspec found for `react-native-google-maps` in
+     *       node_modules/react-native-maps
+     *
+     * It worked on 1.20.1 under SDK 54 and broke on the SDK 57 upgrade, which
+     * is why the previously shipped build was fine.
+     *
+     * This also matches the product decision (2026-09-04): the app uses the
+     * platform's own maps, and only the courier's navigation hands off to
+     * Google Maps — via a URL, which needs no SDK and no key. Android keeps
+     * its key below because Android maps genuinely require one.
+     */
   },
   android: {
     package: "az.natalaundry.app",
