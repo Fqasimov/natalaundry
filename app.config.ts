@@ -3,18 +3,28 @@ import type { ExpoConfig } from "expo/config";
 /*
  * The EAS project this app publishes updates to.
  *
- * `eas init` normally writes this into app.json, but it cannot write to a
- * dynamic config like this one (the same reason `expo install --fix` printed
- * its plugin list instead of adding it). So it is read from the environment:
- * run `eas init` once — it needs an Expo login, which is why it is not done
- * here — and put the id it prints into .env as EAS_PROJECT_ID.
+ * Hardcoded, and NOT read from .env. This was briefly the other way round and
+ * it was wrong: .env is gitignored, so it is never uploaded to EAS Build, and
+ * a cloud build would have evaluated this file with the variable unset,
+ * silently producing a binary with no `updates` block and no way to ever
+ * receive one. The failure would only have shown up as "OTA does nothing"
+ * weeks later.
  *
- * Until then `updates` is deliberately left off the config entirely rather
- * than pointed at a malformed URL. A build without it simply has no OTA
- * capability, which is the honest state; a build with a broken update URL
- * fails at runtime, on a customer's phone, where nobody is watching.
+ * It is not a secret either. The id is the update URL, and that URL ships
+ * inside every binary — anyone can read it out of the app. Treating it as a
+ * credential bought nothing and cost the build.
+ *
+ * `eas init` cannot write it here itself (it does not edit dynamic configs),
+ * which is why it is pasted in by hand. The env var still overrides, for a
+ * fork or a second Expo project built from the same source.
+ *
+ * Note `||`, not `??`. .env.example ships `EAS_PROJECT_ID=` with no value, so
+ * anyone copying it to .env gets an empty STRING, which `??` happily accepts —
+ * the config then has an empty id, drops `updates`, and builds without OTA.
+ * An empty value has to mean "unset" here.
  */
-const easProjectId = process.env.EAS_PROJECT_ID;
+const easProjectId =
+  process.env.EAS_PROJECT_ID?.trim() || "6f4481f3-89a1-45f6-8465-7b0f584087fc";
 
 // Values recovered from the original App Store build (Info.plist / Expo.plist)
 // of Nata Laundry. Secrets (Supabase anon key, Google Maps key) are read from
