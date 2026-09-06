@@ -39,6 +39,25 @@ Do not build render harnesses for these.
 1. `npx tsc --noEmit` — always. Cheap, catches a lot.
 2. `cd backend && php artisan test` — whenever backend logic changed.
 3. `git status --short` — must be clean of demo artifacts (see the stub note).
+4. `npm run check:icons` — before any build or release.
+
+   The icons were blank fills for the whole life of the project: `icon.png`
+   and `adaptive-icon.png` near-black squares, `splash.png` white. 1.0.2
+   shipped that way and 1.1.0 nearly did. Nothing caught it — they are valid
+   PNGs of the right size in the right place, in-app branding renders from
+   `nata-logo.png` and looks correct, and a typecheck, the full backend suite
+   and a green EAS build all pass regardless of what the picture contains.
+
+   The check decodes them and fails on a near-solid fill, a wrong size, or an
+   alpha channel on the iOS icon (which App Store validation rejects even when
+   every pixel is opaque). Regenerate with `npm run icons` after changing the
+   logo — that needs `npm install sharp --no-save`, deliberately not a
+   dependency, because a native install step in every EAS Build is what
+   eas-cli's node-gyp did to the builds on 2026-09-05.
+
+   The general lesson is worth more than the check: **a native asset can be
+   wrong in a way no test, typecheck or successful build can see.** Icons,
+   splash, permission strings and entitlements are only verified by looking.
 
 ### When a render IS still worth it
 
