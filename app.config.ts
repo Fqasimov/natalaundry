@@ -88,7 +88,11 @@ const config: ExpoConfig = {
     package: "az.natalaundry.app",
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      // The mark's own blue, so the launcher's crop — circle, squircle,
+      // teardrop, whatever the device uses — never cuts the logo's edge
+      // against a contrasting background. White left a blue disc floating on
+      // a white tile, which does not match the iOS icon.
+      backgroundColor: "#3B6BF0",
     },
     config: {
       googleMaps: {
