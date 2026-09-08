@@ -158,7 +158,7 @@ export default function ProfileScreen() {
         {/* Identity reads left-to-right: mark, then name over the contact
             lines, matching the shipped design. */}
         <View style={s.identity}>
-          <AppLogo size={92} ring={false} />
+          <AppLogo size={92} />
           <View style={s.credentials}>
             <Text style={s.name} numberOfLines={1}>
               {profile.name?.trim() || "—"}
