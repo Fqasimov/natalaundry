@@ -170,7 +170,7 @@ export const serviceTheme = {
     iconBg: "#004554",
     iconFg: "#FFFFFF",
     fg: "#004554",
-    label: "Çanta",
+    label: "Aksesuarlar",
     icon: "mci:purse",
   },
   // "Toplu" is a different shape of order: no item picking up front — a

@@ -67,6 +67,21 @@ return [
         'max_topup' => env('NATA_WALLET_MAX_TOPUP', 500),
         // What the top-up sheet offers as one-tap amounts.
         'topup_presets' => [10, 20, 50, 100],
+
+        /*
+         * Bonus credited on a top-up, by size. Ordered high to low; the first
+         * threshold met wins.
+         *
+         * The authority is `credit_topup_bonus()` in
+         * supabase/wallet-topup-bonus.sql — the trigger that fires when a
+         * top-up settles and writes the ledger. This copy and the one in
+         * lib/wallet.ts are for quoting the figure before payment. Change all
+         * three together.
+         */
+        'topup_bonus_tiers' => [
+            ['from' => 200, 'rate' => 0.10],
+            ['from' => 100, 'rate' => 0.05],
+        ],
     ],
 
     'rewards' => [

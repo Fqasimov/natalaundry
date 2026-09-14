@@ -11,7 +11,7 @@ type AuthContextValue = {
   signUp: (
     email: string,
     password: string,
-    profile: { name: string; phone: string },
+    profile: { name: string; phone: string; referralCode?: string },
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   /** Finish a signup by entering the six-digit code from the e-mail. */
   verifySignupCode: (email: string, code: string) => Promise<{ error: string | null }>;
@@ -67,7 +67,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name: profile.name, phone: profile.phone } },
+          // The referral code rides along as metadata rather than being
+          // written here: the profile row is created by a database trigger
+          // after the address is confirmed, and that trigger is what records
+          // the referral (see supabase/referrals.sql). Sending it now means an
+          // unverified signup cannot claim a bonus.
+          options: {
+            data: {
+              name: profile.name,
+              phone: profile.phone,
+              ...(profile.referralCode ? { referral_code: profile.referralCode } : {}),
+            },
+          },
         });
         if (error) return { error: error.message, needsConfirmation: false };
 

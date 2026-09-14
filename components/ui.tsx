@@ -195,28 +195,55 @@ export function IconBubble({
   fg,
   size = 44,
   selected,
+  ring,
 }: {
   name: IconName;
   tint: string;
   fg: string;
   size?: number;
   selected?: boolean;
+  /**
+   * Colour of the selected ring. Defaults to `fg`, which is right when the
+   * glyph sits on a pale tint — but the catalogue's bubbles are dark circles
+   * with a *white* glyph, so `fg` drew a white ring on a white-ish page and
+   * the selected service was indistinguishable from the rest. Callers whose
+   * `fg` is not a contrasting colour must pass one.
+   */
+  ring?: string;
 }) {
+  // Drawn outside the circle rather than as a border: a border eats into the
+  // 56pt bubble, so the selected one rendered visibly smaller than its
+  // neighbours and the row jittered as the selection moved.
+  const gap = 3;
+  const stroke = 2.5;
+
   return (
-    <View
-      style={[
-        s.bubble,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: tint,
-          borderWidth: selected ? 2 : 0,
-          borderColor: fg,
-        },
-      ]}
-    >
-      <AppIcon name={name} size={size * 0.5} color={fg} />
+    <View style={{ padding: gap + stroke }}>
+      {selected ? (
+        <View
+          style={[
+            s.bubbleRing,
+            {
+              borderRadius: (size + (gap + stroke) * 2) / 2,
+              borderWidth: stroke,
+              borderColor: ring ?? fg,
+            },
+          ]}
+        />
+      ) : null}
+      <View
+        style={[
+          s.bubble,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: tint,
+          },
+        ]}
+      >
+        <AppIcon name={name} size={size * 0.5} color={fg} />
+      </View>
     </View>
   );
 }
@@ -314,4 +341,5 @@ const s = StyleSheet.create({
   },
   pillLabel: { fontFamily: font.semibold, fontSize: 12 },
   bubble: { alignItems: "center", justifyContent: "center" },
+  bubbleRing: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
 });

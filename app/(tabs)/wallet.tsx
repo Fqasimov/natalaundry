@@ -19,7 +19,14 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import type { WalletTransaction } from "@/types/database";
-import { fetchWallet, startTopUp, waitForTopUp } from "@/lib/wallet";
+import {
+  fetchWallet,
+  startTopUp,
+  waitForTopUp,
+  topUpBonusFor,
+  topUpBonusRate,
+  TOPUP_BONUS_TIERS,
+} from "@/lib/wallet";
 import { BigButton } from "@/components/ui";
 
 // wallet_transactions columns are confirmed via the schema dump, and the
@@ -141,6 +148,8 @@ export default function WalletScreen() {
   // Parsed once. The comma is accepted because an Azerbaijani or Russian
   // keyboard offers it as the decimal separator.
   const topUpValue = Number(topUpAmount.replace(",", "."));
+  // Display only — the trigger recomputes this from the settled amount.
+  const topUpBonus = topUpBonusFor(topUpValue);
   const topUpValid =
     Number.isFinite(topUpValue) &&
     topUpValue >= bounds.min &&
@@ -244,6 +253,7 @@ export default function WalletScreen() {
             <View style={s.presetRow}>
               {bounds.presets.map((preset) => {
                 const active = Number(topUpAmount) === preset;
+                const rate = topUpBonusRate(preset);
                 return (
                   <Pressable
                     key={preset}
@@ -256,6 +266,11 @@ export default function WalletScreen() {
                     >
                       {money(preset)}
                     </Text>
+                    {rate > 0 ? (
+                      <Text style={s.presetBonus} numberOfLines={1}>
+                        {t("walletBonusBadge", { percent: Math.round(rate * 100) })}
+                      </Text>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -270,6 +285,28 @@ export default function WalletScreen() {
               value={topUpAmount}
               onChangeText={setTopUpAmount}
             />
+            {topUpBonus > 0 ? (
+              <View style={s.bonusNote}>
+                <AppIcon name="mci:gift-outline" size={16} color={brand.onSoft} />
+                <Text style={s.bonusNoteLabel} numberOfLines={2}>
+                  {t("walletBonusEarned", {
+                    percent: Math.round(topUpBonusRate(topUpValue) * 100),
+                    bonus: money(topUpBonus),
+                    total: money(topUpValue + topUpBonus),
+                  })}
+                </Text>
+              </View>
+            ) : (
+              <Text style={s.bonusHint} numberOfLines={2}>
+                {t("walletBonusHint", {
+                  low: money(TOPUP_BONUS_TIERS[1].from),
+                  lowPercent: Math.round(TOPUP_BONUS_TIERS[1].rate * 100),
+                  high: money(TOPUP_BONUS_TIERS[0].from),
+                  highPercent: Math.round(TOPUP_BONUS_TIERS[0].rate * 100),
+                })}
+              </Text>
+            )}
+
             <Text style={s.bounds}>
               {t("walletTopUpBounds", {
                 min: money(bounds.min),
@@ -363,6 +400,23 @@ const s = StyleSheet.create({
   },
   presetActive: { borderColor: brand.moonstoneInk, backgroundColor: brand.moonstoneSoft },
   presetLabel: { fontFamily: font.semibold, fontSize: 13.5, color: brand.onSoftMuted },
+  presetBonus: {
+    fontFamily: font.bold,
+    fontSize: 10,
+    color: colors.success,
+    marginTop: 2,
+  },
+  bonusNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: brand.moonstoneSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  bonusNoteLabel: { flex: 1, ...type.caption, color: brand.onSoft },
+  bonusHint: { ...type.caption, color: brand.onSoftMuted },
   presetLabelActive: { color: brand.moonstoneInk },
   fieldLabel: { fontFamily: font.medium, fontSize: 13.5, color: colors.textPrimary, marginTop: 6 },
   input: {

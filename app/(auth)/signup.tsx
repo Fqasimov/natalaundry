@@ -45,6 +45,7 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [referral, setReferral] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
@@ -65,6 +66,7 @@ export default function SignupScreen() {
     const { error: signUpError, needsConfirmation } = await signUp(email.trim(), password, {
       name: name.trim(),
       phone: phone.trim(),
+      referralCode: referral.trim().toUpperCase() || undefined,
     });
     setSubmitting(false);
 
@@ -241,6 +243,29 @@ export default function SignupScreen() {
           </View>
         </View>
 
+        {/* Referral code — signup only.
+            This is the one place a referral code is ever entered. It is not
+            the promo field at checkout: a promo code discounts an order, a
+            referral code pays both friends a bonus, and putting one into the
+            other's box did nothing while looking like it should work. */}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>{t("signupReferralLabel")}</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="gift-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder={t("signupReferralPlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={12}
+              value={referral}
+              onChangeText={(v) => setReferral(v.toUpperCase())}
+            />
+          </View>
+          <Text style={styles.fieldHint}>{t("signupReferralHint")}</Text>
+        </View>
+
         {/* Error message */}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -368,6 +393,12 @@ const styles = StyleSheet.create({
   form: { padding: 24, gap: 16 },
 
   fieldWrap: { gap: 6 },
+  fieldHint: {
+    fontFamily: font.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
   fieldLabel: {
     fontFamily: font.medium,
     fontSize: 14,

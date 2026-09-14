@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Linking } from "react-native";
 
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,6 +39,15 @@ import { AppIcon } from "@/components/AppIcon";
 // every item is visible and tappable without a disclosure step. Categories
 // still exist in lib/catalog.ts (they mirror how service_prices groups rows)
 // and are simply flattened for display.
+// The same number app/profile/support.tsx lists. Not i18n copy: a phone
+// number is identical in every language.
+const SUPPORT_WHATSAPP = "https://wa.me/994102055050";
+
+// Shared by the tab style and the scroll-into-view maths below, so the two
+// cannot drift and leave the row scrolling to the wrong place.
+const SERVICE_TAB_WIDTH = 74;
+const SERVICE_TAB_GAP = 10;
+
 export default function ServiceCatalogueScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const insets = useSafeAreaInsets();
@@ -51,6 +60,23 @@ export default function ServiceCatalogueScreen() {
   const theme = serviceTheme[activeId] ?? serviceTheme.dry_cleaning;
 
   const [upsellOpen, setUpsellOpen] = useState(false);
+
+  // Bring the active service into view.
+  //
+  // The row scrolls, and arriving on a service near its end left the selected
+  // chip off the right edge — so the one thing the row exists to tell you was
+  // the one thing you could not see. Not animated: this is the screen's
+  // starting position, not a transition.
+  const serviceRowRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    const index = ITEMISED_SERVICES.indexOf(activeId as (typeof ITEMISED_SERVICES)[number]);
+    if (index < 0) return;
+    // SERVICE_TAB_WIDTH + the row's gap, less a chip's worth of lead so the
+    // previous one stays half-visible and the row reads as scrollable.
+    const x = Math.max(0, index * (SERVICE_TAB_WIDTH + SERVICE_TAB_GAP) - SERVICE_TAB_WIDTH);
+    const timer = setTimeout(() => serviceRowRef.current?.scrollTo({ x, animated: false }), 0);
+    return () => clearTimeout(timer);
+  }, [activeId]);
 
   const items = useMemo(
     () => service.categories.flatMap((category) => category.items),
@@ -77,33 +103,56 @@ export default function ServiceCatalogueScreen() {
             scrolls instead of squeezing them together; adding a service later
             can't crush the spacing either. */}
         <ScrollView
+          ref={serviceRowRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.serviceRow}
         >
           {ITEMISED_SERVICES.map((key) => {
             const entryTheme = serviceTheme[key];
+            const isActive = key === activeId;
             return (
-              <Pressable key={key} onPress={() => router.replace(`/service/${key}`)}>
+              <Pressable
+                key={key}
+                style={styles.serviceTab}
+                onPress={() => router.replace(`/service/${key}`)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+              >
                 <IconBubble
                   name={entryTheme.icon}
                   tint={entryTheme.iconBg}
                   fg={entryTheme.iconFg}
+                  ring={brand.midnight}
                   size={56}
-                  selected={key === activeId}
+                  selected={isActive}
                 />
+                {/* The glyphs alone did not say which service was which — a
+                    purse and a shoe are not self-evident at 28pt — so each
+                    circle is named, and the name carries the selected state
+                    as well as the ring. */}
+                <Text
+                  style={[styles.serviceTabLabel, isActive && styles.serviceTabLabelActive]}
+                  numberOfLines={2}
+                >
+                  {copy.label(key, entryTheme.label)}
+                </Text>
               </Pressable>
             );
           })}
           {/* Bulk sits alongside the price lists but leads somewhere else —
               it has no items to browse, only a deposit and a pickup slot. */}
-          <Pressable onPress={() => router.push("/toplu")}>
+          <Pressable style={styles.serviceTab} onPress={() => router.push("/toplu")}>
             <IconBubble
               name={serviceTheme.toplu.icon}
               tint={serviceTheme.toplu.iconBg}
               fg={serviceTheme.toplu.iconFg}
+              ring={brand.midnight}
               size={56}
             />
+            <Text style={styles.serviceTabLabel} numberOfLines={2}>
+              {copy.label("toplu", serviceTheme.toplu.label)}
+            </Text>
           </Pressable>
         </ScrollView>
 
@@ -159,10 +208,24 @@ export default function ServiceCatalogueScreen() {
           })}
         </View>
 
-        <View style={styles.helpCard}>
-          <Text style={styles.helpTitle}>{t("cantFindItem")}</Text>
-          <Text style={styles.helpLink}>{t("writeToTeam")}</Text>
-        </View>
+        {/* This looked like a link and was inert. It now opens WhatsApp on
+            the same number the support screen lists — someone who cannot find
+            their item wants to ask about it there and then, not to go hunting
+            through the profile for a contact page. */}
+        <Pressable
+          style={styles.helpCard}
+          onPress={() => Linking.openURL(SUPPORT_WHATSAPP)}
+          accessibilityRole="link"
+        >
+          <View style={styles.helpIcon}>
+            <AppIcon name="ion:logo-whatsapp" size={20} color={colors.textInverse} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.helpTitle}>{t("cantFindItem")}</Text>
+            <Text style={styles.helpLink}>{t("writeToTeam")}</Text>
+          </View>
+          <AppIcon name="ion:chevron-forward" size={18} color={brand.moonstoneInk} />
+        </Pressable>
       </ScrollView>
 
       {count > 0 ? (
@@ -220,11 +283,22 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: brand.background },
   serviceRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
+    alignItems: "flex-start",
+    gap: SERVICE_TAB_GAP,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
+  // Fixed width so the labels sit on a regular rhythm and a long name
+  // ("Quru Təmizləmə") wraps instead of stretching its own column.
+  serviceTab: { width: SERVICE_TAB_WIDTH, alignItems: "center", gap: 2 },
+  serviceTabLabel: {
+    fontFamily: font.medium,
+    fontSize: 11.5,
+    lineHeight: 14,
+    textAlign: "center",
+    color: brand.onSoftMuted,
+  },
+  serviceTabLabelActive: { fontFamily: font.bold, color: brand.midnight },
   heroBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -272,11 +346,22 @@ const styles = StyleSheet.create({
   itemName: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
   itemPrice: { flexShrink: 0, fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
   helpCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     marginHorizontal: 16,
     marginTop: 6,
     backgroundColor: brand.moonstoneSoft,
     borderRadius: radius.md,
     padding: 16,
+  },
+  helpIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#25D366",
+    alignItems: "center",
+    justifyContent: "center",
   },
   helpTitle: { fontFamily: font.semibold, fontSize: 14, color: colors.textPrimary },
   helpLink: { fontFamily: font.medium, fontSize: 14, color: brand.moonstoneInk, marginTop: 3 },

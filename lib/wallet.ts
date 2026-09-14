@@ -45,6 +45,34 @@ export const MAX_TOPUP = 500;
 export const TOPUP_PRESETS = [10, 20, 50, 100];
 
 /**
+ * Bonus credited on a top-up, by size.
+ *
+ * Mirrors `credit_topup_bonus()` in supabase/wallet-topup-bonus.sql and
+ * `nata.wallet.topup_bonus_tiers` in the backend config. **This copy is for
+ * display only** — it tells the customer what they will get before they pay.
+ * The bonus that is actually credited is worked out by the trigger when the
+ * top-up settles, from the amount the bank confirmed, so a tampered client
+ * can show itself any figure it likes and still be credited the real one.
+ *
+ * Ordered high to low; the first threshold met wins.
+ */
+export const TOPUP_BONUS_TIERS: readonly { from: number; rate: number }[] = [
+  { from: 200, rate: 0.1 },
+  { from: 100, rate: 0.05 },
+];
+
+/** The bonus rate for an amount, as a fraction (0.05 = 5%). */
+export function topUpBonusRate(amount: number): number {
+  if (!Number.isFinite(amount)) return 0;
+  return TOPUP_BONUS_TIERS.find((tier) => amount >= tier.from)?.rate ?? 0;
+}
+
+/** The bonus in manat for an amount, rounded to the cent as the trigger does. */
+export function topUpBonusFor(amount: number): number {
+  return Math.round(amount * topUpBonusRate(amount) * 100) / 100;
+}
+
+/**
  * The balance and its ledger.
  *
  * `profiles.wallet_balance` is read, never derived: the balance is maintained

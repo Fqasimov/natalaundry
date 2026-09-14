@@ -291,6 +291,10 @@ export default function SummaryScreen() {
             <Text style={styles.promoButtonLabel}>{t("apply")}</Text>
           </Pressable>
         </View>
+        {/* A referral code typed here silently did nothing — it is not a promo
+            code and this field does not take one. Said rather than left to be
+            discovered. */}
+        <Text style={styles.promoHint}>{t("promoNotReferral")}</Text>
 
         {/* Gift box prizes the customer has won and not yet spent. The
             discount itself is priced by the server — picking one here only
@@ -538,6 +542,13 @@ const styles = StyleSheet.create({
   rewardAction: { flexShrink: 0, fontFamily: font.semibold, fontSize: 12.5, color: brand.onSoftMuted },
   rewardActionOn: { color: brand.moonstoneInk },
   promoRow: { flexDirection: "row", gap: 10, marginTop: 12 },
+  promoHint: {
+    fontFamily: font.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: brand.onSoftMuted,
+    marginTop: 6,
+  },
   promoInput: {
     flex: 1,
     backgroundColor: brand.surface,
