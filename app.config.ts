@@ -17,6 +17,35 @@ const config: ExpoConfig = {
     backgroundColor: "#ffffff",
   },
   assetBundlePatterns: ["**/*"],
+
+  /*
+   * Over-the-air updates.
+   *
+   * `runtimeVersion` is the compatibility contract between a JS bundle and the
+   * binary that runs it, and the **fingerprint** policy computes it from the
+   * native dependencies rather than from a version string someone remembers to
+   * bump. That matters here more than it sounds: adding a native module
+   * (expo-clipboard, for the referral screen's Copy button) changes the
+   * fingerprint, so a bundle needing it is simply never handed to a binary
+   * that lacks it. With an `appVersion` policy the same update would install
+   * and then crash on the first screen that touched the missing module.
+   *
+   * So the rule this encodes: JS-only changes ship OTA; anything that adds or
+   * removes a native module ships as a build. The policy enforces it rather
+   * than trusting whoever is releasing to notice.
+   *
+   * `url` is filled in by `eas update:configure`, which also writes
+   * extra.eas.projectId — both need an EAS account, so see OTA.md.
+   */
+  updates: {
+    fallbackToCacheTimeout: 0,
+    // Never leave someone staring at a splash screen because the update
+    // server is slow; fall back to the bundle already on the device.
+    checkAutomatically: "ON_LOAD",
+  },
+  runtimeVersion: {
+    policy: "fingerprint",
+  },
   ios: {
     bundleIdentifier: "az.natalaundry.app",
     supportsTablet: false,
@@ -69,6 +98,7 @@ const config: ExpoConfig = {
     // that page, and they should be able to see the real address bar and
     // padlock, and have their browser's autofill available.
     "expo-web-browser",
+    "expo-updates",
     [
       "expo-splash-screen",
       {

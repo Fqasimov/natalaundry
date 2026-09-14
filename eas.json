@@ -4,13 +4,16 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "env": { "EXPO_PUBLIC_API_URL": "http://localhost:8000" }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "env": { "EXPO_PUBLIC_API_URL": "https://api-staging.natalaundry.az" }
     },
     "production": {
+      "channel": "production",
       "env": { "EXPO_PUBLIC_API_URL": "https://api.natalaundry.az" }
     }
   },

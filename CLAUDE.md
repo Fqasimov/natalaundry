@@ -209,6 +209,18 @@ Key invariants:
   must not be run — it names `profiles.avatar_url`, which does not exist, and
   a GRANT on a missing column aborts the whole transaction. See `SECURITY.md`.
 
+## Releases
+
+**JS-only changes ship over the air; native changes ship as a build.**
+`runtimeVersion` uses the fingerprint policy, so a bundle that needs a native
+module is never handed to a binary without it — the rule is enforced rather
+than remembered. Adding any `expo-*` native module, or touching the native
+sections of `app.config.ts`, means a store build.
+
+The binary on the stores (1.0.3) predates `expo-updates` and can never receive
+an OTA; one more store build is needed before any of this applies. Runbook and
+the full can/cannot table: `OTA.md`.
+
 ## Still unresolved
 
 - `service_prices` full column list — schema dump was truncated; prices not
