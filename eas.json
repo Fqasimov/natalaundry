@@ -1,21 +1,41 @@
 {
-  "cli": { "version": ">= 5.9.0" },
+  "cli": {
+    "version": ">= 5.9.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "env": { "EXPO_PUBLIC_API_URL": "http://localhost:8000" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8000"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api-staging.natalaundry.az" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-staging.natalaundry.az"
+      }
     },
     "production": {
       "channel": "production",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.natalaundry.az" }
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.natalaundry.az"
+      }
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6793012757",
+        "appleTeamId": "LJ6BQ556G4",
+        "ascApiKeyPath": "../../.app-store/AuthKey_658G7R82ZW.p8",
+        "ascApiKeyId": "658G7R82ZW",
+        "ascApiKeyIssuerId": "aa65687e-29cd-45ed-8e53-13ab4489eb12"
+      }
+    }
+  }
 }

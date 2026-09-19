@@ -7,6 +7,15 @@ import { Linking, Platform } from "react-native";
  * preferred navigator with their own traffic settings and voice guidance, and
  * rebuilding turn-by-turn inside the app would be worse and would pull in a
  * billed directions API. These links cost nothing.
+ *
+ * Which one to use is a product decision, set 2026-09-04:
+ *
+ *   * Couriers get **Google Maps** — call openNavigation WITHOUT preferNative.
+ *     It is what the drivers use here, and its traffic and address matching
+ *     in Baku are better. The https://www.google.com/maps/dir/ link opens the
+ *     installed app on both platforms and a browser otherwise.
+ *   * Everywhere else gets the **platform's own** maps app — pass
+ *     preferNative: true — so a customer is not sent out of their habits.
  */
 
 export function googleMapsUrl(lat: number, lng: number): string {

@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/language-context";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { BigButton } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // router.back() does nothing when the stack is empty — a deep link or a
 // reload lands here with no history — so fall back to the welcome screen
@@ -40,6 +41,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
   const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
 
@@ -213,7 +216,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Error message */}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
 
         {/* Login button */}
         <BigButton

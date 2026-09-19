@@ -10,9 +10,9 @@ import { reportError } from "@/lib/errors";
 import { useAuth } from "@/lib/auth-context";
 import { createTopluOrder } from "@/lib/orders";
 import { TOPLU_DEPOSIT, TOPLU_PICKUP_WINDOW_HOURS } from "@/lib/toplu";
-import { OUTSIDE_CITY_FEE } from "@/lib/pricing";
 import { AppIcon } from "@/components/AppIcon";
 import { BigButton, IconBubble, ScreenHeader } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // Pickup slots are constrained to the next 24 hours, which is the promise the
 // bulk service makes ("kuryer 24 saat ərzində gəlir").
@@ -60,10 +60,11 @@ export default function TopluScreen() {
   }, [windowOptions]);
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [isOutsideCity, setIsOutsideCity] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
 
   const submit = async () => {
     if (!session?.user.id) return;
@@ -88,7 +89,8 @@ export default function TopluScreen() {
         addressLat: null,
         addressLng: null,
         notes: notes.trim() || null,
-        isOutsideCity,
+        // Slider removed 2026-09-04; the column stays, nothing sets it now.
+        isOutsideCity: false,
       });
       router.replace(`/order/${order.id}`);
     } catch (e) {
@@ -149,19 +151,6 @@ export default function TopluScreen() {
           multiline
         />
 
-        <View style={styles.outsideRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.outsideTitle}>{t("outsideCity")}</Text>
-            <Text style={styles.outsideNote}>
-              {t("outsideCityNote", { fee: money(OUTSIDE_CITY_FEE) })}
-            </Text>
-          </View>
-          <Switch
-            value={isOutsideCity}
-            onValueChange={setIsOutsideCity}
-            trackColor={{ true: theme.fg, false: brand.timberwolf }}
-          />
-        </View>
 
         <View style={styles.depositCard}>
           <View style={styles.depositRow}>
@@ -175,7 +164,7 @@ export default function TopluScreen() {
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -288,9 +277,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   selectValue: { flex: 1, fontFamily: font.regular, fontSize: 15, color: colors.textPrimary },
-  outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 22 },
-  outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   depositCard: {
     backgroundColor: brand.surface,
     borderRadius: radius.lg,

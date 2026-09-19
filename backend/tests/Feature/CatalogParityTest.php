@@ -67,8 +67,21 @@ class CatalogParityTest extends TestCase
         $source = (string) file_get_contents($path);
         $out = [];
 
+        /*
+         * Two things this pattern has to get right, both of which it got wrong
+         * when the catalogue was regenerated from service_prices on
+         * 2026-09-03 — and the test then reported "could not parse" rather
+         * than a mismatch, which reads like a broken test rather than an
+         * unguarded catalogue:
+         *
+         *  * Anchor on a `serviceId` at exactly four spaces of indentation.
+         *    Plain `serviceId: "` also matches inside `priceServiceId: "`,
+         *    which invents a service named after the database's own key.
+         *  * Item ids contain hyphens (`dc-shirt-1`). `\w` does not match one,
+         *    so every item silently parsed as zero items.
+         */
         preg_match_all(
-            '/serviceId: "([\w-]+)",(.*?)(?=\n    serviceId: "|\z)/s',
+            '/^ {4}serviceId: "([\w-]+)",(.*?)(?=^ {4}serviceId: "|\z)/ms',
             $source,
             $services,
             PREG_SET_ORDER,

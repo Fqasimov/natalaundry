@@ -22,7 +22,7 @@ import { fetchGiftBoxes, type ActiveReward } from "@/lib/gift-boxes";
 import { REWARD_PRESENTATION } from "@/lib/rewards";
 import { useRewardCopy } from "@/lib/rewards-i18n";
 import { useAuth } from "@/lib/auth-context";
-import { OUTSIDE_CITY_FEE, RECOMMENDED_PHOTOS } from "@/lib/pricing";
+import { RECOMMENDED_PHOTOS } from "@/lib/pricing";
 import { createOrder } from "@/lib/orders";
 import { reportError } from "@/lib/errors";
 import { phase, timed } from "@/lib/perf";
@@ -37,6 +37,7 @@ import { PaymentMethodPicker } from "@/components/PaymentMethodPicker";
 import { fetchWallet } from "@/lib/wallet";
 import { removeOrderPhoto, uploadOrderPhoto } from "@/lib/uploads";
 import { BigButton, Pill, ScreenHeader, Stepper } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // "Sifariş xülasəsi" — the final step. Note the hard gate the shipped app
 // enforces: at least three garment photos before the order can be submitted.
@@ -56,6 +57,8 @@ export default function SummaryScreen() {
   const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
   const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(payNotice);
   // Read from the API rather than the profile row the app already has: the
   // balance is money, and a stale copy would offer a method that then fails.
   const [balance, setBalance] = useState<number | null>(null);
@@ -200,7 +203,9 @@ export default function SummaryScreen() {
         addressLat: draft.addressLat,
         addressLng: draft.addressLng,
         notes: draft.courierNote || null,
-        isOutsideCity: draft.isOutsideCity,
+        // The outside-city slider was removed on 2026-09-04; the column stays
+        // for the orders that already carry it, but nothing sets it now.
+        isOutsideCity: false,
         photos: draft.photos,
         promoCode: draft.promoCode || null,
         rewardId: draft.rewardId,
@@ -364,20 +369,6 @@ export default function SummaryScreen() {
           <Ionicons name="chevron-forward" size={18} color={brand.onSoftMuted} />
         </Pressable>
 
-        <View style={styles.outsideRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.outsideTitle}>{t("outsideCity")}</Text>
-            <Text style={styles.outsideNote}>
-              {t("outsideCityNote", { fee: money(OUTSIDE_CITY_FEE) })}
-            </Text>
-          </View>
-          <Switch
-            value={draft.isOutsideCity}
-            onValueChange={(isOutsideCity) => patchDraft({ isOutsideCity })}
-            trackColor={{ true: brand.moonstoneInk, false: brand.timberwolf }}
-          />
-        </View>
-
         <View style={styles.photoCard}>
           <View style={styles.photoHeader}>
             <Ionicons name="camera" size={22} color={brand.moonstoneInk} />
@@ -471,7 +462,7 @@ export default function SummaryScreen() {
         </View>
 
         {payNotice ? <Text style={styles.notice}>{payNotice}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -591,9 +582,6 @@ const styles = StyleSheet.create({
     color: brand.moonstoneInk,
     marginTop: 3,
   },
-  outsideRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
-  outsideTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-  outsideNote: { fontFamily: font.regular, fontSize: 12.5, color: brand.onSoftMuted, marginTop: 3 },
   photoCard: {
     backgroundColor: brand.surface,
     borderRadius: radius.lg,

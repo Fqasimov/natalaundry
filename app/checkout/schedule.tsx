@@ -11,7 +11,7 @@ import {
   DELIVERY_TIERS,
   FREE_DELIVERY_THRESHOLD,
   BASE_DELIVERY_FEE,
-  deliveryFeeFor,
+  priceOrder,
   type DeliveryTier,
 } from "@/lib/pricing";
 import { BigButton, ScreenHeader } from "@/components/ui";
@@ -20,11 +20,10 @@ const SLOTS = ["10:00 - 12:00", "12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00
 
 const TIER_META: Record<
   DeliveryTier,
-  { icon: keyof typeof Ionicons.glyphMap; titleKey: "standard" | "express" | "eco"; descKey: "standardDesc" | "expressDesc" | "ecoDesc"; color: string }
+  { icon: keyof typeof Ionicons.glyphMap; titleKey: "standard" | "express"; descKey: "standardDesc" | "expressDesc"; color: string }
 > = {
   standard: { icon: "time", titleKey: "standard", descKey: "standardDesc", color: brand.moonstoneInk },
   express: { icon: "flash", titleKey: "express", descKey: "expressDesc", color: colors.textPrimary },
-  eco: { icon: "leaf", titleKey: "eco", descKey: "ecoDesc", color: colors.success },
 };
 
 export default function ScheduleScreen() {
@@ -102,7 +101,10 @@ export default function ScheduleScreen() {
         {DELIVERY_TIERS.map((tier) => {
           const meta = TIER_META[tier];
           const selected = draft.tier === tier;
-          const fee = deliveryFeeFor(subtotal, tier, draft.isOutsideCity);
+          // Express doubles the whole bill rather than adding a delivery
+          // surcharge, so a "+₼5" delta no longer describes it. Each card
+          // shows what that choice actually costs to pay.
+          const priced = priceOrder({ subtotal, tier, discount: draft.discount });
           return (
             <Pressable
               key={tier}
@@ -116,9 +118,7 @@ export default function ScheduleScreen() {
                 </Text>
               </View>
               <Text style={styles.tierDesc}>{t(meta.descKey)}</Text>
-              <Text style={[styles.tierFee, tier === "eco" && { color: colors.success }]}>
-                +{money(fee)}
-              </Text>
+              <Text style={styles.tierFee}>{money(priced.total)}</Text>
             </Pressable>
           );
         })}

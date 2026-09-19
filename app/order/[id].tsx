@@ -22,6 +22,7 @@ import { reportError } from "@/lib/errors";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
 import { LIFECYCLE_LABEL, isTracking, type LifecycleState } from "@/lib/lifecycle";
+import { useErrorAlert } from "@/lib/alerts";
 import {
   advanceOrderStatus,
   cancelOrder,
@@ -63,6 +64,8 @@ export default function OrderDetailScreen() {
   const [items, setItems] = useState<OrderItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
   const [countInput, setCountInput] = useState("");
 
   const load = useCallback(async () => {
@@ -241,7 +244,7 @@ export default function OrderDetailScreen() {
             — are unaffected. */}
         <OrderPhotoStrip orderId={order.id} />
 
-        {error ? <Text style={s.error}>{error}</Text> : null}
+        
 
         {isOwner && order.status === "pending" ? (
           <Pressable
@@ -299,7 +302,7 @@ export default function OrderDetailScreen() {
               <TextInput
                 style={s.countInput}
                 keyboardType="decimal-pad"
-                placeholder="0.00"
+                placeholder={t("amountPlaceholder")}
                 placeholderTextColor={brand.onSoftMuted}
                 value={countInput}
                 onChangeText={setCountInput}

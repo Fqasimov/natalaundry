@@ -1,46 +1,32 @@
 import { Image, View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 
 /**
- * The Nata Laundry mark — the blue droplet icon, supplied as artwork and
- * masked to a circle (the source PDF's white page is already stripped, so
- * the corners are transparent).
+ * The Nata Laundry mark — the blue droplet disc, filling its container.
  *
- * It sits on the blue hero gradient on most screens, and the mark's own blue
- * is close to that gradient, so a translucent white ring is drawn behind it
- * by default to keep the edge readable. Pass `ring={false}` on a light
- * background, where the mark separates on its own.
+ * There used to be a translucent white ring behind it, on the reasoning that
+ * the mark's blue was close to the hero gradient and needed separating. Two
+ * things were wrong with that. The hero is midnight green, not blue, so the
+ * mark already separates; and the ring combined with a pale halo baked into
+ * the artwork read as a white smear around the logo on every auth screen.
+ *
+ * The halo is gone too — scripts/clean-logo.js trims it when re-cutting the
+ * circular mask, because it was also bleeding into the app icon. If the logo
+ * artwork is ever replaced, run that script before anything else.
  */
 export function AppLogo({
   size = 84,
-  ring = true,
   style,
 }: {
   size?: number;
-  ring?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const pad = ring ? Math.round(size * 0.06) : 0;
   return (
     <View
-      style={[
-        styles.wrap,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          padding: pad,
-          backgroundColor: ring ? "rgba(255,255,255,0.22)" : "transparent",
-        },
-        style,
-      ]}
+      style={[styles.wrap, { width: size, height: size, borderRadius: size / 2 }, style]}
     >
       <Image
         source={require("@/assets/images/nata-logo.png")}
-        style={{
-          width: size - pad * 2,
-          height: size - pad * 2,
-          borderRadius: (size - pad * 2) / 2,
-        }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
         resizeMode="contain"
         accessibilityRole="image"
         accessibilityLabel="Nata Laundry"

@@ -25,6 +25,7 @@ import {
   type CourierStats,
 } from "@/lib/courier-stats";
 import { shortDate } from "@/lib/dates";
+import { useErrorAlert } from "@/lib/alerts";
 import type { Order } from "@/types/database";
 
 type CourierDetails = {
@@ -55,6 +56,8 @@ export default function CourierProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(notice);
 
   const courierId = session?.user.id ?? null;
 
@@ -100,7 +103,7 @@ export default function CourierProfileScreen() {
         <Text style={s.headerTitle}>{t("courierProfileTitle")}</Text>
       </View>
 
-      {notice ? <Text style={s.notice}>{notice}</Text> : null}
+      
 
       <ScrollView
         contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}

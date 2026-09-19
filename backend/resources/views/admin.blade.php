@@ -68,9 +68,14 @@
 
   /* Tones as classes, not inline styles.
      This page sets a strict style-src with a nonce, which blocks the style
-     ATTRIBUTE as well as style elements — so `el.style.background = …` from
-     script is silently dropped and the tiles come out colourless. Anything
-     visual here has to be a class. */
+     ATTRIBUTE as well as nonced style blocks — so `el.style.background = …`
+     from script is silently dropped and the tiles come out colourless.
+     Anything visual here has to be a class.
+
+     Note the wording above: AdminConsoleTest counts opening style and script
+     tags textually and requires every one to carry a nonce, so writing either
+     tag out literally in a comment fails the test on prose. Say "style block",
+     never the tag itself. */
   .tone-amber  .edge { background:var(--amber); }
   .tone-amber  .value { color:var(--amber); }
   .tone-blue   .edge { background:var(--blue); }

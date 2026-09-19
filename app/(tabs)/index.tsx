@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Animated,
+  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +22,7 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { useCart } from "@/lib/state/cart";
 import { useAuth } from "@/lib/auth-context";
 import { useProfile } from "@/lib/profile";
-import { fetchActiveOrder, hasAnyOrder } from "@/lib/tracking";
+import { fetchActiveOrders, hasAnyOrder } from "@/lib/tracking";
 import { fetchLastCompletedOrder, fetchOrderItems } from "@/lib/orders";
 import { countUnreadNotifications } from "@/lib/notifications";
 import { LIFECYCLE_LABEL, stepIndex, LIFECYCLE_STATES } from "@/lib/lifecycle";
@@ -133,7 +134,14 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const { profile } = useProfile();
   const { add, setQty, reset } = useCart();
-  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  // Every live order, not just the newest. A customer can have several going
+  // at once, and showing one of them made a second order look like it had
+  // replaced the first.
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [orderPage, setOrderPage] = useState(0);
+  // The hero pads 20 either side, so a card spans exactly that much less than
+  // the screen — which makes each page land on a card boundary.
+  const orderCardWidth = useWindowDimensions().width - 40;
   const [ordered, setOrdered] = useState<boolean | null>(null);
   const [unread, setUnread] = useState(0);
   const [canRepeat, setCanRepeat] = useState(false);
@@ -146,13 +154,16 @@ export default function HomeScreen() {
     const userId = session?.user.id;
     if (!userId) return;
     try {
-      const [order, has, unreadCount, last] = await Promise.all([
-        fetchActiveOrder(userId),
+      const [orders, has, unreadCount, last] = await Promise.all([
+        fetchActiveOrders(userId),
         hasAnyOrder(userId),
         countUnreadNotifications(userId),
         fetchLastCompletedOrder(),
       ]);
-      setActiveOrder(order);
+      setActiveOrders(orders);
+      // Keep the visible card in range when an order is delivered while the
+      // customer is looking at it — otherwise the carousel pages to a blank.
+      setOrderPage((p) => Math.min(p, Math.max(0, orders.length - 1)));
       setOrdered(has);
       setUnread(unreadCount);
       setCanRepeat(last !== null);
@@ -293,41 +304,72 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
-          {/* Live order: status, progress and a way into tracking. */}
-          {activeOrder ? (
-            <Pressable
-              style={styles.orderCard}
-              onPress={() => router.push(`/track/${activeOrder.id}`)}
-            >
-              <View style={styles.orderTopRow}>
-                <Text style={styles.heroOrderLabel} numberOfLines={1}>
-                  {t("activeOrder")}
-                </Text>
-                <Text style={styles.orderNo} numberOfLines={1}>
-                  {t("orderNo", { no: activeOrder.order_no ?? "—" })}
-                </Text>
-              </View>
-              <Text style={styles.orderState} numberOfLines={2}>
-                {t(LIFECYCLE_LABEL[activeOrder.lifecycle_state] ?? "stateOrderPlaced")}
-              </Text>
+          {/* Live orders: one card each, swiped horizontally.
+              The ScrollView sits inside the hero's 20pt padding, so its own
+              width is already the card width and pagingEnabled lands each
+              card exactly. */}
+          {activeOrders.length > 0 ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={activeOrders.length > 1}
+                onMomentumScrollEnd={(e) =>
+                  setOrderPage(Math.round(e.nativeEvent.contentOffset.x / orderCardWidth))
+                }
+              >
+                {activeOrders.map((order) => (
+                  <Pressable
+                    key={order.id}
+                    style={[styles.orderCard, { width: orderCardWidth }]}
+                    onPress={() => router.push(`/track/${order.id}`)}
+                  >
+                    <View style={styles.orderTopRow}>
+                      <Text style={styles.heroOrderLabel} numberOfLines={1}>
+                        {t("activeOrder")}
+                      </Text>
+                      <Text style={styles.orderNo} numberOfLines={1}>
+                        {t("orderNo", { no: order.order_no ?? "—" })}
+                      </Text>
+                    </View>
+                    <Text style={styles.orderState} numberOfLines={2}>
+                      {t(LIFECYCLE_LABEL[order.lifecycle_state] ?? "stateOrderPlaced")}
+                    </Text>
 
-              <View style={styles.progressTrack}>
-                {LIFECYCLE_STATES.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.progressSegment,
-                      i <= (stepIndex(activeOrder.lifecycle_state) ?? 0) && styles.progressSegmentDone,
-                    ]}
-                  />
+                    <View style={styles.progressTrack}>
+                      {LIFECYCLE_STATES.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.progressSegment,
+                            i <= (stepIndex(order.lifecycle_state) ?? 0) && styles.progressSegmentDone,
+                          ]}
+                        />
+                      ))}
+                    </View>
+
+                    <View style={styles.orderActionRow}>
+                      <Text style={styles.orderAction}>{t("trackOrder")}</Text>
+                      <Ionicons name="arrow-forward" size={15} color={colors.textInverse} />
+                    </View>
+                  </Pressable>
                 ))}
-              </View>
+              </ScrollView>
 
-              <View style={styles.orderActionRow}>
-                <Text style={styles.orderAction}>{t("trackOrder")}</Text>
-                <Ionicons name="arrow-forward" size={15} color={colors.textInverse} />
-              </View>
-            </Pressable>
+              {/* Dots, only when there is somewhere to swipe to. Without them
+                  a second order is invisible until someone happens to drag. */}
+              {activeOrders.length > 1 ? (
+                <View style={styles.orderDots}>
+                  {activeOrders.map((order, i) => (
+                    <View
+                      key={order.id}
+                      style={[styles.orderDot, i === orderPage && styles.orderDotActive]}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
           ) : (
             <View style={styles.emptyOrderCard}>
               <Ionicons name="cube-outline" size={20} color="rgba(255,255,255,0.9)" />
@@ -791,6 +833,22 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 16,
   },
+  // Page indicator for the live-order carousel.
+  orderDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
+  orderDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  orderDotActive: { backgroundColor: colors.textInverse, width: 18 },
+
   orderTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   heroOrderLabel: {
     flexShrink: 1,

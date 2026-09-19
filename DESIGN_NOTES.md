@@ -70,7 +70,7 @@ information the palette cannot:
 | `serviceTheme` tints | catalogue circles, hero banners, `toplu` green | tells the six services apart |
 | Gift-box navy | `app/gifts` hero and reveal backdrop | matched to the rendered artwork; recolouring leaves the image on a visible rectangle of the wrong colour |
 | Red | destructive rows, cancelled badges, errors | an outcome, not brand colour |
-| Green | `completed` badges, eco tier | same |
+| Green | `completed` badges | same (the eco tier that also used it was removed on 2026-09-04) |
 
 `app/profile/personal.tsx` is a fourth kind of exception: it stays
 deliberately monochrome — a form on white with no accent competing for the
@@ -177,6 +177,36 @@ The order summary reads Ara cəm ₼37.00 / Çatdırılma haqqı ₼5.00 / Ümum
 with a red note explaining the ₼5 applies because the basket is under ₼40.
 `lib/pricing.ts` reproduces exactly those figures, and the Laravel test suite
 asserts them.
+
+### Delivery tiers, changed 2026-09-04
+
+The video's three tiers are now two, and express is priced differently. This
+part of the rebuild no longer describes the shipped 1.0.2 build — it is the
+owner's current rule, and it overrides the recording:
+
+| | rule |
+|---|---|
+| Standart | ₼5 delivery under ₼40, free at ₼40+ |
+| **Ekspres (24 saat)** | **the whole payable total, doubled** |
+| ~~Eko~~ | removed — it priced identically to Standart |
+
+Express is not a delivery surcharge. A ₼40 basket earns free delivery and
+totals ₼40 as standard; choosing express makes it ₼80. The delivery line stays
+₼0 or ₼5 and the multiple lands in the total, because the delivery leg is the
+same drive either way — what is being bought is the 24-hour turnaround on the
+whole job. The doubling applies *after* any discount, so ILK20 and express
+compose the way a customer expects.
+
+The **outside-city fee and its slider are gone** as well, from both checkout
+and the toplu screen. `orders.is_outside_city` survives as a column so existing
+orders keep their history; nothing sets it now, and it no longer changes a
+price.
+
+Three places have to agree, and the database wins any disagreement silently:
+`lib/pricing.ts`, `backend/config/nata.php`, and the `recalc_order_total`
+trigger function (see `supabase/express-doubles-delivery.sql` — note it is
+*that* function which is live, not the identically-bodied
+`enforce_order_pricing` the older SQL file defines).
 
 ## Typeface: switched from Outfit to Plus Jakarta Sans
 

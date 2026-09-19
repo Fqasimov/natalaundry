@@ -72,7 +72,13 @@ export const AddressPickerMap = forwardRef<
 const s = StyleSheet.create({
   wrap: { flex: 1, overflow: "hidden" },
   pinWrap: {
-    ...StyleSheet.absoluteFillObject,
+    // RN 0.86 dropped StyleSheet.absoluteFillObject; absoluteFill is a
+    // registered style id and cannot be spread, so this is it written out.
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },

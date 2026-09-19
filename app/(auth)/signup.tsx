@@ -17,8 +17,11 @@ import { AppLogo } from "@/components/AppLogo";
 import { brand, colors, font, radius } from "@/theme/tokens";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
+import { isStrongPassword } from "@/lib/password";
+import { PasswordRules } from "@/components/PasswordRules";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { BigButton } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // How many digits the emailed signup code has. This is NOT ours to choose:
 // Supabase generates the code and the length is set per project in
@@ -47,6 +50,8 @@ export default function SignupScreen() {
   const [phone, setPhone] = useState("");
   const [referral, setReferral] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
   const [submitting, setSubmitting] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
   const [code, setCode] = useState("");
@@ -60,7 +65,9 @@ export default function SignupScreen() {
     // door with no phone number has no way to finish the job.
     if (!name.trim()) return setError(t("signupNameRequired"));
     if (phone.trim().length < 7) return setError(t("signupPhoneRequired"));
-    if (password.length < 8) return setError(t("signupPasswordShort"));
+    // The same list the rules panel above the button is ticking off — a rule
+    // shown but not enforced is worse than no rule at all.
+    if (!isStrongPassword(password)) return setError(t("passwordRules"));
 
     setSubmitting(true);
     const { error: signUpError, needsConfirmation } = await signUp(email.trim(), password, {
@@ -241,6 +248,7 @@ export default function SignupScreen() {
               onChangeText={setPassword}
             />
           </View>
+          <PasswordRules password={password} />
         </View>
 
         {/* Referral code — signup only.
@@ -267,7 +275,7 @@ export default function SignupScreen() {
         </View>
 
         {/* Error message */}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
 
         {confirmSent ? (
           <View style={styles.confirmBox}>

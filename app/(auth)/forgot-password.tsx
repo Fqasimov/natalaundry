@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/language-context";
 import { BigButton } from "@/components/ui";
 import { brand, font } from "@/theme/tokens";
+import { useErrorAlert } from "@/lib/alerts";
 
 /**
  * "I forgot my password."
@@ -26,6 +27,8 @@ export default function ForgotPasswordScreen() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
 
   const onSend = async () => {
     setError(null);
@@ -75,7 +78,7 @@ export default function ForgotPasswordScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="ad@example.com"
+              placeholder={t("emailPlaceholder")}
               placeholderTextColor={brand.moonstoneInk}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -83,7 +86,7 @@ export default function ForgotPasswordScreen() {
               editable={!sending}
             />
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            
 
             <BigButton
               label={t("resetSendBtn")}

@@ -17,19 +17,35 @@ export const TRACK_POLL_MS = 5000;
 export const TRACK_STALE_MS = 60_000;
 
 /** The customer's current order, if any — the one the home screen shows. */
-export async function fetchActiveOrder(userId: string): Promise<Order | null> {
+/**
+ * Every order this customer currently has in flight, newest first.
+ *
+ * There was only ever a `limit(1)` here, so a customer with two live orders
+ * saw one of them on the home screen and had no indication the other existed.
+ * Placing a second order appeared to replace the first.
+ *
+ * Capped rather than unbounded: the home screen shows these as swipeable
+ * cards, and a customer with more than a handful is better served by the
+ * orders tab than by a carousel they have to page through.
+ */
+export async function fetchActiveOrders(userId: string, limit = 10): Promise<Order[]> {
   const { data, error } = await supabase
     .from("orders")
     .select("*")
     .eq("user_id", userId)
     .not("lifecycle_state", "in", '("delivered","cancelled")')
     .order("created_at", { ascending: false })
-    .limit(1);
+    .limit(limit);
   if (error) throw error;
-  const rows = (data ?? []) as Order[];
   // Guard in case the filter is unavailable (older rows have a null
   // lifecycle_state): fall back to checking on the client.
-  return rows.find((o) => isActive(o.lifecycle_state)) ?? null;
+  return ((data ?? []) as Order[]).filter((o) => isActive(o.lifecycle_state));
+}
+
+/** The most recent in-flight order, or null. Kept for callers that want one. */
+export async function fetchActiveOrder(userId: string): Promise<Order | null> {
+  const rows = await fetchActiveOrders(userId, 1);
+  return rows[0] ?? null;
 }
 
 /** Has this customer ever ordered? Drives the first-order promo card. */

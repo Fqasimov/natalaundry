@@ -28,6 +28,7 @@ import {
   TOPUP_BONUS_TIERS,
 } from "@/lib/wallet";
 import { BigButton } from "@/components/ui";
+import { useErrorAlert } from "@/lib/alerts";
 
 // wallet_transactions columns are confirmed via the schema dump, and the
 // running balance itself lives on profiles.wallet_balance (also confirmed)
@@ -56,6 +57,8 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<WalletTransaction[] | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Failures interrupt rather than sitting in red under the button.
+  useErrorAlert(error);
   const [refreshing, setRefreshing] = useState(false);
 
   // Top-up bounds come from the server — they are the only thing standing
@@ -203,7 +206,7 @@ export default function WalletScreen() {
               </View>
               <Text style={s.intro}>{t("walletIntro")}</Text>
               {notice ? <Text style={s.notice}>{notice}</Text> : null}
-              {error ? <Text style={s.error}>{error}</Text> : null}
+              
             </View>
           }
           ListEmptyComponent={
@@ -280,7 +283,7 @@ export default function WalletScreen() {
             <TextInput
               style={s.input}
               keyboardType="decimal-pad"
-              placeholder="0"
+              placeholder={t("amountPlaceholder")}
               placeholderTextColor={brand.onSoftMuted}
               value={topUpAmount}
               onChangeText={setTopUpAmount}
