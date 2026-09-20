@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Same mark as src/components/LogoMark.vue. Kept in sync by hand: there
+       are two copies because a favicon has to be a standalone file, and at
+       ~700 bytes this replaces a 172 KB PNG that was fetched on every visit. -->
+  <defs>
+    <linearGradient id="d" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#3D8FF2"/>
+      <stop offset="1" stop-color="#1A5FD0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="url(#d)"/>
+  <path d="M50 17 C50 17 77 51 77 64 A27 27 0 1 1 23 64 C23 51 50 17 50 17 Z" fill="#fff"/>
+  <path d="M41 48 C33 57 32 68 37 76 C39 79 43 80 45 78 C47 76 46 73 44 70 C40 64 40 56 43 51 C44 49 43 47 41 48 Z" fill="#B9D2F7"/>
+</svg>
