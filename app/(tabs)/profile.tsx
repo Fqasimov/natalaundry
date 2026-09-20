@@ -261,6 +261,17 @@ export default function ProfileScreen() {
             />
             <View style={s.divider} />
             <Row icon="mci:logout" label={t("signOut")} danger onPress={signOut} />
+            <View style={s.divider} />
+            {/* Both stores require this to be reachable from inside the app,
+                and neither accepts "e-mail us to delete your account". It sits
+                below sign-out so the two destructive rows are together and
+                neither is adjacent to anything routine. */}
+            <Row
+              icon="mci:trash-can-outline"
+              label={t("deleteAccount")}
+              danger
+              onPress={() => router.push("/profile/delete-account")}
+            />
           </View>
         </View>
       </ScrollView>

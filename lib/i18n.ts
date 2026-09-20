@@ -355,6 +355,33 @@ const az = {
   notificationsRow: "Bildirişlər",
   helpSupport: "Kömək və dəstək",
   comingSoon: "Tezliklə",
+
+  // Account deletion. The copy says what goes and what stays, because a
+  // customer who is told "everything is deleted" and then sees their old
+  // orders in the admin console has been lied to.
+  deleteAccount: "Hesabı sil",
+  deleteAccountHeading: "Bu əməliyyat geri qaytarılmır",
+  deleteAccountLead:
+    "Hesabınız və şəxsi məlumatlarınız həmişəlik silinir. Bu e-poçt ünvanı ilə yenidən qeydiyyatdan keçə bilərsiniz, lakin köhnə hesabınız bərpa olunmur.",
+  deleteAccountRemovedTitle: "Silinir",
+  deleteAccountRemoved1: "Adınız, telefon nömrəniz və e-poçt ünvanınız",
+  deleteAccountRemoved2: "Ünvanlarınız, sifariş qeydləriniz və bildirişləriniz",
+  deleteAccountRemoved3: "Giriş məlumatlarınız — parol və Google bağlantısı",
+  deleteAccountKeptTitle: "Saxlanılır",
+  deleteAccountKeptBody:
+    "Mühasibat uçotu üçün sifarişlərin məbləği və tarixi saxlanılır, lakin onlar artıq sizin adınızla bağlı deyil.",
+  deleteAccountConfirmTitle: "Təsdiq",
+  deleteAccountConfirmBody: "Davam etmək üçün {email} ünvanını yazın.",
+  deleteAccountPlaceholder: "E-poçt ünvanınızı daxil edin",
+  deleteAccountButton: "Hesabımı həmişəlik sil",
+  deleteAccountFootnote:
+    "Sualınız varsa, silməzdən əvvəl dəstək xidməti ilə əlaqə saxlayın.",
+  deleteAccountActiveOrder:
+    "Aktiv sifarişiniz var. Sifariş tamamlandıqdan sonra hesabınızı silə bilərsiniz.",
+  deleteAccountStaff:
+    "İşçi hesabları buradan silinmir. Zəhmət olmasa dəstək xidməti ilə əlaqə saxlayın.",
+  deleteAccountNotSignedIn: "Hesabınıza yenidən daxil olun və bir daha cəhd edin.",
+  deleteAccountFailed: "Hesab silinmədi. Bir az sonra yenidən cəhd edin.",
   loading: "Yüklənir…",
   saved: "Yadda saxlanıldı",
   repeatOrderEmpty: "Təkrarlamaq üçün tamamlanmış sifariş tapılmadı",
@@ -882,6 +909,30 @@ const ru: Record<StringKey, string> = {
   notificationsRow: "Уведомления",
   helpSupport: "Помощь и поддержка",
   comingSoon: "Скоро",
+
+  deleteAccount: "Удалить аккаунт",
+  deleteAccountHeading: "Это действие необратимо",
+  deleteAccountLead:
+    "Ваш аккаунт и личные данные будут удалены навсегда. Вы сможете зарегистрироваться снова с этим адресом, но старый аккаунт восстановить нельзя.",
+  deleteAccountRemovedTitle: "Будет удалено",
+  deleteAccountRemoved1: "Имя, номер телефона и адрес электронной почты",
+  deleteAccountRemoved2: "Адреса, комментарии к заказам и уведомления",
+  deleteAccountRemoved3: "Данные для входа — пароль и связь с Google",
+  deleteAccountKeptTitle: "Будет сохранено",
+  deleteAccountKeptBody:
+    "Суммы и даты заказов сохраняются для бухгалтерского учёта, но они больше не связаны с вашим именем.",
+  deleteAccountConfirmTitle: "Подтверждение",
+  deleteAccountConfirmBody: "Чтобы продолжить, введите {email}.",
+  deleteAccountPlaceholder: "Введите ваш адрес электронной почты",
+  deleteAccountButton: "Удалить аккаунт навсегда",
+  deleteAccountFootnote:
+    "Если у вас есть вопросы, свяжитесь с поддержкой до удаления.",
+  deleteAccountActiveOrder:
+    "У вас есть активный заказ. Удалить аккаунт можно после его завершения.",
+  deleteAccountStaff:
+    "Служебные аккаунты здесь не удаляются. Пожалуйста, обратитесь в поддержку.",
+  deleteAccountNotSignedIn: "Войдите в аккаунт заново и повторите попытку.",
+  deleteAccountFailed: "Не удалось удалить аккаунт. Попробуйте позже.",
   loading: "Загрузка…",
   saved: "Сохранено",
   repeatOrderEmpty: "Нет завершённых заказов для повтора",
@@ -1400,6 +1451,29 @@ const en: Record<StringKey, string> = {
   notificationsRow: "Notifications",
   helpSupport: "Help & support",
   comingSoon: "Soon",
+
+  deleteAccount: "Delete account",
+  deleteAccountHeading: "This cannot be undone",
+  deleteAccountLead:
+    "Your account and personal details are deleted permanently. You can sign up again with this address, but the old account cannot be restored.",
+  deleteAccountRemovedTitle: "What is deleted",
+  deleteAccountRemoved1: "Your name, phone number and e-mail address",
+  deleteAccountRemoved2: "Your addresses, order notes and notifications",
+  deleteAccountRemoved3: "Your sign-in details — password and Google link",
+  deleteAccountKeptTitle: "What is kept",
+  deleteAccountKeptBody:
+    "Order amounts and dates are kept for accounting, but they are no longer linked to your name.",
+  deleteAccountConfirmTitle: "Confirm",
+  deleteAccountConfirmBody: "Type {email} to continue.",
+  deleteAccountPlaceholder: "Enter your e-mail address",
+  deleteAccountButton: "Delete my account permanently",
+  deleteAccountFootnote: "If you have questions, contact support before deleting.",
+  deleteAccountActiveOrder:
+    "You have an active order. You can delete your account once it is complete.",
+  deleteAccountStaff:
+    "Staff accounts are not deleted here. Please contact support.",
+  deleteAccountNotSignedIn: "Sign in again and retry.",
+  deleteAccountFailed: "The account was not deleted. Please try again later.",
   loading: "Loading…",
   saved: "Saved",
   repeatOrderEmpty: "No completed order to repeat",
