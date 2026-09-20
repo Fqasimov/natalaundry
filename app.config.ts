@@ -33,11 +33,23 @@ const config: ExpoConfig = {
   name: "Nata Laundry",
   slug: "nata-laundry",
   scheme: "natalaundry",
-  // 1.1.0, not 1.0.4: this release changes what an order costs (express now
+  // 1.1.x, not 1.0.4: this release changes what an order costs (express now
   // doubles the total), removes two delivery options and moves to a new SDK.
   // A customer comparing prices with the last version should see a different
   // minor, and a crash report should not be ambiguous about which build it is.
-  version: "1.1.0",
+  //
+  // The patch is 1.1.1 because 1.1.0 is already READY_FOR_SALE. Apple closes a
+  // version's pre-release train the moment it is approved, so builds 6 and 7 —
+  // both reported as "submitted" by eas-cli, neither ever visible in App Store
+  // Connect — were rejected during processing with ITMS 90062 / 90186:
+  //
+  //   The value for key CFBundleShortVersionString [1.1.0] must contain a
+  //   higher version than that of the previously approved version [1.1.0]
+  //
+  // Incrementing the build number is not enough; the marketing version itself
+  // has to move. Bump this before every store submission that follows a
+  // release, not just when the JS changes.
+  version: "1.1.1",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/images/icon.png",
