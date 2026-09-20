@@ -163,7 +163,18 @@ begin
 end;
 $$;
 
+-- `revoke ... from public` is not enough here, and the first version of this
+-- file got it wrong. Supabase ships ALTER DEFAULT PRIVILEGES granting EXECUTE
+-- on new functions in `public` to anon, authenticated and service_role, so the
+-- function came into existence already callable by `anon` — revoking from the
+-- PUBLIC pseudo-role does not touch a grant held by a named role.
+--
+-- Not exploitable as written (auth.uid() is null for anon, so the first guard
+-- raises), but a function whose whole purpose is deleting auth users should not
+-- be reachable by an unauthenticated caller at all, and the next edit to those
+-- guards should not be the thing standing between anon and auth.users.
 revoke all on function public.delete_my_account() from public;
+revoke all on function public.delete_my_account() from anon;
 grant execute on function public.delete_my_account() to authenticated;
 
 comment on function public.delete_my_account() is
