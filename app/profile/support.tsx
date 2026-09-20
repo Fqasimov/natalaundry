@@ -9,6 +9,16 @@ import { Card, SettingsScaffold, settingsText, settingsUi } from "@/components/S
 const SUPPORT_PHONE = "+994102055050";
 const SUPPORT_EMAIL = "info@natalaundry.az";
 
+// Google Play requires the privacy policy to be reachable from inside the app,
+// not only from the store listing, and the app had no link to it anywhere.
+//
+// The host and the path are both deliberate. `natalaundry.az` has no A record
+// at all — only `www` resolves — and the extensionless `/privacy` returns 403;
+// the policy is served at `/privacy.html`. Pointing Play at the wrong one of
+// these is what produced the "DNS name not found" rejection, so this URL is
+// the one that was actually verified to return 200.
+const PRIVACY_URL = "https://www.natalaundry.az/privacy.html";
+
 export default function SupportScreen() {
   const { t } = useI18n();
 
@@ -45,6 +55,16 @@ export default function SupportScreen() {
         <View style={settingsText.pad}>
           <Text style={settingsText.h2}>{t("supportHours")}</Text>
         </View>
+      </Card>
+
+      {/* Its own card rather than a fourth contact row: it is not a way of
+          reaching us, and it carries no value line under the label. */}
+      <Card>
+        <Pressable style={s.row} onPress={() => Linking.openURL(PRIVACY_URL)}>
+          <Ionicons name="shield-checkmark-outline" size={22} color={settingsUi.accent} />
+          <Text style={[s.label, { flex: 1 }]}>{t("privacyPolicy")}</Text>
+          <Ionicons name="open-outline" size={18} color={settingsUi.accent} />
+        </Pressable>
       </Card>
     </SettingsScaffold>
   );
