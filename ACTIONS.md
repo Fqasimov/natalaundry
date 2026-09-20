@@ -111,10 +111,16 @@ now, and will keep serving every user who has not updated.
 
 ## Phase 1 — deploy the API
 
-**Nothing else unblocks until this is done.** `EXPO_PUBLIC_API_URL` currently
-points at `http://192.168.0.107:8000` — a laptop on your home Wi-Fi. In a store
-build that is dead twice over: a private address nobody can route to, and plain
-HTTP, which iOS App Transport Security blocks outright.
+> **Corrected 2026-09-20: this no longer blocks the app.** When this was
+> written the phone app posted every order to Laravel, so a dead API meant a
+> dead app. It does not any more — `lib/api.ts` is deleted and
+> `EXPO_PUBLIC_API_URL` is read nowhere in the tree. The app writes straight
+> to Supabase (see `supabase/direct-writes.sql`), and this deployment now
+> serves **the admin console only**.
+>
+> So it is no longer a release blocker, and Phase 4 does not wait for it.
+> It is still needed — without it you have no way to approve an order or
+> dispatch a courier except by hand in the SQL editor.
 
 Full runbook: **[`backend/DEPLOY.md`](backend/DEPLOY.md)**. Summary:
 
@@ -216,19 +222,22 @@ unavoidable with a store release. So:
 
 ## Phase 4 — build and submit
 
-### 4.1 Repoint the app
+### 4.1 Check the build's addresses
 
-In the **root** `.env`:
+~~Set `EXPO_PUBLIC_API_URL`.~~ **Obsolete as of 2026-09-20** — the variable is
+read nowhere in the app, and `lib/api.ts` no longer exists. Nothing to repoint.
 
+What still matters is that `EXPO_PUBLIC_SUPABASE_URL` is the **Frankfurt**
+project (`kzfsagccvxjmsbqjdpnb`), and that the values are set **as EAS
+environment variables**, not only in the local `.env` — that file is gitignored
+and never travels with a cloud build:
+
+```bash
+node node_modules/eas-cli/bin/run env:list --environment production
 ```
-EXPO_PUBLIC_API_URL=https://api.natalaundry.az
-```
 
-**No trailing slash** — `lib/api.ts` appends `/api` itself. Also confirm
-`EXPO_PUBLIC_SUPABASE_URL` is the Frankfurt one (it is).
-
-**Set these in the EAS build secrets too.** Expo inlines them at build time; the
-local file does not travel with an EAS build.
+Getting this wrong is quiet. Metro does not execute modules, so a missing key
+bundles cleanly and only throws at launch, on the device, as a blank screen.
 
 ### 4.2 Clear the cache
 

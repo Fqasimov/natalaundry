@@ -233,12 +233,27 @@ Key invariants:
   by the order's state, never by a manual toggle.
 - **ILK20**: 20% off the first order, applied server-side. The app never
   sends the code; it only announces the offer.
-- **Writes go through the API.** Reads use Supabase directly under RLS, but
-  anything that decides money or state — order creation, lifecycle
-  transitions, claims, the toplu count, location pings, cancellation — goes
-  through Laravel via `lib/api.ts`, because RLS chooses rows and has no
-  opinion about the values in them. Never add a direct table write for those.
-  `EXPO_PUBLIC_API_URL` is required, deliberately with no fallback.
+- **Writes go direct to Supabase, but the database decides the values.**
+  This replaced the earlier rule that writes went through Laravel via
+  `lib/api.ts`; that file is deleted and `EXPO_PUBLIC_API_URL` is read
+  nowhere in the app. The reasoning behind the old rule still holds — RLS
+  chooses rows and has no opinion about the values in them — so the check
+  moved into the database rather than being dropped:
+
+  - `BEFORE INSERT` triggers overwrite line prices from the catalogue,
+    recompute the total and force the status. Proved against production by
+    `scripts/migration/can-client-write-safely.php`: a client asking for
+    total 0.01 / status 'completed' got back 100.00 / 'pending'.
+  - What a trigger cannot settle is a `SECURITY DEFINER` function that
+    re-checks the caller — `claim_order` (two couriers, one millisecond) and
+    `transition_order` (the nine-state machine). Being callable is not being
+    authorised.
+  - Payments go through the `payments` / `payments-callback` Edge Functions.
+
+  See `supabase/direct-writes.sql` and `supabase/harden-order-insert.sql`.
+  **Never add a client-side write that sets a price, a total or a state**;
+  add the trigger or the function instead. Laravel now serves the admin
+  console only.
 - **RLS: applied for every table that exists.** As of 2026-08-27 all 19
   tables in `public` have `rowsecurity = true`. `rls.sql` is superseded and
   must not be run — it names `profiles.avatar_url`, which does not exist, and
