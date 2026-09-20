@@ -1,0 +1,208 @@
+/*
+  Tokens carried over from the app's theme/tokens.ts so the site and the phone
+  app are recognisably the same product. The coastal palette is the one the
+  app's home, orders and auth screens use; the logo blue is kept separately
+  because the mark itself is that blue and nothing else on the page should be.
+*/
+:root {
+  --midnight: #004554;
+  --moonstone: #44a6b5;
+  --moonstone-dark: #38909e;
+  --moonstone-ink: #256f7d;
+  --moonstone-soft: #daedf1;
+  --light-blue: #b2d5e2;
+  --alice: #e9f1f6;
+  --timberwolf: #d3d0c8;
+  --timberwolf-soft: #e4e2dc;
+
+  --logo-blue: #3184ec;
+
+  --ink: #14181f;
+  --ink-soft: #3f6b77;
+  --ink-faint: #7a828e;
+  --surface: #ffffff;
+  --bg: #f7fafc;
+  --border: #cbdee8;
+  --divider: #dfe9ef;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --max: 1180px;
+  --gutter: clamp(20px, 5vw, 48px);
+
+  /*
+    One spring and one ease, used everywhere. Motion that is consistent reads
+    as intentional; a different curve per component reads as noise.
+    The spring overshoots slightly — that is what stops a transition feeling
+    mechanical — and is never used on opacity, where an overshoot would clip.
+  */
+  --spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --shadow-sm: 0 1px 2px rgba(0, 69, 84, 0.05), 0 2px 8px rgba(0, 69, 84, 0.04);
+  --shadow-md: 0 2px 6px rgba(0, 69, 84, 0.06), 0 12px 32px rgba(0, 69, 84, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 69, 84, 0.1), 0 32px 64px rgba(0, 69, 84, 0.12);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  /*
+    Inter is not decoration. Plus Jakarta Sans covers the full Azerbaijani
+    alphabet but carries no Cyrillic, and CSS does not fall back per glyph the
+    way iOS and Android do — with a bare family name the Russian copy drops to
+    the default serif. Inter catches those glyphs. Do not remove it.
+  */
+  font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--moonstone);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ── layout ──────────────────────────────────────────────────────────────── */
+
+.shell {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: clamp(72px, 11vw, 148px);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--moonstone-ink);
+}
+
+/* Fluid, but with a real lower bound — a display size that collapses to body
+   size on a phone stops being a display size. */
+.h-display {
+  font-size: clamp(2.35rem, 6.2vw, 4.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+
+.h-section {
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+}
+
+.lead {
+  font-size: clamp(1.02rem, 1.35vw, 1.2rem);
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+/* ── scroll reveal ───────────────────────────────────────────────────────── */
+/*
+  The initial state is applied by JS (`.reveal-ready`), never by CSS alone.
+  If the script fails or IntersectionObserver is missing, nothing was ever
+  hidden, so the page reads normally instead of being blank — the failure mode
+  of scroll animation done the other way round.
+*/
+.reveal-ready {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.62s var(--ease),
+    transform 0.82s var(--spring);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal-ready {
+    opacity: 1;
+    transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+::selection {
+  background: var(--moonstone);
+  color: #fff;
+}

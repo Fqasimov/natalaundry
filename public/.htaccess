@@ -1,0 +1,58 @@
+# Hostinger (Apache/LiteSpeed). Upload this alongside index.html in public_html.
+#
+# Without the rewrite below, /privacy and /terms return 404 when opened
+# directly or refreshed: they are client-side routes, and Apache looks for
+# files that do not exist. Google fetches the privacy URL directly, with no
+# prior navigation, so that 404 would be the whole listing blocked.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Force HTTPS.
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+  # The apex has no A record today and only www resolves. If an address record
+  # is ever added for the bare domain, this keeps one canonical host so the
+  # site is not indexed twice.
+  RewriteCond %{HTTP_HOST} ^natalaundry\.az$ [NC]
+  RewriteRule ^(.*)$ https://www.natalaundry.az/$1 [R=301,L]
+
+  # Old URLs from the previous site. A privacy policy link that has been handed
+  # to Google, printed, or e-mailed must not break.
+  RewriteRule ^privacy\.html$ /privacy [R=301,L]
+  RewriteRule ^terms\.html$ /terms [R=301,L]
+
+  # Everything that is not a real file or directory is handed to the SPA.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+    application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # Hashed filenames, so they can be cached hard.
+  <FilesMatch "\.(js|css|woff2|png|jpg|jpeg|svg|webp|mp4)$">
+    ExpiresDefault "access plus 1 year"
+    Header set Cache-Control "public, immutable"
+  </FilesMatch>
+  # index.html must not be, or a deploy is invisible until caches expire.
+  <FilesMatch "\.(html)$">
+    ExpiresDefault "access plus 0 seconds"
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+ErrorDocument 404 /index.html
