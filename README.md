@@ -80,8 +80,13 @@ nothing else.
   privacy contact that cannot receive mail is a compliance problem by itself.
 - Terms referred to a **CleanPass** subscription. The app calls it Nata Plus.
   Neutralised to "subscription" here; decide which name is real.
-- `public/loader.mp4` is a generated clip. Deleting it is supported — the SVG
-  mark underneath is a complete animation, not a placeholder.
+- `public/loader.mp4` is a generated clip that the site **does not use**. It is
+  a blue disc on black with its own droplet at its own scale; laid over the
+  loader it ghosted a second, larger drop around the mark and left a faintly
+  visible square where the mask ended. The ripple it was bought for is
+  reproduced in `LogoMark.vue` instead, where it is sharp at any size and costs
+  no bytes. The file is kept because it is what those credits paid for; putting
+  it back is a two-line change in `Preloader.vue`.
 
 ## Layout
 
