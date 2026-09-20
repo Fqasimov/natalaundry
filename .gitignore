@@ -3,3 +3,7 @@ dist/
 .DS_Store
 *.local
 .vite/
+
+# Deploy bundle — regenerated from dist/ whenever it is needed, and 1.4 MB of
+# it is the same files already tracked in public/.
+*.zip
