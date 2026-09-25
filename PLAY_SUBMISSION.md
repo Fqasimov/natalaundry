@@ -92,19 +92,43 @@ visible feature.
 - Category: Lifestyle. Contact e-mail: `info@natalaundry.az`
 - Countries: Azerbaijan at minimum
 
-## 5. The testing gate — settles the timeline
+## 5. The testing gate — CONFIRMED, and it is the long pole
 
-**If the Play developer account is a personal one created after November 2023**,
-Google requires **12 testers opted in continuously for 14 days** on a *closed*
-testing track before production unlocks. Internal testing does not count
-toward it, and the 14 days only start once the twelfth tester has opted in.
+**The developer account is a personal one.** Confirmed 2026-09-25.
 
-**If it is an organisation account**, none of this applies and you can go
-straight to production.
+So unless it was created before **13 November 2023** (worth checking once at
+*Settings → Developer account → Account details* — if it predates that, none
+of this applies), production is gated behind:
 
-This single fact is the difference between shipping this week and shipping in
-two weeks or more. Check *Play Console → Settings → Developer account →
-Account details*.
+> **12 testers, opted in continuously for 14 days, on a CLOSED testing track.**
+
+Then you apply for production access, and Google reviews that application.
+
+Four things about this that cost people weeks:
+
+1. **Internal testing does not count.** It has to be a *closed* track. The
+   earlier rejected submission was internal testing, so no clock has started.
+2. **The 14 days start when the twelfth tester has opted in**, not when the
+   track is created. Every day the testers are not recruited is a day added.
+3. **Dropping below 12 can reset the clock.** Recruit more than twelve.
+4. **Google looks at engagement**, not just headcount. Testers should actually
+   open the app during the fortnight.
+
+**Therefore: create the closed track and send the opt-in link today.** Nothing
+else on this list is on the critical path — the store listing, the feature
+graphic and the Data safety form can all be finished while the clock runs.
+
+### Running it
+
+- Testers are identified by **Google account e-mail**. A personal Gmail is
+  fine; a non-Google address will not work.
+- Use a **Google Group** rather than pasting a list: adding or replacing a
+  tester later then needs no new release.
+- Each tester opens the opt-in URL, accepts, then installs from Play.
+- Track it at *Testing → Closed testing → Testers*.
+
+Realistic timeline from the day twelve people have opted in: **14 days + the
+production-access review**, which is usually days rather than hours.
 
 ## 6. Release
 
