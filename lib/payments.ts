@@ -49,7 +49,55 @@ export function isSettled(status: PaymentStatus | string | null | undefined): bo
 export type PaymentOptions = {
   methods: PaymentMethod[];
   wallets_enabled: boolean;
+  /** Offered, but greyed out and not selectable. See CARD_PAYMENTS_ENABLED. */
+  unavailable: PaymentMethod[];
 };
+
+/**
+ * Whether the bank gateway may be used at all.
+ *
+ * FALSE, deliberately, and this is the only place to change it.
+ *
+ * KAPITAL_BASE_URL points at `txpgtst.kapitalbank.az` — Kapital's **test**
+ * gateway, with their public sandbox merchant. A card entered there is not
+ * charged, and worse, the sandbox answers our callback with a success the
+ * `payments-callback` function has no way to tell from a real one. So an
+ * order would be marked paid, and a wallet top-up would credit real balance,
+ * for money that never moved. Silent free money in one direction and a
+ * customer who believes they have paid in the other.
+ *
+ * Cash is a first-class method here — 7 of the first 15 real orders were cash
+ * — so the product works without the gateway. Card stays visible but disabled
+ * rather than hidden: a customer who used card on the old build should see
+ * that it is temporarily off, not be left wondering where it went.
+ *
+ * To turn card back on: get production credentials from Kapital, set
+ * KAPITAL_BASE_URL to `https://e-commerce.kapitalbank.az/api` and the
+ * callback URL to a public HTTPS address, verify a real payment of a small
+ * amount end to end, and only then flip this to true. Flipping it first ships
+ * a checkout that takes no money.
+ */
+export const CARD_PAYMENTS_ENABLED = false;
+
+/**
+ * Methods that ride on the bank gateway, and so are off whenever it is.
+ *
+ * Cash and `balance` are not here: cash never touches a gateway, and a
+ * balance payment is an in-house debit inside one locked transaction
+ * (`pay_order`), so it moves money that is already ours to move. A customer
+ * with a balance can still spend it — they simply cannot add to it until the
+ * gateway is live, since topping up is itself a card payment.
+ */
+export const GATEWAY_METHODS: readonly PaymentMethod[] = [
+  "card",
+  "apple_pay",
+  "google_pay",
+];
+
+/** True when this method cannot be used right now. */
+export function isMethodUnavailable(method: PaymentMethod): boolean {
+  return !CARD_PAYMENTS_ENABLED && GATEWAY_METHODS.includes(method);
+}
 
 /**
  * Which methods checkout may offer.
@@ -61,7 +109,11 @@ export type PaymentOptions = {
  * end the customer discovers at the bank's page.
  */
 export async function fetchPaymentOptions(): Promise<PaymentOptions> {
-  return { methods: ["card", "cash", "balance"], wallets_enabled: false };
+  return {
+    methods: ["card", "cash", "balance"],
+    wallets_enabled: false,
+    unavailable: (["card", "cash", "balance"] as PaymentMethod[]).filter(isMethodUnavailable),
+  };
 }
 
 /**
@@ -156,6 +208,11 @@ export async function payForOrder(
     }
     return fetchPaymentState(orderId);
   }
+
+  // A disabled method must not be reachable by any path — a stale screen, a
+  // resumed checkout, a future caller. The picker greys it out; this refuses
+  // it. A UI-only guard is not a guard.
+  if (isMethodUnavailable(method)) throw new Error("payment_method_unavailable");
 
   // Card goes through the Edge Function: it holds the bank credentials, reads
   // the amount from `orders.total` rather than taking one from here, and gives

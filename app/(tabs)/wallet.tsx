@@ -28,6 +28,7 @@ import {
   TOPUP_BONUS_TIERS,
 } from "@/lib/wallet";
 import { BigButton } from "@/components/ui";
+import { CARD_PAYMENTS_ENABLED } from "@/lib/payments";
 import { useErrorAlert } from "@/lib/alerts";
 
 // wallet_transactions columns are confirmed via the schema dump, and the
@@ -188,7 +189,9 @@ export default function WalletScreen() {
                   {money(balance ?? 0)}
                 </Text>
                 <Pressable
-                  style={s.topUpButton}
+                  style={[s.topUpButton, !CARD_PAYMENTS_ENABLED && s.topUpButtonOff]}
+                  disabled={!CARD_PAYMENTS_ENABLED}
+                  accessibilityState={{ disabled: !CARD_PAYMENTS_ENABLED }}
                   onPress={() => {
                     // Preselect the smallest preset so the sheet opens on a
                     // usable action instead of a disabled zero.
@@ -205,6 +208,15 @@ export default function WalletScreen() {
                 </Pressable>
               </View>
               <Text style={s.intro}>{t("walletIntro")}</Text>
+              {/*
+                Topping up is itself a card payment through the same gateway,
+                so it goes off with card. Said plainly here: a top-up button
+                that does nothing is worse than one that explains itself.
+                Balance already held stays spendable at checkout.
+              */}
+              {!CARD_PAYMENTS_ENABLED ? (
+                <Text style={s.topUpOffNote}>{t("walletTopUpUnavailable")}</Text>
+              ) : null}
               {notice ? <Text style={s.notice}>{notice}</Text> : null}
               
             </View>
@@ -370,6 +382,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   topUpLabel: { fontFamily: font.bold, fontSize: 13.5, color: brand.moonstoneInk },
+  // Matches PaymentMethodPicker's rowDisabled, so a disabled control looks
+  // the same wherever it appears.
+  topUpButtonOff: { opacity: 0.45 },
   notice: {
     ...type.caption,
     color: brand.onSoft,
@@ -437,6 +452,15 @@ const s = StyleSheet.create({
   sheetCancel: { alignItems: "center", paddingVertical: 12 },
   sheetCancelLabel: { fontFamily: font.medium, fontSize: 14.5, color: brand.onSoftMuted },
   intro: { ...type.caption, color: brand.onSoftMuted },
+  topUpOffNote: {
+    ...type.caption,
+    color: brand.onSoft,
+    backgroundColor: brand.moonstoneSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 10,
+  },
   error: {
     ...type.caption,
     color: colors.danger,

@@ -19,6 +19,16 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!--
+            A fixed, throwaway key so the suite runs on a fresh clone.
+            backend/.env is gitignored, so a new checkout has no APP_KEY at
+            all and every test that boots the HTTP kernel died with "No
+            application encryption key has been specified" — four failures
+            that look like broken code and are not. This is NOT a secret and
+            must never be the production key: it encrypts nothing but a
+            throwaway in-memory session.
+        -->
+        <env name="APP_KEY" value="base64:bmF0YS1sYXVuZHJ5LXRlc3Rpbmcta2V5LW5vdHJlYWw="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

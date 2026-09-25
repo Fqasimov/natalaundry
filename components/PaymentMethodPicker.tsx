@@ -3,7 +3,7 @@ import { AppIcon, type IconName } from "@/components/AppIcon";
 import { useI18n } from "@/lib/language-context";
 import type { StringKey } from "@/lib/i18n";
 import { brand, colors, font, money, radius } from "@/theme/tokens";
-import type { PaymentMethod } from "@/lib/payments";
+import { isMethodUnavailable, type PaymentMethod } from "@/lib/payments";
 
 /**
  * How the customer wants to pay.
@@ -59,7 +59,12 @@ export function PaymentMethodPicker({
         const isBalance = method === "balance";
         const shortOfFunds =
           isBalance && balance !== null && amountDue > 0 && balance < amountDue;
-        const rowDisabled = disabled || shortOfFunds;
+        // Card and the wallets are shown greyed out rather than removed while
+        // the bank gateway is off. Removing them reads as a bug to anyone who
+        // paid by card on the previous build; a disabled row with a reason
+        // reads as a decision.
+        const unavailable = isMethodUnavailable(method);
+        const rowDisabled = disabled || shortOfFunds || unavailable;
 
         return (
           <Pressable
@@ -87,7 +92,11 @@ export function PaymentMethodPicker({
               <Text style={styles.label} numberOfLines={1}>
                 {t(look.label)}
               </Text>
-              {isBalance ? (
+              {unavailable ? (
+                <Text style={[styles.note, styles.noteWarn]} numberOfLines={2}>
+                  {t("payMethodUnavailable")}
+                </Text>
+              ) : isBalance ? (
                 <Text
                   style={[styles.note, shortOfFunds && styles.noteWarn]}
                   numberOfLines={1}

@@ -28,6 +28,7 @@ import { reportError } from "@/lib/errors";
 import { phase, timed } from "@/lib/perf";
 import {
   fetchPaymentOptions,
+  isMethodUnavailable,
   payForOrder,
   waitForSettlement,
   walletForPlatform,
@@ -51,10 +52,12 @@ export default function SummaryScreen() {
   const [rewards, setRewards] = useState<ActiveReward[]>([]);
   const rewardCopy = useRewardCopy();
 
-  // Card is the default because it is the only method that is certain to be
-  // offered — wallets depend on the bank terminal, and the list is narrowed
-  // to whatever the server says is actually available.
-  const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
+  // Cash is the default, and while the bank gateway is off it is the only
+  // method that can complete a payment outright (Nata Balance can too, but
+  // only for a customer who already has the funds). Card used to be the
+  // default here; defaulting to a method the picker now greys out would open
+  // checkout on a dead selection.
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("cash");
   const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
   // Failures interrupt rather than sitting in red under the button.
@@ -71,10 +74,17 @@ export default function SummaryScreen() {
         // Only this device's own wallet is ever shown: an Apple Pay button on
         // Android is a dead end.
         const wallet = walletForPlatform();
-        setPayMethods(
-          options.methods.filter(
-            (m) => m === "card" || m === "cash" || m === "balance" || m === wallet,
-          ),
+        const offered = options.methods.filter(
+          (m) => m === "card" || m === "cash" || m === "balance" || m === wallet,
+        );
+        setPayMethods(offered);
+        // If the selection is one the server has since disabled, move off it.
+        // Leaving it selected would put the confirm button behind a row the
+        // picker will not let the customer change away from by tapping it.
+        setPayMethod((current) =>
+          isMethodUnavailable(current)
+            ? (offered.find((m) => !isMethodUnavailable(m)) ?? "cash")
+            : current,
         );
       })
       // Falling back to card + cash is safe: both work without any
