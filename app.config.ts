@@ -100,18 +100,68 @@ const config: ExpoConfig = {
         apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       },
     },
+    /*
+     * Only what the app actually calls.
+     *
+     * READ_PHONE_STATE was removed on 2026-09-25. It was carried over from
+     * the recovered 1.0.2 manifest and nothing in this codebase ever read it
+     * — grep finds no caller. Google Play treats it as sensitive and expects
+     * a core-functionality justification; declaring one you cannot justify
+     * invites a policy review you would lose, for a capability the app does
+     * not use.
+     *
+     * Location is FOREGROUND ONLY (requestForegroundPermissionsAsync +
+     * watchPositionAsync, driven by the order's state). No
+     * ACCESS_BACKGROUND_LOCATION, so Play's background-location declaration
+     * and demo video do not apply. Keep it that way — adding it turns a
+     * routine submission into a multi-week review.
+     */
     permissions: [
       "CAMERA",
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION",
-      "READ_PHONE_STATE",
     ],
   },
   plugins: [
     "expo-router",
     "expo-location",
-    "expo-camera",
-    "expo-image-picker",
+    /*
+     * Camera without the microphone.
+     *
+     * The plugin adds RECORD_AUDIO on Android and a microphone usage string
+     * on iOS by default, because expo-camera can record video. This app only
+     * ever takes stills of garments, so both were asking for a capability it
+     * never uses — an extra sensitive permission on the Play listing and an
+     * unexplained mic prompt on iOS.
+     *
+     * The iOS string stays in infoPlist above because the shipped 1.0.2 build
+     * declared it and it is already through review; it is inert without the
+     * native mic capability. Nothing here requests the microphone.
+     */
+    [
+      "expo-camera",
+      {
+        // Option names taken from the plugin's own signature in
+        // node_modules/expo-camera/plugin/build/withCamera.js, not guessed:
+        // an unknown key here is ignored silently and the permission ships.
+        recordAudioAndroid: false,
+        microphonePermission: false,
+      },
+    ],
+    /*
+     * expo-image-picker adds RECORD_AUDIO too, independently of expo-camera —
+     * turning it off in one place is not enough, which is why the resolved
+     * config kept showing it after the camera plugin was configured. Passing
+     * microphonePermission: false here does not merely skip the permission,
+     * it adds it to the manifest's blocked list, so the merger strips it even
+     * if some other library reintroduces it.
+     */
+    [
+      "expo-image-picker",
+      {
+        microphonePermission: false,
+      },
+    ],
     // SDK 57 moved these three to explicit config plugins; without them the
     // prebuild step skips their native setup and fonts/images/status bar
     // silently fall back to defaults in a dev or production build.

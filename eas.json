@@ -7,28 +7,23 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:8000"
-      }
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.natalaundry.az"
-      }
+      "channel": "preview"
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.natalaundry.az"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
     "production": {
+      "android": {
+        "serviceAccountKeyPath": "../../.play-store/service-account.json",
+        "track": "internal"
+      },
       "ios": {
         "ascAppId": "6793012757",
         "appleTeamId": "LJ6BQ556G4",
