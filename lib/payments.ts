@@ -52,16 +52,41 @@ export type PaymentOptions = {
 };
 
 /**
+ * Card is off because the function that would take the payment does not exist.
+ *
+ * Probed against production on 2026-09-25:
+ *
+ *     POST /functions/v1/payments
+ *     404 {"code":"NOT_FOUND","message":"Requested function was not found"}
+ *
+ * `payForOrder` invokes that function for card and rethrows its error, so
+ * every customer who chose Kart got an error alert and no payment — on the
+ * live App Store build, not just in review. Offering a button that cannot
+ * work is worse than not offering it: cash and Nata Balance both settle
+ * through `pay_order` in the database and are unaffected.
+ *
+ * **To turn card back on:** deploy the `payments` and `payments-callback`
+ * Edge Functions with KAPITAL_USERNAME, KAPITAL_PASSWORD and a production
+ * KAPITAL_BASE_URL set as secrets, confirm with
+ * `node scripts/migration/probe-edge-functions.js`, then flip this to true.
+ * Nothing else has to change.
+ */
+export const CARD_ENABLED = false;
+
+/**
  * Which methods checkout may offer.
  *
- * Card and cash always work. Wallets depend on the merchant terminal's
- * configuration at the bank, and there is no longer a server to ask — so they
- * stay off until someone turns them on deliberately, which is the safe
- * default: offering Apple Pay on a terminal that does not accept it is a dead
- * end the customer discovers at the bank's page.
+ * Wallets depend on the merchant terminal's configuration at the bank, and
+ * there is no longer a server to ask — so they stay off until someone turns
+ * them on deliberately, which is the safe default: offering Apple Pay on a
+ * terminal that does not accept it is a dead end the customer discovers at
+ * the bank's page.
  */
 export async function fetchPaymentOptions(): Promise<PaymentOptions> {
-  return { methods: ["card", "cash", "balance"], wallets_enabled: false };
+  return {
+    methods: CARD_ENABLED ? ["card", "cash", "balance"] : ["cash", "balance"],
+    wallets_enabled: false,
+  };
 }
 
 /**

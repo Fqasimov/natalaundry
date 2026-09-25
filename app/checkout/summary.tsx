@@ -51,11 +51,16 @@ export default function SummaryScreen() {
   const [rewards, setRewards] = useState<ActiveReward[]>([]);
   const rewardCopy = useRewardCopy();
 
-  // Card is the default because it is the only method that is certain to be
-  // offered — wallets depend on the bank terminal, and the list is narrowed
-  // to whatever the server says is actually available.
-  const [payMethod, setPayMethod] = useState<PaymentMethod>("card");
-  const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
+  // Cash is the default, and the initial list, because it is the only method
+  // that cannot fail: it settles through `pay_order` in the database with no
+  // gateway involved. Card used to be the default, but it is off while the
+  // `payments` Edge Function is undeployed (see CARD_ENABLED) — and these two
+  // lines are why that mattered here as well as in lib/payments.ts. They
+  // render before the effect below resolves, so a hardcoded "card" would show
+  // the card option for a frame and, worse, leave it *selected* even once the
+  // list that no longer contains it arrives.
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("cash");
+  const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
   // Failures interrupt rather than sitting in red under the button.
   useErrorAlert(payNotice);
@@ -77,8 +82,8 @@ export default function SummaryScreen() {
           ),
         );
       })
-      // Falling back to card + cash is safe: both work without any
-      // terminal-specific configuration.
+      // Falling back to the initial ["cash"] is safe: it needs no gateway and
+      // no terminal-specific configuration.
       .catch(() => undefined);
     return () => {
       cancelled = true;
