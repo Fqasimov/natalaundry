@@ -1,157 +1,145 @@
-# Google Play — everything still needed to get to production
+# Google Play — the whole path to production
 
-Status as of 2026-09-25. The app has **never been published on Play**; there
-was one internal-testing submission and it was rejected.
+Status 2026-09-25. The app has **never been published on Play**. There was one
+internal-testing submission, and it was rejected.
 
-**The rejection reason is known and fixed.** It was not account deletion, and
-not the app at all:
+**The rejection is fixed and it was never the app.** It was the privacy policy
+URL failing DNS:
 
 > The privacy policy URL you provided is returning a DNS name not found error.
 > `https://natalaundry.az/privacy`
 
-Two faults in one URL — the apex had no address record, and the extensionless
-`/privacy` path returned 403. Both are fixed: the apex resolves, both paths
-return 200, and `/privacy.html` redirects rather than 404s. Verified from the
-authoritative nameservers, 8.8.8.8 and 1.1.1.1.
+Two faults in one URL — the apex had no address record, and extensionless
+`/privacy` returned 403. Both closed: the apex resolves, both paths return 200,
+`/privacy.html` redirects. Verified from the authoritative nameservers and from
+8.8.8.8 and 1.1.1.1.
 
 ---
 
-## 1. Done — no further action
+## The one thing that decides the timeline
 
-| Item | Evidence |
-|---|---|
-| Privacy policy live | `https://www.natalaundry.az/privacy` → 200 |
-| Apex resolves | `natalaundry.az` → 147.93.54.248 → 301 → www |
-| TLS covers both names | `SAN: DNS:natalaundry.az, DNS:www.natalaundry.az` |
-| Web account-deletion route | Section 5 of the privacy policy |
-| In-app account deletion | Profile → *Hesabı sil*; `delete_my_account()` applied and verified in production |
-| Privacy policy linked in-app | Profile → Kömək və dəstək (Google requires this) |
-| Unused permission removed | `READ_PHONE_STATE` dropped from `app.config.ts` |
-| Upload signing key | SHA-1 `59:5B:7A:37:9B:18:1C:AB:CE:22:4E:77:CA:22:C7:B5:A6:A8:A7:CA` — matches Play |
+**The developer account is personal** (confirmed 2026-09-25). Unless it was
+created before **13 November 2023** — check once at *Settings → Developer
+account → Account details*; if it predates that, skip to Phase 3 — production
+is gated behind:
 
-## 2. Blocked on a new build
+> **12 testers, opted in continuously for 14 days, on a CLOSED track.**
 
-**The newest AAB is versionCode 9, built from `5d45215`.** It predates both
-the in-app privacy policy link (`cc1ef0a`) and the permission removal
-(`e20814e`). Submitting it would ship without the link Google asks for.
+Internal testing does not count, so no clock has started. The 14 days begin
+when the twelfth tester opts in, and dropping below 12 can reset it.
 
-```bash
-npx eas-cli build --platform android --profile production --non-interactive
-```
+**Everything else can be done while that clock runs.** So the order below is
+not "easiest first" — it is "what starts the clock first".
 
-That produces versionCode 10 at 1.1.1. Nothing else is waiting on code.
+---
 
-## 3. Play Console — App content
+## Phase 1 — today, to start the clock
 
-Every one of these blocks submission until it is green.
+1. **Upload the build to a CLOSED track.** Play Console → *Testing → Closed
+   testing → Create track* (or use the default *Alpha*) → *Create new release*
+   → upload the AAB → release name `1.1.1 (12)` → Save → Review → **Start
+   rollout**.
+
+   Some App content answers are demanded before even a closed release will
+   save. If so, do Phase 2 first — but do it today, because nothing starts
+   until this release is live.
+
+2. **Recruit testers.** *Testers* tab → create an e-mail list or point it at a
+   **Google Group** (a group means swapping a tester later needs no new
+   release). Testers are identified by **Google account e-mail**; a non-Google
+   address silently will not work.
+
+   Recruit **15, not 12** — a dropout below twelve can restart the fortnight.
+   Couriers, staff, family, regular customers.
+
+3. **Send the opt-in link.** Each tester opens it, accepts, then installs from
+   Play. Watch the count on the *Testers* tab. **The clock starts at twelve.**
+
+4. **Ask them to actually use it.** Google looks at engagement, not just the
+   headcount. One real order each during the fortnight is plenty. A WhatsApp
+   group is enough to collect what they find — you will need to summarise it
+   in Phase 4.
+
+## Phase 2 — App content (blocks the release from saving)
+
+Every item must be green.
 
 - **Privacy policy** → `https://www.natalaundry.az/privacy`
-- **App access** — the app is entirely behind a login, so Google *requires*
-  working demo credentials here. A reviewer who cannot sign in rejects the
-  app. Create a throwaway customer account, give it an address and one
-  completed order so the screens are not empty, and paste the e-mail and
-  password into *All functionality is restricted → Add instructions*.
-- **Ads** — declare none, assuming none are running.
-- **Content rating** — complete the questionnaire. A laundry service with no
-  user-generated content rates Everyone / PEGI 3.
-- **Target audience and content** — 18+. Declare no appeal to children.
-- **Data safety** — see the table below.
+- **App access** — the app is entirely behind a login, so Google **requires**
+  working demo credentials. A reviewer who cannot sign in rejects. Create a
+  throwaway customer, give it an address and one completed order so the
+  screens are not empty, and put the e-mail and password under *All
+  functionality is restricted → Add instructions*.
+- **Ads** — none.
+- **Content rating** — questionnaire. Laundry service, no user content:
+  Everyone / PEGI 3.
+- **Target audience and content** — 18+, no appeal to children.
+- **Data safety** — table below.
 - **Government apps** — No.
-- **Financial features** — the app takes payment for services. Read this one
-  rather than clicking through; misdeclaring it is a common rejection.
-- **Account deletion** — declare in-app deletion **and** give the web URL
-  `https://www.natalaundry.az/privacy` (the deletion section).
+- **Financial features** — the app takes payment for services. Read it rather
+  than clicking through; misdeclaring this is a common rejection.
+- **Account deletion** — declare in-app deletion **and** the web URL
+  `https://www.natalaundry.az/privacy`.
 
 ### Data safety — what to declare
 
-Derived from what the code actually collects, not from a guess.
+From what the code actually collects.
 
-| Data type | Collected | Why | Notes |
-|---|---|---|---|
-| Name | Yes | Account, courier contact | `profiles.name` |
-| E-mail address | Yes | Account, sign-in | `profiles.email` |
-| Phone number | Yes | Courier contacts the customer | `profiles.phone` |
-| Physical address | Yes | Pickup and delivery | `orders.address` |
-| **Precise location** | Yes | Courier routing, live tracking map | `courier_locations`, `ACCESS_FINE_LOCATION` |
-| Payment info | Yes | Paying for orders | Processed by the payment provider |
-| Photos | Yes | Documenting pre-existing garment defects | `CAMERA` |
-| Push token | Yes | Order status notifications | `profiles.push_token` |
+| Data type | Why | Where |
+|---|---|---|
+| Name | Account, courier contact | `profiles.name` |
+| E-mail | Account, sign-in | `profiles.email` |
+| Phone | Courier contacts the customer | `profiles.phone` |
+| Physical address | Pickup and delivery | `orders.address` |
+| **Precise location** | Courier routing, live tracking map | `courier_locations`, `ACCESS_FINE_LOCATION` |
+| Payment info | Paying for orders | `payment_intents` |
+| Photos | Documenting pre-existing defects | `CAMERA` |
+| Push token | Order status notifications | `profiles.push_token` |
 
-For every row: **encrypted in transit — yes** (HTTPS/TLS throughout) and
-**users can request deletion — yes**. Precise location is the one Google looks
-at hardest; the justification is the courier tracking map, which is a core,
-visible feature.
+Every row: **encrypted in transit — yes**, **deletion can be requested — yes**.
+Precise location gets the most scrutiny; the courier tracking map is the
+justification and it is a visible, core feature.
 
-## 4. Play Console — Store listing
+## Phase 3 — Store listing (can run in parallel)
 
-- App name, short description (80 chars), full description (4000)
-- **Feature graphic 1024×500** — does not exist yet, and it blocks the listing
-- **Phone screenshots**, minimum 2 — the 6.5" set made for the App Store works
-- **App icon 512×512** — `assets/images/play-store-icon.png`, generated by
-  `npm run icons`
-- Category: Lifestyle. Contact e-mail: `info@natalaundry.az`
-- Countries: Azerbaijan at minimum
+- App name, short description (80), full description (4000)
+- **Feature graphic 1024×500** — *does not exist yet*, and blocks the listing
+- **Phone screenshots**, minimum 2 — the 6.5″ App Store set works
+- **App icon 512×512** — `assets/images/play-store-icon.png` (`npm run icons`)
+- Category Lifestyle; contact `info@natalaundry.az`; countries include
+  Azerbaijan
 
-## 5. The testing gate — CONFIRMED, and it is the long pole
+## Phase 4 — after the 14 days
 
-**The developer account is a personal one.** Confirmed 2026-09-25.
-
-So unless it was created before **13 November 2023** (worth checking once at
-*Settings → Developer account → Account details* — if it predates that, none
-of this applies), production is gated behind:
-
-> **12 testers, opted in continuously for 14 days, on a CLOSED testing track.**
-
-Then you apply for production access, and Google reviews that application.
-
-Four things about this that cost people weeks:
-
-1. **Internal testing does not count.** It has to be a *closed* track. The
-   earlier rejected submission was internal testing, so no clock has started.
-2. **The 14 days start when the twelfth tester has opted in**, not when the
-   track is created. Every day the testers are not recruited is a day added.
-3. **Dropping below 12 can reset the clock.** Recruit more than twelve.
-4. **Google looks at engagement**, not just headcount. Testers should actually
-   open the app during the fortnight.
-
-**Therefore: create the closed track and send the opt-in link today.** Nothing
-else on this list is on the critical path — the store listing, the feature
-graphic and the Data safety form can all be finished while the clock runs.
-
-### Running it
-
-- Testers are identified by **Google account e-mail**. A personal Gmail is
-  fine; a non-Google address will not work.
-- Use a **Google Group** rather than pasting a list: adding or replacing a
-  tester later then needs no new release.
-- Each tester opens the opt-in URL, accepts, then installs from Play.
-- Track it at *Testing → Closed testing → Testers*.
-
-Realistic timeline from the day twelve people have opted in: **14 days + the
-production-access review**, which is usually days rather than hours.
-
-## 6. Release
-
-1. Testing → Closed (or Production) → **Create new release**
-2. Upload the versionCode 10 AAB
-3. Release name `1.1.1 (10)`, paste the release notes
-4. Review release → **Start rollout**. Consider 20% staged for a first release
-5. First-production review is typically hours, but can run up to ~7 days
+1. Play Console offers **Apply for production access**.
+2. The form asks how testers were recruited, what feedback came back, and what
+   changed as a result. Answer from the WhatsApp group — a few sentences each.
+3. Google reviews the application. Days, not hours.
+4. On approval: *Production → Create new release* → upload the same AAB (or a
+   newer one) → staged rollout at 20% is sensible for a first release.
 
 ---
 
-## Risks worth closing before a reviewer finds them
+## Deferred work — not blocking, but do not lose it
 
-- **Payments point at the test gateway.** `supabase/functions/payments/index.ts`
-  defaults to `https://txpgtst.kapitalbank.az/api` unless `KAPITAL_BASE_URL` is
-  set. If the Edge Function is undeployed or still on the test host, a reviewer
-  who reaches checkout hits a dead or sandbox payment flow. Confirm the
-  function is deployed and pointed at production before submitting.
-- **Google sign-in.** Reported broken for live iOS users and never diagnosed —
-  the suspicion is the Supabase redirect allow-list missing
-  `natalaundry://auth-callback`. A reviewer offered a Google button that fails
-  will reject. Either fix it or make sure the demo account is an
-  e-mail/password one and the flow is obviously available.
-- **Order #64** is stranded in `processing_finished` with no courier, and the
-  courier profile created for testing has the name "info" and no phone. Tidy
-  before anyone screenshots the admin board.
+- **Card payment is switched off.** The `payments` Edge Function is not
+  deployed (`404 NOT_FOUND`, probed 2026-09-25), so card checkout threw for
+  every customer who chose it — on the live App Store build too. Cash and Nata
+  Balance settle through `pay_order` and are unaffected.
+
+  To restore: deploy `payments` and `payments-callback` with
+  `KAPITAL_USERNAME`, `KAPITAL_PASSWORD` and a **production**
+  `KAPITAL_BASE_URL` as secrets, confirm with
+  `node scripts/migration/probe-edge-functions.js`, then set `CARD_ENABLED =
+  true` in `lib/payments.ts`. One line, plus a build.
+
+- **Google sign-in is broken on both platforms.** Never diagnosed. Prime
+  suspect is the Supabase redirect allow-list missing
+  `natalaundry://auth-callback` (Authentication → URL Configuration). The demo
+  account for review must therefore be e-mail/password.
+
+- **iOS**: build 9 (1.1.1) is in TestFlight and has never been attached to an
+  App Store version. It also predates the card fix.
+
+- Order #64 is stranded in `processing_finished` with no courier; the test
+  courier profile is named "info" and has no phone.
