@@ -112,11 +112,20 @@ const config: ExpoConfig = {
         apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       },
     },
+    // Each of these is used and can be justified in the Data safety form:
+    // CAMERA photographs pre-existing defects at pickup, and the two location
+    // permissions drive courier routing and the customer's live tracking map.
+    //
+    // READ_PHONE_STATE was declared here and read nowhere in the codebase — a
+    // recursive search finds it in this file and nothing else. Google treats an
+    // unused sensitive permission as a policy problem rather than an oversight,
+    // and it has to be justified in the Data safety declaration whether or not
+    // a single line of code reads it. Declaring a permission the app does not
+    // use is the easiest possible rejection to avoid.
     permissions: [
       "CAMERA",
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION",
-      "READ_PHONE_STATE",
     ],
   },
   plugins: [
