@@ -33,11 +33,23 @@ const config: ExpoConfig = {
   name: "Nata Laundry",
   slug: "nata-laundry",
   scheme: "natalaundry",
-  // 1.1.0, not 1.0.4: this release changes what an order costs (express now
+  // 1.1.x, not 1.0.4: this release changes what an order costs (express now
   // doubles the total), removes two delivery options and moves to a new SDK.
   // A customer comparing prices with the last version should see a different
   // minor, and a crash report should not be ambiguous about which build it is.
-  version: "1.1.0",
+  //
+  // The patch is 1.1.1 because 1.1.0 is already READY_FOR_SALE. Apple closes a
+  // version's pre-release train the moment it is approved, so builds 6 and 7 —
+  // both reported as "submitted" by eas-cli, neither ever visible in App Store
+  // Connect — were rejected during processing with ITMS 90062 / 90186:
+  //
+  //   The value for key CFBundleShortVersionString [1.1.0] must contain a
+  //   higher version than that of the previously approved version [1.1.0]
+  //
+  // Incrementing the build number is not enough; the marketing version itself
+  // has to move. Bump this before every store submission that follows a
+  // release, not just when the JS changes.
+  version: "1.1.1",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/images/icon.png",
@@ -100,22 +112,16 @@ const config: ExpoConfig = {
         apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       },
     },
-    /*
-     * Only what the app actually calls.
-     *
-     * READ_PHONE_STATE was removed on 2026-09-25. It was carried over from
-     * the recovered 1.0.2 manifest and nothing in this codebase ever read it
-     * — grep finds no caller. Google Play treats it as sensitive and expects
-     * a core-functionality justification; declaring one you cannot justify
-     * invites a policy review you would lose, for a capability the app does
-     * not use.
-     *
-     * Location is FOREGROUND ONLY (requestForegroundPermissionsAsync +
-     * watchPositionAsync, driven by the order's state). No
-     * ACCESS_BACKGROUND_LOCATION, so Play's background-location declaration
-     * and demo video do not apply. Keep it that way — adding it turns a
-     * routine submission into a multi-week review.
-     */
+    // Each of these is used and can be justified in the Data safety form:
+    // CAMERA photographs pre-existing defects at pickup, and the two location
+    // permissions drive courier routing and the customer's live tracking map.
+    //
+    // READ_PHONE_STATE was declared here and read nowhere in the codebase — a
+    // recursive search finds it in this file and nothing else. Google treats an
+    // unused sensitive permission as a policy problem rather than an oversight,
+    // and it has to be justified in the Data safety declaration whether or not
+    // a single line of code reads it. Declaring a permission the app does not
+    // use is the easiest possible rejection to avoid.
     permissions: [
       "CAMERA",
       "ACCESS_FINE_LOCATION",

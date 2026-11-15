@@ -28,7 +28,7 @@ import {
   TOPUP_BONUS_TIERS,
 } from "@/lib/wallet";
 import { BigButton } from "@/components/ui";
-import { CARD_PAYMENTS_ENABLED } from "@/lib/payments";
+import { CARD_ENABLED } from "@/lib/payments";
 import { useErrorAlert } from "@/lib/alerts";
 
 // wallet_transactions columns are confirmed via the schema dump, and the
@@ -189,9 +189,9 @@ export default function WalletScreen() {
                   {money(balance ?? 0)}
                 </Text>
                 <Pressable
-                  style={[s.topUpButton, !CARD_PAYMENTS_ENABLED && s.topUpButtonOff]}
-                  disabled={!CARD_PAYMENTS_ENABLED}
-                  accessibilityState={{ disabled: !CARD_PAYMENTS_ENABLED }}
+                  style={[s.topUpButton, !CARD_ENABLED && s.topUpButtonOff]}
+                  disabled={!CARD_ENABLED}
+                  accessibilityState={{ disabled: !CARD_ENABLED }}
                   onPress={() => {
                     // Preselect the smallest preset so the sheet opens on a
                     // usable action instead of a disabled zero.
@@ -214,7 +214,7 @@ export default function WalletScreen() {
                 that does nothing is worse than one that explains itself.
                 Balance already held stays spendable at checkout.
               */}
-              {!CARD_PAYMENTS_ENABLED ? (
+              {!CARD_ENABLED ? (
                 <Text style={s.topUpOffNote}>{t("walletTopUpUnavailable")}</Text>
               ) : null}
               {notice ? <Text style={s.notice}>{notice}</Text> : null}

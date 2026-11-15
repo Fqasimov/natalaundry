@@ -22,6 +22,10 @@ const APP_SCHEME = Deno.env.get("KAPITAL_APP_RETURN_SCHEME") ?? "natalaundry";
 /** The bank's vocabulary, mapped to ours. Lifted from config/kapital.php. */
 const STATUS_MAP: Record<string, string> = {
   FullyPaid: "paid",
+  // "Order has been closed (after payment)" in Kapital's status table. Missing
+  // until 2026-11-15, so a paid order the bank had already closed fell through
+  // to the "pending" default and was never recorded as paid.
+  Closed: "paid",
   Refunded: "refunded",
   PartiallyRefunded: "partially_refunded",
   Declined: "failed",

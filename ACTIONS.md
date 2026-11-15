@@ -350,6 +350,21 @@ request instead of once per query.
 
 ---
 
+## Account deletion — the half that is not in the app
+
+`supabase/account-deletion.sql` and the in-app screen cover Apple Guideline
+5.1.1(v) and most of Google's requirement. Google asks for one more thing:
+
+**A web page, reachable without installing the app, where someone can request
+account deletion**, whose URL is entered in Play Console under
+*App content → Data safety → Account deletion*. A link to a support form is
+enough; it does not have to delete anything automatically. Without it the
+listing is rejected even though the app itself is compliant.
+
+Needs: a page on `natalaundry.az` stating what is deleted and what is retained
+(the same two lists the app screen shows), and a way to get in touch. Then
+paste the URL into Play Console.
+
 ## Already done — nothing here needs redoing
 
 - Database moved Seoul → Frankfurt, verified row for row; pooler handshake

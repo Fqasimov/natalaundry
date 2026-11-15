@@ -11,7 +11,10 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_CARD_PAYMENTS": "true"
+      }
     },
     "production": {
       "channel": "production",

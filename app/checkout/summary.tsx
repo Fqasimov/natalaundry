@@ -28,7 +28,6 @@ import { reportError } from "@/lib/errors";
 import { phase, timed } from "@/lib/perf";
 import {
   fetchPaymentOptions,
-  isMethodUnavailable,
   payForOrder,
   waitForSettlement,
   walletForPlatform,
@@ -52,13 +51,16 @@ export default function SummaryScreen() {
   const [rewards, setRewards] = useState<ActiveReward[]>([]);
   const rewardCopy = useRewardCopy();
 
-  // Cash is the default, and while the bank gateway is off it is the only
-  // method that can complete a payment outright (Nata Balance can too, but
-  // only for a customer who already has the funds). Card used to be the
-  // default here; defaulting to a method the picker now greys out would open
-  // checkout on a dead selection.
+  // Cash is the default, and the initial list, because it is the only method
+  // that cannot fail: it settles through `pay_order` in the database with no
+  // gateway involved. Card used to be the default, but it is off while the
+  // `payments` Edge Function is undeployed (see CARD_ENABLED) — and these two
+  // lines are why that mattered here as well as in lib/payments.ts. They
+  // render before the effect below resolves, so a hardcoded "card" would show
+  // the card option for a frame and, worse, leave it *selected* even once the
+  // list that no longer contains it arrives.
   const [payMethod, setPayMethod] = useState<PaymentMethod>("cash");
-  const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["card", "cash"]);
+  const [payMethods, setPayMethods] = useState<PaymentMethod[]>(["cash"]);
   const [payNotice, setPayNotice] = useState<string | null>(null);
   // Failures interrupt rather than sitting in red under the button.
   useErrorAlert(payNotice);
@@ -74,21 +76,14 @@ export default function SummaryScreen() {
         // Only this device's own wallet is ever shown: an Apple Pay button on
         // Android is a dead end.
         const wallet = walletForPlatform();
-        const offered = options.methods.filter(
-          (m) => m === "card" || m === "cash" || m === "balance" || m === wallet,
-        );
-        setPayMethods(offered);
-        // If the selection is one the server has since disabled, move off it.
-        // Leaving it selected would put the confirm button behind a row the
-        // picker will not let the customer change away from by tapping it.
-        setPayMethod((current) =>
-          isMethodUnavailable(current)
-            ? (offered.find((m) => !isMethodUnavailable(m)) ?? "cash")
-            : current,
+        setPayMethods(
+          options.methods.filter(
+            (m) => m === "card" || m === "cash" || m === "balance" || m === wallet,
+          ),
         );
       })
-      // Falling back to card + cash is safe: both work without any
-      // terminal-specific configuration.
+      // Falling back to the initial ["cash"] is safe: it needs no gateway and
+      // no terminal-specific configuration.
       .catch(() => undefined);
     return () => {
       cancelled = true;

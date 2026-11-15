@@ -49,70 +49,53 @@ export function isSettled(status: PaymentStatus | string | null | undefined): bo
 export type PaymentOptions = {
   methods: PaymentMethod[];
   wallets_enabled: boolean;
-  /** Offered, but greyed out and not selectable. See CARD_PAYMENTS_ENABLED. */
-  unavailable: PaymentMethod[];
 };
 
 /**
- * Whether the bank gateway may be used at all.
+ * Card is off because the function that would take the payment does not exist.
  *
- * FALSE, deliberately, and this is the only place to change it.
+ * Probed against production on 2026-09-25:
  *
- * KAPITAL_BASE_URL points at `txpgtst.kapitalbank.az` — Kapital's **test**
- * gateway, with their public sandbox merchant. A card entered there is not
- * charged, and worse, the sandbox answers our callback with a success the
- * `payments-callback` function has no way to tell from a real one. So an
- * order would be marked paid, and a wallet top-up would credit real balance,
- * for money that never moved. Silent free money in one direction and a
- * customer who believes they have paid in the other.
+ *     POST /functions/v1/payments
+ *     404 {"code":"NOT_FOUND","message":"Requested function was not found"}
  *
- * Cash is a first-class method here — 7 of the first 15 real orders were cash
- * — so the product works without the gateway. Card stays visible but disabled
- * rather than hidden: a customer who used card on the old build should see
- * that it is temporarily off, not be left wondering where it went.
+ * `payForOrder` invokes that function for card and rethrows its error, so
+ * every customer who chose Kart got an error alert and no payment — on the
+ * live App Store build, not just in review. Offering a button that cannot
+ * work is worse than not offering it: cash and Nata Balance both settle
+ * through `pay_order` in the database and are unaffected.
  *
- * To turn card back on: get production credentials from Kapital, set
- * KAPITAL_BASE_URL to `https://e-commerce.kapitalbank.az/api` and the
- * callback URL to a public HTTPS address, verify a real payment of a small
- * amount end to end, and only then flip this to true. Flipping it first ships
- * a checkout that takes no money.
+ * **Now set per build, not in code** (2026-11-15). Card is on only where the
+ * build sets `EXPO_PUBLIC_CARD_PAYMENTS=true` — the `preview` profile in
+ * eas.json, which is the test build pointed at Kapital's TEST gateway. The
+ * `production` profile does not set it, so a store build stays cash-only
+ * until the bank issues production credentials and someone adds the variable
+ * there deliberately. A hardcoded `true` would have put the test gateway in
+ * front of real customers the moment anyone flipped it to try card out.
+ *
+ * Rollout and the Edge Function secrets: `scripts/kapital/README.md`.
  */
-export const CARD_PAYMENTS_ENABLED = false;
-
-/**
- * Methods that ride on the bank gateway, and so are off whenever it is.
- *
- * Cash and `balance` are not here: cash never touches a gateway, and a
- * balance payment is an in-house debit inside one locked transaction
- * (`pay_order`), so it moves money that is already ours to move. A customer
- * with a balance can still spend it — they simply cannot add to it until the
- * gateway is live, since topping up is itself a card payment.
- */
-export const GATEWAY_METHODS: readonly PaymentMethod[] = [
-  "card",
-  "apple_pay",
-  "google_pay",
-];
-
-/** True when this method cannot be used right now. */
-export function isMethodUnavailable(method: PaymentMethod): boolean {
-  return !CARD_PAYMENTS_ENABLED && GATEWAY_METHODS.includes(method);
-}
+export const CARD_ENABLED = process.env.EXPO_PUBLIC_CARD_PAYMENTS === "true";
 
 /**
  * Which methods checkout may offer.
  *
- * Card and cash always work. Wallets depend on the merchant terminal's
- * configuration at the bank, and there is no longer a server to ask — so they
- * stay off until someone turns them on deliberately, which is the safe
- * default: offering Apple Pay on a terminal that does not accept it is a dead
- * end the customer discovers at the bank's page.
+ * Wallets depend on the merchant terminal's configuration at the bank, and
+ * there is no longer a server to ask — so they stay off until someone turns
+ * them on deliberately, which is the safe default: offering Apple Pay on a
+ * terminal that does not accept it is a dead end the customer discovers at
+ * the bank's page.
  */
+/** Card and the wallets ride on the bank gateway, and are off whenever it is. */
+
+export function isMethodUnavailable(method: PaymentMethod): boolean {
+  return !CARD_ENABLED && (method === "card" || method === "apple_pay" || method === "google_pay");
+}
+
 export async function fetchPaymentOptions(): Promise<PaymentOptions> {
   return {
-    methods: ["card", "cash", "balance"],
+    methods: CARD_ENABLED ? ["card", "cash", "balance"] : ["cash", "balance"],
     wallets_enabled: false,
-    unavailable: (["card", "cash", "balance"] as PaymentMethod[]).filter(isMethodUnavailable),
   };
 }
 
@@ -208,11 +191,6 @@ export async function payForOrder(
     }
     return fetchPaymentState(orderId);
   }
-
-  // A disabled method must not be reachable by any path — a stale screen, a
-  // resumed checkout, a future caller. The picker greys it out; this refuses
-  // it. A UI-only guard is not a guard.
-  if (isMethodUnavailable(method)) throw new Error("payment_method_unavailable");
 
   // Card goes through the Edge Function: it holds the bank credentials, reads
   // the amount from `orders.total` rather than taking one from here, and gives
